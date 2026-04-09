@@ -120,8 +120,7 @@ $singleFiles = @(
     "dev_source/build_and_release.ps1",
     "dev_source/publish_repo_assets.ps1",
     "dev_source/cleanup_temp_workdirs.ps1",
-    "dev_source/000 Launch_dashboard.bat",
-    "dev_source/__01 진행현황__/04 인수인계서_대시보드_웹전환_설치형EXE_2026-04-08.md"
+    "dev_source/000 Launch_dashboard.bat"
 )
 
 foreach ($file in $singleFiles) {
@@ -134,6 +133,15 @@ if ($webUrlFile) {
 }
 else {
     throw "dev_source/웹접속 주소.txt 파일을 찾지 못했습니다."
+}
+
+$handoffDir = Join-Path $scriptRoot '__01 진행현황__'
+$handoffFile = Get-ChildItem -LiteralPath $handoffDir -Filter '04 인수인계서_대시보드_웹전환_설치형EXE_*.md' -File | Sort-Object Name -Descending | Select-Object -First 1
+if ($handoffFile) {
+    Publish-RepoFile -LocalPath $handoffFile.FullName -RepoPath ('dev_source/__01 진행현황__/' + $handoffFile.Name)
+}
+else {
+    throw "인수인계서 파일을 찾지 못했습니다."
 }
 
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "automated_scripts") -RepoRoot "automated_scripts"
