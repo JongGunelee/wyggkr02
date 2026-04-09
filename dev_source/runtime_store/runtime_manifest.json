@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "generated_on": "2026-04-09",
+  "strategy": "minimal_release_remote_runtime_store",
+  "notes": [
+    "Release bundles only the bootstrap launcher and web assets.",
+    "Scripts sync from GitHub automated_scripts.",
+    "Runtime wheels smaller than 25MB are published under dev_source/runtime_store/packages.",
+    "Assets larger than 25MB must use manifest parts or an external official download URL."
+  ],
+  "python": {
+    "major_minor": "3.13",
+    "install_url": "https://www.python.org/ftp/python/3.13.2/python-3.13.2-amd64.exe",
+    "install_args": [
+      "/quiet",
+      "InstallAllUsers=0",
+      "PrependPath=0",
+      "Include_pip=1",
+      "Include_launcher=0",
+      "Shortcuts=0"
+    ]
+  },
+  "packages": {
+    "et_xmlfile": {
+      "file": "packages/et_xmlfile-2.0.0-py3-none-any.whl",
+      "cache_name": "et_xmlfile-2.0.0-py3-none-any.whl",
+      "imports": [
+        "et_xmlfile"
+      ],
+      "sha256": "7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa"
+    },
+    "openpyxl": {
+      "file": "packages/openpyxl-3.1.5-py2.py3-none-any.whl",
+      "cache_name": "openpyxl-3.1.5-py2.py3-none-any.whl",
+      "imports": [
+        "openpyxl"
+      ],
+      "sha256": "5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2"
+    },
+    "pillow": {
+      "file": "packages/pillow-12.1.1-cp313-cp313-win_amd64.whl",
+      "cache_name": "pillow-12.1.1-cp313-cp313-win_amd64.whl",
+      "imports": [
+        "PIL"
+      ],
+      "sha256": "344cf1e3dab3be4b1fa08e449323d98a2a3f819ad20f4b22e77a0ede31f0faa1"
+    },
+    "psutil": {
+      "file": "packages/psutil-7.2.2-cp37-abi3-win_amd64.whl",
+      "cache_name": "psutil-7.2.2-cp37-abi3-win_amd64.whl",
+      "imports": [
+        "psutil"
+      ],
+      "sha256": "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988"
+    },
+    "pymupdf": {
+      "file": "packages/pymupdf-1.27.2-cp310-abi3-win_amd64.whl",
+      "cache_name": "pymupdf-1.27.2-cp310-abi3-win_amd64.whl",
+      "imports": [
+        "fitz"
+      ],
+      "sha256": "acdfdb7329882246545a0f6bc85f91739e2773ed81f9301c1687cffb826470f3"
+    },
+    "pywin32": {
+      "file": "packages/pywin32-311-cp313-cp313-win_amd64.whl",
+      "cache_name": "pywin32-311-cp313-cp313-win_amd64.whl",
+      "imports": [
+        "pythoncom",
+        "win32api",
+        "win32com.client"
+      ],
+      "sha256": "718a38f7e5b058e76aee1c56ddd06908116d35147e133427e59a3983f703a20d"
+    }
+  },
+  "scripts": {
+    "advanced_column_modifier.py": {
+      "packages": [
+        "pywin32",
+        "psutil"
+      ]
+    },
+    "advanced_excel_rename.py": {
+      "packages": [
+        "et_xmlfile",
+        "openpyxl"
+      ]
+    },
+    "advanced_pdf_compressor.py": {
+      "packages": [
+        "pymupdf"
+      ]
+    },
+    "batch_copy_pdf.py": {
+      "packages": []
+    },
+    "Batch_PPT_to_PDF_DDD.py": {
+      "packages": [
+        "pywin32",
+        "psutil"
+      ]
+    },
+    "collect_closing_data.py": {
+      "packages": []
+    },
+    "excel_compressor_tool.py": {
+      "packages": [
+        "pillow",
+        "pywin32"
+      ]
+    },
+    "excel_compressor_tool(1).py": {
+      "packages": [
+        "pillow",
+        "pywin32"
+      ]
+    },
+    "excel_deep_cleaner.py": {
+      "packages": [
+        "et_xmlfile",
+        "openpyxl",
+        "psutil",
+        "pywin32"
+      ]
+    },
+    "excel_deep_cleaner(1).py": {
+      "packages": [
+        "et_xmlfile",
+        "openpyxl",
+        "psutil",
+        "pywin32"
+      ]
+    },
+    "group_cross_merger.py": {
+      "packages": [
+        "et_xmlfile",
+        "openpyxl",
+        "psutil",
+        "pymupdf",
+        "pywin32"
+      ]
+    },
+    "intelligent_file_organizer.py": {
+      "packages": [
+        "psutil"
+      ]
+    },
+    "modify_excel_repair.py": {
+      "packages": [
+        "psutil",
+        "pywin32"
+      ]
+    },
+    "pattern_document_merger.py": {
+      "packages": [
+        "psutil",
+        "pymupdf",
+        "pywin32"
+      ]
+    },
+    "pdf_to_html_converter_ultimate.py": {
+      "packages": [
+        "pymupdf"
+      ]
+    },
+    "ppt_compressor_tool.py": {
+      "packages": [
+        "pillow",
+        "psutil",
+        "pywin32"
+      ]
+    },
+    "search_two_items.py": {
+      "packages": [
+        "et_xmlfile",
+        "openpyxl"
+      ]
+    },
+    "universal_office_optimizer.py": {
+      "packages": [
+        "pillow",
+        "psutil",
+        "pywin32"
+      ]
+    }
+  }
+}
