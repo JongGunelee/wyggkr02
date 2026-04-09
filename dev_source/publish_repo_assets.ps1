@@ -118,12 +118,19 @@ $singleFiles = @(
     "dev_source/publish_repo_assets.ps1",
     "dev_source/cleanup_temp_workdirs.ps1",
     "dev_source/000 Launch_dashboard.bat",
-    "dev_source/웹접속 주소.txt",
     "dev_source/__01 진행현황__/04 인수인계서_대시보드_웹전환_설치형EXE_2026-04-08.md"
 )
 
 foreach ($file in $singleFiles) {
     Publish-RepoFile -LocalPath (Join-Path $projectRoot $file) -RepoPath ($file -replace "\\", "/")
+}
+
+$webUrlFile = Get-ChildItem -LiteralPath $scriptRoot -Filter '*접속 주소.txt' -File | Select-Object -First 1
+if ($webUrlFile) {
+    Publish-RepoFile -LocalPath $webUrlFile.FullName -RepoPath 'dev_source/웹접속 주소.txt'
+}
+else {
+    throw "dev_source/웹접속 주소.txt 파일을 찾지 못했습니다."
 }
 
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "automated_scripts") -RepoRoot "automated_scripts"
