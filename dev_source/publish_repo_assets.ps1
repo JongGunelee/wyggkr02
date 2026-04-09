@@ -37,6 +37,11 @@ $headers = @{
     "X-GitHub-Api-Version" = "2022-11-28"
 }
 
+$script:PublishStats = @{
+    Published = 0
+    Skipped   = 0
+}
+
 function Convert-ToRepoApiPath {
     param([string]$RepoPath)
     $parts = $RepoPath -split "/" | Where-Object { $_ -ne "" }
@@ -59,6 +64,22 @@ function Get-RemoteMetadata {
     }
 }
 
+function Get-GitBlobSha {
+    param([byte[]]$Bytes)
+    $prefixBytes = [System.Text.Encoding]::UTF8.GetBytes("blob $($Bytes.Length)`0")
+    $allBytes = New-Object byte[] ($prefixBytes.Length + $Bytes.Length)
+    [System.Buffer]::BlockCopy($prefixBytes, 0, $allBytes, 0, $prefixBytes.Length)
+    [System.Buffer]::BlockCopy($Bytes, 0, $allBytes, $prefixBytes.Length, $Bytes.Length)
+    $sha1 = [System.Security.Cryptography.SHA1]::Create()
+    try {
+        $hashBytes = $sha1.ComputeHash($allBytes)
+    }
+    finally {
+        $sha1.Dispose()
+    }
+    return ([System.BitConverter]::ToString($hashBytes) -replace "-", "").ToLowerInvariant()
+}
+
 function Publish-RepoFile {
     param(
         [string]$LocalPath,
@@ -72,10 +93,17 @@ function Publish-RepoFile {
 
     $fileBytes = [System.IO.File]::ReadAllBytes($localFullPath)
     $contentBase64 = [Convert]::ToBase64String($fileBytes)
+    $localBlobSha = Get-GitBlobSha -Bytes $fileBytes
     $escapedPath = Convert-ToRepoApiPath $RepoPath
     $uri = "https://api.github.com/repos/$Owner/$Repo/contents/$escapedPath"
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         $remote = Get-RemoteMetadata -RepoPath $RepoPath
+        if ($remote -and $remote.type -eq "file" -and $remote.sha -eq $localBlobSha -and [int64]$remote.size -eq [int64]$fileBytes.Length) {
+            Write-Host ("[SKIP] Unchanged {0}" -f $RepoPath)
+            $script:PublishStats.Skipped++
+            return
+        }
+
         $payload = @{
             message = "chore: publish $RepoPath"
             content = $contentBase64
@@ -89,6 +117,7 @@ function Publish-RepoFile {
             $jsonBody = $payload | ConvertTo-Json -Depth 8
             Invoke-RestMethod -Method Put -Uri $uri -Headers $headers -Body $jsonBody | Out-Null
             Write-Host ("[OK] Published {0}" -f $RepoPath)
+            $script:PublishStats.Published++
             return
         }
         catch {
@@ -195,4 +224,4 @@ Publish-RepoTree -LocalRoot (Join-Path $projectRoot "dev_source\\runtime_store")
 Publish-RepoFile -LocalPath $ZipPath -RepoPath "dev_source/runtime_store/WYGGKR02_Dashboard_Agent_Setup.zip"
 Remove-RepoFileIfExists -RepoPath "WYGGKR02_Dashboard_Agent_Setup.zip"
 
-Write-Host "[OK] Repository publish complete"
+Write-Host ("[OK] Repository publish complete (published={0}, skipped={1})" -f $script:PublishStats.Published, $script:PublishStats.Skipped)
