@@ -135,8 +135,11 @@ else {
     throw "dev_source/웹접속 주소.txt 파일을 찾지 못했습니다."
 }
 
-$handoffDir = Join-Path $scriptRoot '__01 진행현황__'
-$handoffFile = Get-ChildItem -LiteralPath $handoffDir -File | Where-Object { $_.Extension -eq '.md' -and $_.Name -like '04 *' } | Sort-Object Name -Descending | Select-Object -First 1
+$handoffDir = Get-ChildItem -LiteralPath $scriptRoot -Directory | Where-Object { $_.Name -like '__01*' } | Select-Object -First 1
+if (-not $handoffDir) {
+    throw "진행현황 폴더를 찾지 못했습니다."
+}
+$handoffFile = Get-ChildItem -LiteralPath $handoffDir.FullName -File | Where-Object { $_.Extension -eq '.md' -and $_.Name -like '04 *' } | Sort-Object Name -Descending | Select-Object -First 1
 if ($handoffFile) {
     Publish-RepoFile -LocalPath $handoffFile.FullName -RepoPath ('dev_source/__01 진행현황__/' + $handoffFile.Name)
 }
