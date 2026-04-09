@@ -70,24 +70,37 @@ function Publish-RepoFile {
         throw "업로드 대상 파일이 없습니다: $localFullPath"
     }
 
-    $remote = Get-RemoteMetadata -RepoPath $RepoPath
     $fileBytes = [System.IO.File]::ReadAllBytes($localFullPath)
     $contentBase64 = [Convert]::ToBase64String($fileBytes)
-
-    $payload = @{
-        message = "chore: publish $RepoPath"
-        content = $contentBase64
-        branch  = $Branch
-    }
-    if ($remote -and $remote.sha) {
-        $payload.sha = $remote.sha
-    }
-
     $escapedPath = Convert-ToRepoApiPath $RepoPath
     $uri = "https://api.github.com/repos/$Owner/$Repo/contents/$escapedPath"
-    $jsonBody = $payload | ConvertTo-Json -Depth 8
-    Invoke-RestMethod -Method Put -Uri $uri -Headers $headers -Body $jsonBody | Out-Null
-    Write-Host ("[OK] Published {0}" -f $RepoPath)
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        $remote = Get-RemoteMetadata -RepoPath $RepoPath
+        $payload = @{
+            message = "chore: publish $RepoPath"
+            content = $contentBase64
+            branch  = $Branch
+        }
+        if ($remote -and $remote.sha) {
+            $payload.sha = $remote.sha
+        }
+
+        try {
+            $jsonBody = $payload | ConvertTo-Json -Depth 8
+            Invoke-RestMethod -Method Put -Uri $uri -Headers $headers -Body $jsonBody | Out-Null
+            Write-Host ("[OK] Published {0}" -f $RepoPath)
+            return
+        }
+        catch {
+            $statusCode = $null
+            try { $statusCode = $_.Exception.Response.StatusCode.value__ } catch {}
+            if (($statusCode -eq 409) -and ($attempt -lt 3)) {
+                Start-Sleep -Milliseconds 400
+                continue
+            }
+            throw
+        }
+    }
 }
 
 function Remove-RepoFileIfExists {
