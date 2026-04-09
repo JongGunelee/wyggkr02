@@ -127,7 +127,7 @@ foreach ($file in $singleFiles) {
     Publish-RepoFile -LocalPath (Join-Path $projectRoot $file) -RepoPath ($file -replace "\\", "/")
 }
 
-$webUrlFile = Get-ChildItem -LiteralPath $scriptRoot -Filter '*접속 주소.txt' -File | Select-Object -First 1
+$webUrlFile = Get-ChildItem -LiteralPath $scriptRoot -File | Where-Object { $_.Extension -eq '.txt' } | Select-Object -First 1
 if ($webUrlFile) {
     Publish-RepoFile -LocalPath $webUrlFile.FullName -RepoPath 'dev_source/웹접속 주소.txt'
 }
@@ -136,7 +136,7 @@ else {
 }
 
 $handoffDir = Join-Path $scriptRoot '__01 진행현황__'
-$handoffFile = Get-ChildItem -LiteralPath $handoffDir -Filter '04 인수인계서_대시보드_웹전환_설치형EXE_*.md' -File | Sort-Object Name -Descending | Select-Object -First 1
+$handoffFile = Get-ChildItem -LiteralPath $handoffDir -File | Where-Object { $_.Extension -eq '.md' -and $_.Name -like '04 *' } | Sort-Object Name -Descending | Select-Object -First 1
 if ($handoffFile) {
     Publish-RepoFile -LocalPath $handoffFile.FullName -RepoPath ('dev_source/__01 진행현황__/' + $handoffFile.Name)
 }
