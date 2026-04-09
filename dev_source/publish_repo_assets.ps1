@@ -9,6 +9,9 @@ $ErrorActionPreference = "Stop"
 
 function Resolve-FullPath {
     param([string]$PathValue)
+    if (Test-Path -LiteralPath $PathValue) {
+        return (Get-Item -LiteralPath $PathValue).FullName
+    }
     return [System.IO.Path]::GetFullPath($PathValue)
 }
 
