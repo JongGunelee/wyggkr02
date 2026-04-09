@@ -60,10 +60,12 @@ if ($PublishRepo) {
     & (Join-Path $scriptRoot "publish_repo_assets.ps1") `
         -Owner $Owner `
         -Repo $Repo `
-        -Token $Token
+        -Token $Token `
+        -ZipPath $packageZipPath
 }
 
 if ($UploadRelease) {
+    Write-Warning "Release 배포는 폐기 검토 정책입니다. 저장소 루트 ZIP 배포를 기본으로 사용하세요."
     & (Join-Path $scriptRoot "release_update_asset.ps1") `
         -Owner $Owner `
         -Repo $Repo `
