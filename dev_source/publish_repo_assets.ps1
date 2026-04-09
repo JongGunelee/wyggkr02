@@ -129,7 +129,7 @@ foreach ($file in $singleFiles) {
 
 $webUrlFile = Get-ChildItem -LiteralPath $scriptRoot -File | Where-Object { $_.Extension -eq '.txt' } | Select-Object -First 1
 if ($webUrlFile) {
-    Publish-RepoFile -LocalPath $webUrlFile.FullName -RepoPath 'dev_source/웹접속 주소.txt'
+    Publish-RepoFile -LocalPath $webUrlFile.FullName -RepoPath ('dev_source/' + $webUrlFile.Name)
 }
 else {
     throw "dev_source/웹접속 주소.txt 파일을 찾지 못했습니다."
@@ -141,7 +141,7 @@ if (-not $handoffDir) {
 }
 $handoffFile = Get-ChildItem -LiteralPath $handoffDir.FullName -File | Where-Object { $_.Extension -eq '.md' -and $_.Name -like '04 *' } | Sort-Object Name -Descending | Select-Object -First 1
 if ($handoffFile) {
-    Publish-RepoFile -LocalPath $handoffFile.FullName -RepoPath ('dev_source/__01 진행현황__/' + $handoffFile.Name)
+    Publish-RepoFile -LocalPath $handoffFile.FullName -RepoPath ('dev_source/' + $handoffDir.Name + '/' + $handoffFile.Name)
 }
 else {
     throw "인수인계서 파일을 찾지 못했습니다."
