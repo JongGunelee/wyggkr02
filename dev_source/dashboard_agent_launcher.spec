@@ -12,6 +12,7 @@ datas = [
     (str(PROJECT_ROOT / 'index.html'), '.'),
     (str(PROJECT_ROOT / 'manifest.webmanifest'), '.'),
     (str(PROJECT_ROOT / 'service-worker.js'), '.'),
+    (str(PROJECT_ROOT / 'automated_scripts'), 'automated_scripts'),
     (str(PROJECT_ROOT / 'system_guides'), 'system_guides'),
     (str(SPEC_DIR / 'run_dashboard.py'), 'dev_source'),
     (str(SPEC_DIR / 'runtime_store' / 'runtime_manifest.json'), 'runtime_store'),
