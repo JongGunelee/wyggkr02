@@ -175,6 +175,8 @@ else {
 }
 
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "automated_scripts") -RepoRoot "automated_scripts"
+Publish-RepoTree -LocalRoot (Join-Path $projectRoot "automated_app") -RepoRoot "automated_app"
+Publish-RepoTree -LocalRoot (Join-Path $projectRoot "runtime_store") -RepoRoot "runtime_store"
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "system_guides") -RepoRoot "system_guides"
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "dev_source\\runtime_store") -RepoRoot "dev_source/runtime_store"
 Publish-RepoFile -LocalPath $ZipPath -RepoPath "dev_source/runtime_store/WYGGKR02_Dashboard_Agent_Setup.zip"
