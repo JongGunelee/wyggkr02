@@ -90,6 +90,24 @@ function Publish-RepoFile {
     Write-Host ("[OK] Published {0}" -f $RepoPath)
 }
 
+function Remove-RepoFileIfExists {
+    param([string]$RepoPath)
+    $remote = Get-RemoteMetadata -RepoPath $RepoPath
+    if (-not $remote -or $remote.type -ne "file") {
+        return
+    }
+
+    $escapedPath = Convert-ToRepoApiPath $RepoPath
+    $uri = "https://api.github.com/repos/$Owner/$Repo/contents/$escapedPath"
+    $payload = @{
+        message = "chore: remove legacy path $RepoPath"
+        sha = $remote.sha
+        branch = $Branch
+    } | ConvertTo-Json
+    Invoke-RestMethod -Method Delete -Uri $uri -Headers $headers -Body $payload | Out-Null
+    Write-Host ("[-] Removed legacy file {0}" -f $RepoPath)
+}
+
 function Publish-RepoTree {
     param(
         [string]$LocalRoot,
@@ -154,6 +172,7 @@ else {
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "automated_scripts") -RepoRoot "automated_scripts"
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "system_guides") -RepoRoot "system_guides"
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "dev_source\\runtime_store") -RepoRoot "dev_source/runtime_store"
-Publish-RepoFile -LocalPath $ZipPath -RepoPath "WYGGKR02_Dashboard_Agent_Setup.zip"
+Publish-RepoFile -LocalPath $ZipPath -RepoPath "dev_source/runtime_store/WYGGKR02_Dashboard_Agent_Setup.zip"
+Remove-RepoFileIfExists -RepoPath "WYGGKR02_Dashboard_Agent_Setup.zip"
 
 Write-Host "[OK] Repository publish complete"
