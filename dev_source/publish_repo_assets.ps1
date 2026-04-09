@@ -48,6 +48,12 @@ function Convert-ToRepoApiPath {
     return (($parts | ForEach-Object { [uri]::EscapeDataString($_) }) -join "/")
 }
 
+function Convert-ToAsciiSafeText {
+    param([string]$Text)
+    if ($null -eq $Text) { return "" }
+    return ($Text -replace "[^\u0020-\u007E]", "_")
+}
+
 function Get-RemoteMetadata {
     param([string]$RepoPath)
     $escapedPath = Convert-ToRepoApiPath $RepoPath
@@ -105,7 +111,7 @@ function Publish-RepoFile {
         }
 
         $payload = @{
-            message = "chore: publish $RepoPath"
+            message = "chore: publish " + (Convert-ToAsciiSafeText -Text $RepoPath)
             content = $contentBase64
             branch  = $Branch
         }
@@ -142,7 +148,7 @@ function Remove-RepoFileIfExists {
     $escapedPath = Convert-ToRepoApiPath $RepoPath
     $uri = "https://api.github.com/repos/$Owner/$Repo/contents/$escapedPath"
     $payload = @{
-        message = "chore: remove legacy path $RepoPath"
+        message = "chore: remove legacy path " + (Convert-ToAsciiSafeText -Text $RepoPath)
         sha = $remote.sha
         branch = $Branch
     } | ConvertTo-Json
