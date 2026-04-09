@@ -885,7 +885,7 @@
                 <span><code>WYGGKR02_Dashboard_Agent_Setup.zip</code>을 내려받아 압축 해제 후 <code>WYGGKR02_Dashboard_Agent_Setup.exe</code>를 실행한 뒤 5초 정도 후 다시 연결을 확인하세요.</span>
             </div>
             <div class="connection-actions">
-                <a class="action-btn secondary" id="launcherInlineBtn" href="https://github.com/jonggunelee/wyggkr02/releases/latest/download/WYGGKR02_Dashboard_Agent_Setup.zip">설치 파일 받기</a>
+                <a class="action-btn secondary" id="launcherInlineBtn" href="#">설치 파일 받기</a>
                 <button class="server-btn server-btn-start" id="serverStartBtn" onclick="retryAgentConnection()" style="display:none;">
                     연결 재확인
                 </button>
@@ -1630,10 +1630,8 @@
             document.getElementById('launcherInlineBtn')
         ];
         const agentSourceBtn = document.getElementById('agentSourceBtn');
-        const RELEASE_DOWNLOAD_BASE = 'https://github.com/jonggunelee/wyggkr02/releases/latest/download/';
-
         function getLauncherDownloadUrl() {
-            return `${RELEASE_DOWNLOAD_BASE}WYGGKR02_Dashboard_Agent_Setup.zip`;
+            return resolveRepositoryUrl('WYGGKR02_Dashboard_Agent_Setup.zip');
         }
 
         function resolveRepositoryUrl(relativePath) {
