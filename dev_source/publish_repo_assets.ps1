@@ -2,7 +2,8 @@ param(
     [string]$Owner = "JongGunelee",
     [string]$Repo = "wyggkr02",
     [string]$Branch = "main",
-    [string]$Token = ""
+    [string]$Token = "",
+    [string]$ZipPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,6 +26,9 @@ if ([string]::IsNullOrWhiteSpace($Token)) {
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptRoot
+if ([string]::IsNullOrWhiteSpace($ZipPath)) {
+    $ZipPath = Join-Path $scriptRoot "__temp_artifacts__\WYGGKR02_Dashboard_Agent_Setup.zip"
+}
 
 $headers = @{
     Authorization = "Bearer $Token"
@@ -150,5 +154,6 @@ else {
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "automated_scripts") -RepoRoot "automated_scripts"
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "system_guides") -RepoRoot "system_guides"
 Publish-RepoTree -LocalRoot (Join-Path $projectRoot "dev_source\\runtime_store") -RepoRoot "dev_source/runtime_store"
+Publish-RepoFile -LocalPath $ZipPath -RepoPath "WYGGKR02_Dashboard_Agent_Setup.zip"
 
 Write-Host "[OK] Repository publish complete"
