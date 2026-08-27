@@ -1,0 +1,592 @@
+//
+// Copyright (c) 2001-2013 Leon Lee author. All rights reserved.
+//
+//   homepage: http://www.flychk.com
+//   e-mail:   mailto:flychk@flychk.com
+//
+// Use of this source code is governed by a GPLv3 license that can be
+// found in the LICENSE file.
+
+#include "stdafx.h"
+#include "shell_change_notify.h"
+
+#include "option.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#endif
+
+namespace fxfile
+{
+namespace
+{
+typedef struct NotifyRegister
+{
+    LPCITEMIDLIST mFullPidl;
+    xpr_bool_t    mSubItems;
+} NotifyRegister;
+
+typedef WINSHELLAPI HANDLE (WINAPI *SHChangeNotifyRegisterFunc)(HWND                  aHwnd,
+                                                                DWORD                 aFlags, 
+                                                                xpr_slong_t           aEventMask,
+                                                                xpr_uint_t            aMsg,
+                                                                DWORD                 aItemCount,
+                                                                const NotifyRegister *aItems);
+
+typedef WINSHELLAPI xpr_bool_t (WINAPI *SHChangeNotifyDeregisterFunc)(HANDLE aNotify);
+
+// second parameter
+//
+//SHCNF_ACCEPT_INTERRUPTS       0x0001
+//SHCNF_ACCEPT_NON_INTERRUPTS   0x0002
+//SHCNF_NO_PROXY                0x8000
+
+//SHCNRF_InterruptLevel         0x0001
+//SHCNRF_ShellLevel             0x0002
+//SHCNRF_RecursiveInterrupt     0x1000 /* Must be combined with SHCNRF_InterruptLevel */
+//SHCNRF_NewDelivery            0x8000 /* Messages use shared memory */
+
+HANDLE createShellChangeNotify(HWND aHwnd, LPCITEMIDLIST aFullPidl, xpr_slong_t aEventMask, xpr_uint_t aMsg, xpr_bool_t aSubItems)
+{
+    HANDLE sShcnHandle = XPR_NULL;
+    HINSTANCE sDll;
+    SHChangeNotifyRegisterFunc sSHChangeNotifyRegisterFunc;
+
+    sDll = ::LoadLibrary(XPR_STRING_LITERAL("shell32.dll"));
+    if (XPR_IS_NOT_NULL(sDll))
+    {
+        sSHChangeNotifyRegisterFunc = (SHChangeNotifyRegisterFunc)GetProcAddress(sDll, (const xpr_char_t *)2);
+        if (XPR_IS_NOT_NULL(sSHChangeNotifyRegisterFunc))
+        {
+            NotifyRegister sNotifyRegister = {0};
+            sNotifyRegister.mFullPidl = aFullPidl;
+            sNotifyRegister.mSubItems = aSubItems;
+
+            sShcnHandle = sSHChangeNotifyRegisterFunc(aHwnd, 0x000000FF, aEventMask | SHCNE_INTERRUPT, aMsg, 1, &sNotifyRegister);
+        }
+
+        ::FreeLibrary(sDll);
+    }
+
+    return sShcnHandle;
+}
+
+xpr_bool_t destroyShellChangeNotify(HANDLE aShcnHandle)
+{
+    xpr_bool_t sResult = XPR_FALSE;
+    HINSTANCE sDll;
+    SHChangeNotifyDeregisterFunc sSHChangeNotifyDeregisterFunc;
+
+    sDll = ::LoadLibrary(XPR_STRING_LITERAL("shell32.dll"));
+    if (XPR_IS_NOT_NULL(sDll))
+    {
+        sSHChangeNotifyDeregisterFunc = (SHChangeNotifyDeregisterFunc)GetProcAddress(sDll, (const xpr_char_t *)4);
+        if (XPR_IS_NOT_NULL(sSHChangeNotifyDeregisterFunc))
+            sResult = sSHChangeNotifyDeregisterFunc(aShcnHandle);
+
+        ::FreeLibrary(sDll);
+    }
+
+    return sResult;
+}
+
+enum
+{
+    WM_SHCHANGENOTIFY     = WM_USER + 1000,
+    WM_SHCHANGENOTIFY_END = 0x7FFF,
+};
+} // namespace anonymous
+
+xpr_uint_t ShellChangeNotify::mIdMgr     = 100;
+xpr_bool_t ShellChangeNotify::mNoRefresh = XPR_FALSE;
+
+ShellChangeNotify::ShellChangeNotify(void)
+    : mThread(XPR_NULL)
+    , mEvent(XPR_NULL)
+    , mStopEvent(XPR_NULL)
+    , mThreadId(0)
+    , mInFlightShcn(XPR_NULL)
+{
+}
+
+ShellChangeNotify::~ShellChangeNotify(void)
+{
+}
+
+BEGIN_MESSAGE_MAP(ShellChangeNotify, CWnd)
+END_MESSAGE_MAP()
+
+void ShellChangeNotify::create(void)
+{
+    CreateEx(0, AfxRegisterWndClass(CS_GLOBALCLASS), XPR_STRING_LITERAL(""), 0,0,0,0,0,0,0);
+}
+
+void ShellChangeNotify::destroy(void)
+{
+    NotifyItem *sNotifyItem;
+    NotifyMap::iterator sIterator;
+
+    // Stop every producer first.  Deregistering after the worker/queue had
+    // already been destroyed allowed late shell callbacks to enqueue orphaned
+    // payloads with no consumer.
+    sIterator = mNotifyMap.begin();
+    for (; sIterator != mNotifyMap.end(); ++sIterator)
+    {
+        sNotifyItem = sIterator->second;
+        if (XPR_IS_NULL(sNotifyItem))
+            continue;
+
+        destroyShellChangeNotify(sNotifyItem->mNotify);
+        sNotifyItem->mNotify = XPR_NULL;
+    }
+
+    stop();
+    clearQueue();
+
+    sIterator = mNotifyMap.begin();
+    for (; sIterator != mNotifyMap.end(); ++sIterator)
+    {
+        sNotifyItem = sIterator->second;
+        if (XPR_IS_NULL(sNotifyItem))
+            continue;
+
+        COM_FREE(sNotifyItem->mFullPidl);
+
+        XPR_SAFE_DELETE(sNotifyItem);
+    }
+
+    mNotifyMap.clear();
+    mNotifyMsgMap.clear();
+    mMsgSet.clear();
+
+    DestroyWindow();
+}
+
+void ShellChangeNotify::setNoRefresh(xpr_bool_t aNoRefresh)
+{
+    mNoRefresh = aNoRefresh;
+}
+
+void ShellChangeNotify::start(void)
+{
+    if (XPR_IS_NOT_NULL(mThread))
+        return;
+
+    mEvent = ::CreateEvent(XPR_NULL, XPR_TRUE, XPR_FALSE, XPR_NULL);
+    if (XPR_IS_NULL(mEvent))
+        return;
+
+    mStopEvent = ::CreateEvent(XPR_NULL, XPR_TRUE, XPR_FALSE, XPR_NULL);
+    if (XPR_IS_NULL(mStopEvent))
+    {
+        CLOSE_HANDLE(mEvent);
+        return;
+    }
+
+    mThread = (HANDLE)::_beginthreadex(
+        XPR_NULL, 0, NotifyProc, this, 0, &mThreadId);
+    if (XPR_IS_NULL(mThread))
+    {
+        CLOSE_HANDLE(mEvent);
+        CLOSE_HANDLE(mStopEvent);
+        mThreadId = 0;
+    }
+}
+
+void ShellChangeNotify::stop(DWORD aStopMillseconds)
+{
+    if (XPR_IS_NULL(mThread))
+    {
+        CLOSE_HANDLE(mEvent);
+        CLOSE_HANDLE(mStopEvent);
+        return;
+    }
+
+    if (XPR_IS_NOT_NULL(mStopEvent))
+        ::SetEvent(mStopEvent);
+    // The worker waits only on owned events and therefore has a deterministic
+    // exit path.  TerminateThread could leave the mutex/heap corrupted.
+    XPR_UNUSED(aStopMillseconds);
+    ::WaitForSingleObject(mThread, INFINITE);
+
+    CLOSE_HANDLE(mThread);
+    CLOSE_HANDLE(mEvent);
+    CLOSE_HANDLE(mStopEvent);
+    mThreadId = 0;
+}
+
+void ShellChangeNotify::clearQueue(void)
+{
+    xpr::MutexGuard sLockGuard(mMutex);
+    while (!mShcnDeque.empty())
+    {
+        Shcn *sShcn = mShcnDeque.front();
+        mShcnDeque.pop_front();
+        if (XPR_IS_NOT_NULL(sShcn))
+        {
+            sShcn->Free();
+            XPR_SAFE_DELETE(sShcn);
+        }
+    }
+    mInFlightShcn = XPR_NULL;
+    mCancelledWatchSet.clear();
+}
+
+xpr_uint_t ShellChangeNotify::registerWatch(HWND aHwnd, xpr_uint_t aMsg, LPITEMIDLIST aFullPidl, xpr_slong_t aEventMask, xpr_bool_t aSubItems)
+{
+    if (XPR_IS_NULL(aHwnd) || XPR_IS_NULL(mThread) ||
+        XPR_IS_NULL(mEvent) || XPR_IS_NULL(mStopEvent))
+        return 0;
+
+    xpr_uint_t sNotifyMsg = WM_SHCHANGENOTIFY;
+
+    xpr_uint_t i;
+    for (i = WM_SHCHANGENOTIFY; i <= WM_SHCHANGENOTIFY_END; ++i)
+    {
+        if (mMsgSet.find(i) == mMsgSet.end())
+        {
+            sNotifyMsg = i;
+            break;
+        }
+    }
+
+    NotifyItem *sNotifyItem = new NotifyItem;
+    if (XPR_IS_NULL(sNotifyItem))
+        return 0;
+
+    sNotifyItem->mId        = mIdMgr++;
+    sNotifyItem->mHwnd      = aHwnd;
+    sNotifyItem->mMsg       = aMsg;
+    sNotifyItem->mFullPidl  = XPR_IS_NOT_NULL(aFullPidl) ? fxfile::base::Pidl::clone(aFullPidl) : XPR_NULL;
+    sNotifyItem->mNotifyMsg = sNotifyMsg;
+    sNotifyItem->mEventMask = aEventMask;
+    sNotifyItem->mNotify    = createShellChangeNotify(m_hWnd, aFullPidl, aEventMask, sNotifyItem->mNotifyMsg, aSubItems);
+
+    if (XPR_IS_NULL(sNotifyItem->mNotify))
+    {
+        COM_FREE(sNotifyItem->mFullPidl);
+        XPR_SAFE_DELETE(sNotifyItem);
+        return 0;
+    }
+
+    mMsgSet.insert(sNotifyMsg);
+    mNotifyMap[sNotifyItem->mId] = sNotifyItem;
+    mNotifyMsgMap[sNotifyItem->mNotifyMsg] = sNotifyItem;
+
+    return sNotifyItem->mId;
+}
+
+xpr_uint_t ShellChangeNotify::registerWatch(CWnd *aWnd, xpr_uint_t aMsg, LPITEMIDLIST aFullPidl, xpr_slong_t aEventMask, xpr_bool_t aSubItems)
+{
+    if (XPR_IS_NULL(aWnd))
+        return 0;
+
+    return registerWatch(aWnd->m_hWnd, aMsg, aFullPidl, aEventMask, aSubItems);
+}
+
+xpr_bool_t ShellChangeNotify::modifyWatch(xpr_uint_t aId, LPITEMIDLIST aFullPidl, xpr_bool_t aSubItems)
+{
+    xpr_bool_t sResult = XPR_FALSE;
+
+    NotifyItem *sNotifyItem;
+    NotifyMap::iterator sIterator;
+
+    sIterator = mNotifyMap.find(aId);
+    if (sIterator == mNotifyMap.end())
+        return XPR_FALSE;
+
+    sNotifyItem = sIterator->second;
+    if (XPR_IS_NULL(sNotifyItem))
+        return XPR_FALSE;
+
+    if (sNotifyItem->mId != aId)
+        return XPR_FALSE;
+
+    destroyShellChangeNotify(sNotifyItem->mNotify);
+    sNotifyItem->mNotify = XPR_NULL;
+    COM_FREE(sNotifyItem->mFullPidl);
+
+    sNotifyItem->mNotify   = createShellChangeNotify(m_hWnd, aFullPidl, sNotifyItem->mEventMask, sNotifyItem->mNotifyMsg, aSubItems);
+    sNotifyItem->mFullPidl = XPR_IS_NOT_NULL(aFullPidl) ? fxfile::base::Pidl::clone(aFullPidl) : XPR_NULL;
+
+    sResult = (sNotifyItem->mNotify != XPR_NULL);
+
+    return sResult;
+}
+
+void ShellChangeNotify::unregisterWatch(xpr_uint_t aId)
+{
+    NotifyItem *sNotifyItem;
+    NotifyMap::iterator sIterator;
+
+    sIterator = mNotifyMap.find(aId);
+    if (sIterator == mNotifyMap.end())
+        return;
+
+    sNotifyItem = sIterator->second;
+    if (XPR_IS_NOT_NULL(sNotifyItem))
+    {
+        destroyShellChangeNotify(sNotifyItem->mNotify);
+        sNotifyItem->mNotify = XPR_NULL;
+
+        // Remove not-yet-posted payloads and mark a dequeued payload so the
+        // worker cannot post it after its owner starts destroying the HWND.
+        {
+            xpr::MutexGuard sLockGuard(mMutex);
+            if (XPR_IS_NOT_NULL(mInFlightShcn) &&
+                mInFlightShcn->mWatchId == aId)
+                mCancelledWatchSet.insert(aId);
+
+            for (ShcnDeque::iterator sQueueIt = mShcnDeque.begin();
+                 sQueueIt != mShcnDeque.end(); )
+            {
+                Shcn *sPending = *sQueueIt;
+                if (XPR_IS_NOT_NULL(sPending) && sPending->mWatchId == aId)
+                {
+                    sPending->Free();
+                    XPR_SAFE_DELETE(sPending);
+                    sQueueIt = mShcnDeque.erase(sQueueIt);
+                }
+                else
+                {
+                    ++sQueueIt;
+                }
+            }
+        }
+        COM_FREE(sNotifyItem->mFullPidl);
+
+        MsgSet::iterator itMsg = mMsgSet.find(sNotifyItem->mNotifyMsg);
+        if (itMsg != mMsgSet.end())
+            mMsgSet.erase(itMsg);
+
+        NotifyMsgMap::iterator sNotifyMsgIterator = mNotifyMsgMap.find(sNotifyItem->mNotifyMsg);
+        if (sNotifyMsgIterator != mNotifyMsgMap.end())
+            mNotifyMsgMap.erase(sNotifyMsgIterator);
+
+        XPR_SAFE_DELETE(sNotifyItem);
+    }
+
+    mNotifyMap.erase(sIterator);
+}
+
+unsigned __stdcall ShellChangeNotify::NotifyProc(void *aParam)
+{
+    DWORD sExitCode = 0;
+
+    ShellChangeNotify *sShellChangeNotify = (ShellChangeNotify *)aParam;
+    if (XPR_IS_NOT_NULL(sShellChangeNotify))
+        sExitCode = sShellChangeNotify->OnNotify();
+
+    ::_endthreadex(sExitCode);
+    return 0;
+}
+
+DWORD ShellChangeNotify::OnNotify(void)
+{
+    Shcn *sShcn;
+
+    DWORD sWait;
+    HANDLE sEvents[2] = { mStopEvent, mEvent };
+
+    while (true)
+    {
+        sWait = ::WaitForMultipleObjects(2, sEvents, XPR_FALSE, INFINITE);
+        if (sWait == WAIT_OBJECT_0)
+            break;
+
+        if (sWait != WAIT_OBJECT_0+1)
+            continue;
+
+        {
+            xpr::MutexGuard sLockGuard(mMutex);
+
+            if (mShcnDeque.empty() == true)
+            {
+                ::ResetEvent(mEvent);
+                continue;
+            }
+
+            sShcn = mShcnDeque.front();
+            mShcnDeque.pop_front();
+            mInFlightShcn = sShcn;
+        }
+
+        if (XPR_IS_NOT_NULL(sShcn))
+        {
+            xpr_bool_t sPosted = XPR_FALSE;
+            {
+                xpr::MutexGuard sLockGuard(mMutex);
+                if (mCancelledWatchSet.find(sShcn->mWatchId) ==
+                        mCancelledWatchSet.end() &&
+                    ::IsWindow(sShcn->mHwnd) != XPR_FALSE)
+                {
+                    // Post while holding the cancellation mutex.  unregister
+                    // then either cancels before this point or returns after
+                    // the payload is in the HWND queue and can drain it.
+                    sPosted = ::PostMessage(sShcn->mHwnd, sShcn->mMsg,
+                                            (WPARAM)sShcn,
+                                            (LPARAM)sShcn->mEventId);
+                }
+                mCancelledWatchSet.erase(sShcn->mWatchId);
+                mInFlightShcn = XPR_NULL;
+            }
+
+            if (XPR_IS_FALSE(sPosted))
+            {
+                // Some events carry integral data in the same union.  Let the
+                // event-aware routine decide which members are PIDLs.
+                sShcn->Free();
+                XPR_SAFE_DELETE(sShcn);
+            }
+        }
+    }
+
+    return 0;
+}
+
+void ShellChangeNotify::insertQueue(HWND aHwnd, xpr_uint_t aMsg,
+                                    xpr_uint_t aWatchId,
+                                    LPCITEMIDLIST aWatchPidl,
+                                    WPARAM wParam, LPARAM lParam)
+{
+    ShcnDrives *sShcnDrives = *reinterpret_cast<ShcnDrives **>(wParam);
+    SHNotifyStruct *sSHNotifyStruct = (SHNotifyStruct *)wParam;
+    LPITEMIDLIST sPidl1 = (LPITEMIDLIST)sSHNotifyStruct->mItem1;
+    LPITEMIDLIST sPidl2 = (LPITEMIDLIST)sSHNotifyStruct->mItem2;
+    xpr_slong_t sEventId = (xpr_slong_t)lParam;
+
+    // FolderCtrl - filtering
+    CWnd *sWnd = CWnd::FromHandle(aHwnd);
+    if (XPR_IS_NOT_NULL(sWnd) &&
+        sWnd->IsKindOf(RUNTIME_CLASS(CTreeCtrl)))
+    {
+        if (sEventId == SHCNE_CREATE || 
+            sEventId == SHCNE_RENAMEITEM ||
+            sEventId == SHCNE_DELETE)
+            return;
+    }
+
+    Shcn *sShcn = new Shcn;
+    if (XPR_IS_NULL(sShcn))
+        return;
+
+    sShcn->mHwnd    = aHwnd;
+    sShcn->mMsg     = aMsg;
+    sShcn->mWatchId = aWatchId;
+    sShcn->mEventId = sEventId;
+
+    switch (sEventId)
+    {
+    case SHCNE_UPDATEIMAGE:
+        {
+            sShcn->mItem1 = sSHNotifyStruct->mItem1;
+            sShcn->mItem2 = sSHNotifyStruct->mItem2;
+            break;
+        }
+
+    case SHCNE_FREESPACE:
+        {
+            sShcn->mDrives = *sShcnDrives;
+            break;
+        }
+
+    default:
+        {
+            sShcn->mItem1 = sSHNotifyStruct->mItem1;
+            sShcn->mItem2 = sSHNotifyStruct->mItem2;
+
+            sShcn->mPidl1  = fxfile::base::Pidl::clone(sPidl1);
+            sShcn->mPidl2  = fxfile::base::Pidl::clone(sPidl2);
+
+            break;
+        }
+    }
+
+    {
+        xpr::MutexGuard sLockGuard(mMutex);
+
+        // A file-operation burst can otherwise grow this queue without bound
+        // and trigger thousands of sorts.  Preserve correctness by replacing
+        // this target's backlog with one folder rescan at the watched root.
+        static const xpr_size_t kMaxQueueSize = 512;
+        if (mShcnDeque.size() >= kMaxQueueSize &&
+            XPR_IS_NOT_NULL(aWatchPidl))
+        {
+            for (ShcnDeque::iterator sIt = mShcnDeque.begin();
+                 sIt != mShcnDeque.end(); )
+            {
+                Shcn *sPending = *sIt;
+                if (XPR_IS_NOT_NULL(sPending) &&
+                    sPending->mHwnd == aHwnd)
+                {
+                    sPending->Free();
+                    XPR_SAFE_DELETE(sPending);
+                    sIt = mShcnDeque.erase(sIt);
+                }
+                else
+                {
+                    ++sIt;
+                }
+            }
+
+            sShcn->Free();
+            sShcn->mEventId = SHCNE_UPDATEDIR;
+            sShcn->mPidl1 = fxfile::base::Pidl::clone(aWatchPidl);
+            sShcn->mPidl2 = XPR_NULL;
+        }
+
+        // Suppress adjacent duplicate shell echoes.
+        if (!mShcnDeque.empty())
+        {
+            Shcn *sLast = mShcnDeque.back();
+            if (XPR_IS_NOT_NULL(sLast) && sLast->mHwnd == sShcn->mHwnd &&
+                sLast->mEventId == sShcn->mEventId &&
+                sLast->mEventId != SHCNE_UPDATEIMAGE &&
+                sLast->mEventId != SHCNE_FREESPACE &&
+                ((XPR_IS_NULL(sLast->mPidl1) && XPR_IS_NULL(sShcn->mPidl1)) ||
+                 (XPR_IS_NOT_NULL(sLast->mPidl1) &&
+                  XPR_IS_NOT_NULL(sShcn->mPidl1) &&
+                  fxfile::base::Pidl::isEqual(sLast->mPidl1, sShcn->mPidl1))) &&
+                ((XPR_IS_NULL(sLast->mPidl2) && XPR_IS_NULL(sShcn->mPidl2)) ||
+                 (XPR_IS_NOT_NULL(sLast->mPidl2) &&
+                  XPR_IS_NOT_NULL(sShcn->mPidl2) &&
+                  fxfile::base::Pidl::isEqual(sLast->mPidl2, sShcn->mPidl2))))
+            {
+                sShcn->Free();
+                XPR_SAFE_DELETE(sShcn);
+                return;
+            }
+        }
+
+        mShcnDeque.push_back(sShcn);
+        ::SetEvent(mEvent);
+    }
+}
+
+LRESULT ShellChangeNotify::WindowProc(xpr_uint_t aMsg, WPARAM wParam, LPARAM lParam) 
+{
+    if (XPR_IS_RANGE(WM_SHCHANGENOTIFY, aMsg, WM_SHCHANGENOTIFY_END))
+    {
+        if (XPR_IS_FALSE(mNoRefresh))
+        {
+            NotifyItem *sNotifyItem;
+            NotifyMsgMap::iterator sNotifyMsgIterator;
+
+            sNotifyMsgIterator = mNotifyMsgMap.find(aMsg);
+            if (sNotifyMsgIterator != mNotifyMsgMap.end())
+            {
+                sNotifyItem = sNotifyMsgIterator->second;
+                if (XPR_IS_NOT_NULL(sNotifyItem) && sNotifyItem->mNotifyMsg == aMsg)
+                {
+                    insertQueue(sNotifyItem->mHwnd, sNotifyItem->mMsg,
+                                sNotifyItem->mId,
+                                sNotifyItem->mFullPidl, wParam, lParam);
+                    return XPR_TRUE;
+                }
+            }
+        }
+    }
+
+    return CWnd::WindowProc(aMsg, wParam, lParam);
+}
+} // namespace fxfile
