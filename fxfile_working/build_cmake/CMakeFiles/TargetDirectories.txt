@@ -1,0 +1,15 @@
+Z:/build_cmake/CMakeFiles/collect_artifacts.dir
+Z:/build_cmake/CMakeFiles/ALL_BUILD.dir
+Z:/build_cmake/CMakeFiles/ZERO_CHECK.dir
+Z:/build_cmake/src/base/CMakeFiles/base.dir
+Z:/build_cmake/src/base/CMakeFiles/ALL_BUILD.dir
+Z:/build_cmake/src/xpr/CMakeFiles/xpr.dir
+Z:/build_cmake/src/xpr/CMakeFiles/ALL_BUILD.dir
+Z:/build_cmake/src/fxfile-crash/CMakeFiles/fxfile-crash.dir
+Z:/build_cmake/src/fxfile-crash/CMakeFiles/ALL_BUILD.dir
+Z:/build_cmake/src/fxfile-keyhook/CMakeFiles/fxfile-keyhook.dir
+Z:/build_cmake/src/fxfile-keyhook/CMakeFiles/ALL_BUILD.dir
+Z:/build_cmake/src/fxfile/CMakeFiles/fxfile.dir
+Z:/build_cmake/src/fxfile/CMakeFiles/ALL_BUILD.dir
+Z:/build_cmake/src/fxfile-launcher/CMakeFiles/fxfile-launcher.dir
+Z:/build_cmake/src/fxfile-launcher/CMakeFiles/ALL_BUILD.dir

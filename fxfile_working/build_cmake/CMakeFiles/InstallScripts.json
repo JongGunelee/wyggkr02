@@ -1,0 +1,13 @@
+{
+	"InstallScripts" : 
+	[
+		"Z:/build_cmake/cmake_install.cmake",
+		"Z:/build_cmake/src/base/cmake_install.cmake",
+		"Z:/build_cmake/src/xpr/cmake_install.cmake",
+		"Z:/build_cmake/src/fxfile-crash/cmake_install.cmake",
+		"Z:/build_cmake/src/fxfile-keyhook/cmake_install.cmake",
+		"Z:/build_cmake/src/fxfile/cmake_install.cmake",
+		"Z:/build_cmake/src/fxfile-launcher/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

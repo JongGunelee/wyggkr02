@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Z:\build_cmake\src\fxfile-keyhook\CMakeFiles\fxfile-keyhook.dir\cmake_pch.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Z:\src\fxfile-keyhook\fxfile-keyhook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Z:\src\fxfile-keyhook\stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Z:\src\fxfile-keyhook\fxfile-keyhook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Z:\build_cmake\src\fxfile-keyhook\CMakeFiles\fxfile-keyhook.dir\Debug\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+    <ClInclude Include="Z:\build_cmake\src\fxfile-keyhook\CMakeFiles\fxfile-keyhook.dir\Release\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+    <ClInclude Include="Z:\build_cmake\src\fxfile-keyhook\CMakeFiles\fxfile-keyhook.dir\MinSizeRel\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+    <ClInclude Include="Z:\build_cmake\src\fxfile-keyhook\CMakeFiles\fxfile-keyhook.dir\RelWithDebInfo\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="Z:\src\fxfile-keyhook\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{ACA06605-2645-3A35-AACD-0CB75A54420A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Precompile Header File">
+      <UniqueIdentifier>{304CFCE4-4393-3E36-90E5-D09ECC501163}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{68AEEC33-EF37-3E43-A194-36CBE259AA84}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

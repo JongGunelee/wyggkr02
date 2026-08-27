@@ -2,7 +2,7 @@
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 운영 기준: 2026-08-27 — Task 072 (2×2 열 헤더 수동 드래그 직후 자동폭 복원 결함 수정, x64/x32 3개 패키지 배포 확정)_  
+_현재 운영 기준: 2026-08-27 — Task 073 (레거시/임시 산출물 정리 완료, bin 재생성 후 최종 통합 배포·VerifyOnly 완료)_  
 _현재 기능/배포 기준: Task 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
 
@@ -127,7 +127,7 @@ rg -n "AdaptiveFileOperation|IFileOperation|FOFX_RECYCLEONDELETE" fxfile_working
 
 | 위치/파일 | 정책 |
 |---|---|
-| `fxfile_working\build_*`, `obj`, `bin` 내부 컴파일 산출물 | 정상 빌드 캐시. 현재 빌드가 필요하면 보존하며, 정리 시 전체 재빌드 비용을 고지한다. |
+| `fxfile_working\build_*`, `obj`, `bin` 내부 컴파일 산출물 | 정상 빌드 캐시. `build_cmake*`/`obj`는 배포 완료 후 재생성 가능하지만, `bin`은 `VerifyOnly`가 현재 배포본과 비교하는 기준 산출물이므로 최종 검증 전에는 삭제하지 않는다. 이미 삭제했다면 즉시 preflight → `BuildDeployVerify`로 재생성하고 새 manifest/VerifyOnly까지 완료한다. |
 | `__BACKUP_보존용__` | 사용자 지정 보존 백업. 자동 삭제 금지. |
 | `__BUILD_TEMP_BACKUP__\unified_deploy_*` | 배포 롤백·manifest 증거. 기본 보존은 **최신 성공 1세대**다. 새 성공본 검증 뒤 이전 성공 세대와 완료된 smoke 복제본을 정리한다. 배포 진행 중인 폴더와 사용 중인 최신본은 삭제 금지. |
 | Task 시험 폴더의 `RESULTS.md`·manifest·작은 로그 | 장기 증거. 보존한다. |
@@ -6860,3 +6860,78 @@ _후속 정정: Task 059의 창·splitter 반응형 자동폭 구현은 유지�
 ---
 
 **— 실제 헤더 drag 직후 재예약되던 자동 reflow를 제거해 수동 열폭이 유지되도록 수정하고, 창·2×2 splitter 반응형 자동폭은 보존한 채 x64/x32 세 패키지 통합 배포 완료 (2026-08-27) —**
+
+---
+
+## Task 073 — 작업 중 생성된 레거시·임시 산출물 정리와 잠금 잔여물 식별 (2026-08-27)
+
+_작업 유형: 작업공간 정리 + 최신 배포 증거 보존 + TeraBox 잠금 원인 추적_  
+_작업 기준: 초입 §0.6~0.7, Task 054~055·061·072의 보존/정리 정책 우선_
+
+### 73.1 요청과 최종 판정
+
+사용자는 이번 섹션에서 리팩토링·빌드·배포 중 생성된 불필요 파일·폴더와 레거시 산출물을 전체 정리하도록 요청했다. 최종 판정은 다음과 같다.
+
+1. 재생성 가능한 빌드 cache, 구형 배포 세대, 중복 백업, 임시 GUI 시험 증거는 삭제 대상이었다.
+2. 최신 Task 072 최종 배포 증거, 최신 preflight, 최종 수동 drag 증거, 최초 원본 소스 백업, 사용자/클라우드 보존 의미가 있는 zip은 보존 대상이었다.
+3. 1차 정리에서 총 53개 target, 약 1,032.24MiB를 삭제했다.
+4. 최초 정리 시 4개 target, 약 95.44MiB는 `TeraBoxHost/TeraBoxUnite`가 파일 핸들을 잡고 있어 삭제하지 않았다. 이후 사용자가 FxFile을 닫고 TeraBox를 일시중지/종료한 뒤 같은 4개 경로만 재시도하여 모두 삭제했다. 강제 프로세스 종료, 강제 핸들 폐쇄, 보안/동기화 앱 우회는 수행하지 않았다.
+
+### 73.2 삭제한 대표 항목
+
+- `fxfile_working\build_cmake_x32`, `fxfile_working\build_cmake`, `fxfile_working\obj`: 최신 배포 완료 후 재생성 가능한 빌드 산출물.
+- `fxfile_working\bin`: 1차 정리에서는 재생성 가능한 산출물로 보고 삭제했으나, `VerifyOnly`의 비교 기준이므로 최종 검증 편의상 보존하는 편이 맞다. 삭제 후에는 반드시 새 preflight와 통합 빌드로 재생성한다.
+- `__BUILD_TEMP_BACKUP__`의 과거 `unified_deploy_*`, 과거 `preflight_*`, Task 051~071 중간 증거, hang dump: 최신 1세대와 Task 072 최종 증거를 제외한 레거시 증거.
+- `__BACKUP_보존용__\fxfile_original_backup` 내부 byte-identical `(1)` 중복 파일 19개: 원본 백업 의미가 없는 완전 중복.
+- `__BACKUP_보존용__\fxfile_dev`, 오래된 changelog 백업, Task 060 이전 중복 소스 zip 일부: 최신 개발 기준과 중복되는 레거시 산출물.
+
+### 73.3 보존한 항목
+
+- 최신 최종 배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260827_113739_772`
+- 최신 preflight: `__BUILD_TEMP_BACKUP__\preflight_20260827_113619_455`
+- 최종 Task 072 증거: `__BUILD_TEMP_BACKUP__\task072_manual_column_drag_stable_x64_20260827.json`
+- 원본 소스 백업: `__BACKUP_보존용__\fxfile_original_backup`
+- 고유 사용자/작업 로그 성격의 `codex_task059_rollouts_20260813.zip`
+- TeraBox 업로드/동기화 sidecar: 사용자 클라우드 상태를 나타낼 수 있어 보존
+
+### 73.4 잠금 잔여 항목과 최종 처리
+
+아래 4개는 삭제 대상이 맞았지만, 최초 Windows Restart Manager 조회 결과 TeraBox가 핸들을 잡고 있었다.
+
+| 잔여 항목 | 크기 | 잠금 프로세스 |
+|---|---:|---|
+| `__BACKUP_보존용__\fxfile_run_x64_Backup(레거시 64bit 빌드)` | 17.17MiB | `TeraBoxHost.exe` |
+| `__BACKUP_보존용__\fxfile_working_source_Task060_20260814.zip` | 55.89MiB | `TeraBoxUnite`, `TeraBoxHost.exe` |
+| `__BUILD_TEMP_BACKUP__\unified_deploy_20260821_125006_605` | 13.89MiB | `TeraBoxHost.exe` |
+| `__BUILD_TEMP_BACKUP__\unified_deploy_20260821_135506_290` | 8.49MiB | `TeraBoxHost.exe` |
+
+최종 처리: 사용자가 FxFile을 닫고 TeraBox를 일시중지/종료한 뒤 동일 4개 경로만 재삭제하여 `Requested=4`, `Deleted=4`, `DeletedMiB=95.44`, `Result=SUCCESS`로 완료했다. FxFile 최신 설치본과 최신 Task 072 증거는 삭제하지 않았다.
+
+### 73.5 최종 재빌드·검증
+
+- 1차 정리 직후 `fxfile_working\bin\x64`가 없어 공식 `VerifyOnly`가 `Artifact root does not exist`로 중단됐다. 이는 사용자 자료 삭제가 아니라 비교 기준 산출물 보존 정책의 판단 오류였다.
+- 새 preflight: `__BUILD_TEMP_BACKUP__\preflight_20260827_113619_455\preflight_report.json`, PASS, 필수 실패 0, x64/x32 configure PASS. Git repository health는 비필수 경고였다.
+- 최종 통합 build/deploy manifest: `D:\03 금일작업\00 임시\0000 FxFile\__BUILD_TEMP_BACKUP__\unified_deploy_20260827_113739_772\deployment_manifest.json`
+- x64/x32 빌드, 설치본 x64 + run_x64 + run_x32 배포, no-INI smoke: PASS
+- no-INI smoke:
+  - x64 skeleton 2.77초, 2×2 ready 8.39초, 4/4 pane
+  - x32 skeleton 4.29초, 2×2 ready 13.67초, 4/4 pane
+- C: 최종 여유 공간: 54.886GiB/23.692%, D: 최종 여유 공간: 2098.707GiB/56.326%.
+- 최신 세 패키지 루트에는 `fxfile.ini`와 `.fxfile`이 없고, `fxfile\fxfile.conf`, `fxfile\fxfile-main.conf`, `Languages\Korean.xml`은 모두 존재한다.
+- 설치본 x64와 `run_x64`의 SHA-256은 `5A8E0B3D1D3DE7E800E6549D7C3CDCCE3BFFA07FD7F5B334A03CB74DEB18A778`로 동일하다.
+- `run_x32`의 SHA-256은 `1E880B5816E5400BD0EBF62B65F8C2D2FF250116E035357545443A3544782AA9`이며, 32비트 실행 파일이라 x64와 다른 것이 정상이다.
+- `*.obj`, `*.tmp`, `*.ilk`, `*.pdb`, `*.tlog`, `*.lastbuildstate`, `*.log` stray 산출물은 보존 대상 외 범위에서 0개로 확인했다.
+- 공식 `Build-Deploy-Verify.ps1 -Mode VerifyOnly`는 실행 중인 설치본 `fxfile(PID 25420)` 때문에 최초에는 설계대로 중단됐다. 사용자가 FxFile을 닫은 뒤에는 `bin` 부재를 정확히 검출했고, `bin` 재생성 후 재실행한 최종 `VerifyOnly`는 exit 0으로 성공했다.
+- 새 성공본 확보 후 이전 성공 세대 `unified_deploy_20260827_083131_195`와 이전 preflight `preflight_20260827_082943_577`는 구세대가 되어 삭제했다. 최신 성공 1세대와 최신 preflight, Task 072의 작은 GUI 증거만 남긴다.
+
+### 73.6 교훈과 재발 방지
+
+1. 정리 작업은 먼저 최신 manifest/preflight/최종 증거를 확정하고, 그 외 구형 세대만 삭제한다.
+2. 백업 폴더 안의 `(1)` 파일은 이름만 보고 지우지 말고 byte hash가 같은 경우에만 삭제한다.
+3. TeraBox, OneDrive, 백신이 작업공간을 감시 중이면 오래된 exe/zip도 삭제 잠금이 걸릴 수 있다. 이런 경우 강제 핸들 폐쇄나 보안 우회가 아니라 동기화 앱의 정상 일시중지·종료 후 재시도한다.
+4. `bin`은 배포용으로 직접 복사하지 않는다는 과거 경고와 별개로, `VerifyOnly`의 기준 산출물이다. 용량 정리 때 `bin`까지 지우면 공식 검증이 불가능해지므로, 최종 검증 전에는 보존하거나 삭제 직후 반드시 재빌드로 복구한다.
+5. 정리용 1회성 스크립트는 작업 종료 후 소스 트리에 남기지 않는다. 반복 자동화가 필요한 경우에만 정식 도구로 승격하고 문서와 시험을 붙인다.
+
+---
+
+**— 최신 Task 072 수정 소스의 세 패키지 무결성을 보존하면서 레거시/임시 산출물을 정리하고, TeraBox 잠금 해제 후 잔여 95.44MiB까지 삭제했으며, `bin` 재생성용 preflight → BuildDeployVerify → 최종 VerifyOnly까지 완료 (2026-08-27) —**

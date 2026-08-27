@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>Z:\build_cmake_x32\Release\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>Z:\bin\x32\Release\fxfile-keyhook.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>Z:\bin\x32\Release\libxprw.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>Z:\bin\x32\Release\fxfile-launcher.exe</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

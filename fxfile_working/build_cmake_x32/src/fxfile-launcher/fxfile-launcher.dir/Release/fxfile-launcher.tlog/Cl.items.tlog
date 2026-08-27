@@ -1,0 +1,7 @@
+Z:\build_cmake_x32\src\fxfile-launcher\CMakeFiles\fxfile-launcher.dir\cmake_pch.cxx;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\cmake_pch.obj
+Z:\src\fxfile-launcher\CmdLineParser.cpp;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\CmdLineParser.obj
+Z:\src\fxfile-launcher\IniFile.cpp;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\IniFile.obj
+Z:\src\fxfile-launcher\LauncherApp.cpp;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\LauncherApp.obj
+Z:\src\fxfile-launcher\MainWnd.cpp;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\MainWnd.obj
+Z:\src\fxfile-launcher\SysTray.cpp;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\SysTray.obj
+Z:\src\fxfile-launcher\stdafx.cpp;Z:\build_cmake_x32\src\fxfile-launcher\fxfile-launcher.dir\Release\stdafx.obj
