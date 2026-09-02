@@ -202,6 +202,7 @@ public:
         xpr_uint_t      mFileListBkgndColor[MAX_VIEW_SPLIT];
         xpr_sint_t      mFileListTextColorType[MAX_VIEW_SPLIT];
         xpr_uint_t      mFileListTextColor[MAX_VIEW_SPLIT];
+        xpr_uint_t      mFileListRowFocusColor[MAX_VIEW_SPLIT];
         xpr_sint_t      mFileListInitFolderType[MAX_VIEW_SPLIT];
         xpr_tchar_t     mFileListInitFolder[MAX_VIEW_SPLIT][XPR_MAX_PATH + 1];
         xpr_bool_t      mFileListNoNetLastFolder[MAX_VIEW_SPLIT];

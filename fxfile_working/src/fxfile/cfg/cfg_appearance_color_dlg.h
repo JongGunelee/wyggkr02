@@ -39,6 +39,7 @@ private:
     {
         xpr_sint_t  mFileListTextColorType;
         xpr_uint_t  mFileListTextColor;
+        xpr_uint_t  mFileListRowFocusColor;
         xpr_sint_t  mFileListBkgndColorType;
         xpr_uint_t  mFileListBkgndColor;
         xpr_sint_t  mFolderTreeTextColorType;
@@ -59,6 +60,7 @@ private:
     xpr_sint_t      mOldViewIndex;
     CColourPickerXP mFileListTextCustomColorCtrl;
     CColourPickerXP mFileListBkgndCustomColorCtrl;
+    CColourPickerXP mFileListRowFocusColorCtrl;
     CColourPickerXP mFolderTreeTextCustomColorCtrl;
     CColourPickerXP mFolderTreeBkgndCustomColorCtrl;
     CColourPickerXP mFolderTreeInactiveHighlightColorCtrl;

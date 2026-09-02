@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [ValidateSet('BuildDeployVerify', 'DeployVerify', 'VerifyOnly')]
     [string]$Mode = 'BuildDeployVerify',
@@ -1220,7 +1220,7 @@ function Invoke-SmokeProcess([string]$StageRoot, [string]$Arch) {
             }
             $process.Refresh()
             $window = [FxUnifiedDeploy.NativeMethods]::GetLayoutWindow($process.Id, [ref]$readyViewCount)
-            $frameWindow = $process.MainWindowHandle
+            $frameWindow = if ($process.MainWindowHandle -ne [IntPtr]::Zero) { $process.MainWindowHandle } else { $window }
             if ($frameWindow -ne [IntPtr]::Zero) {
                 if ($skeletonSeconds -lt 0 -and
                     [FxUnifiedDeploy.NativeMethods]::GetIntProperty($frameWindow, 'FxFile.StartupLayoutSkeletonPainted') -eq 1) {

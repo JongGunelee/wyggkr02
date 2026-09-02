@@ -88,7 +88,27 @@ protected:
 
     ~ExplorerCtrlData(void)
     {
-        DESTROY_DELETE(mExplorerCtrl);
+        destroyExplorerCtrl();
+    }
+
+    void destroyExplorerCtrl(void)
+    {
+        // Withdraw ownership before DestroyWindow(). Native teardown is
+        // synchronous and can re-enter ExplorerPane through observers/messages.
+        ExplorerCtrl *sExplorerCtrl = mExplorerCtrl;
+        mExplorerCtrl = XPR_NULL;
+
+        if (XPR_IS_NULL(sExplorerCtrl))
+            return;
+
+        HWND sHwnd = sExplorerCtrl->GetSafeHwnd();
+        if (::IsWindow(sHwnd) &&
+            CWnd::FromHandlePermanent(sHwnd) == sExplorerCtrl)
+        {
+            sExplorerCtrl->DestroyWindow();
+        }
+
+        XPR_SAFE_DELETE(sExplorerCtrl);
     }
 
 protected:
@@ -111,6 +131,29 @@ ExplorerPane::ExplorerPane(void)
 
 ExplorerPane::~ExplorerPane(void)
 {
+}
+
+void ExplorerPane::setViewIndex(xpr_sint_t aViewIndex)
+{
+    if (getViewIndex() == aViewIndex)
+        return;
+
+    super::setViewIndex(aViewIndex);
+
+    // Splitter windows are reused across layout changes.  Rebind every tab
+    // control to the pane's new canonical #1-#6 index and queue its per-view
+    // options without refreshing or re-enumerating the current folder.
+    ExplorerCtrlMap::iterator sIterator = mExplorerCtrlMap.begin();
+    for (; sIterator != mExplorerCtrlMap.end(); ++sIterator)
+    {
+        ExplorerCtrlData *sExplorerCtrlData = sIterator->second;
+        if (XPR_IS_NULL(sExplorerCtrlData) || XPR_IS_NULL(sExplorerCtrlData->mExplorerCtrl))
+            continue;
+
+        ExplorerCtrl *sExplorerCtrl = sExplorerCtrlData->mExplorerCtrl;
+        sExplorerCtrl->setViewIndex(aViewIndex);
+        setExplorerOption(sExplorerCtrl, *gOpt);
+    }
 }
 
 void ExplorerPane::setExplorerObserver(ExplorerPaneObserver *aExplorerPaneObserver)
@@ -167,6 +210,10 @@ xpr_sint_t ExplorerPane::OnCreate(LPCREATESTRUCT aCreateStruct)
 
 void ExplorerPane::OnDestroy(void)
 {
+    // ExplorerView normally drains shared controls before tab callbacks. Keep
+    // this idempotent fallback for parent-driven native destruction.
+    destroySubPane();
+
     DESTROY_DELETE(mAddressBar);
     DESTROY_DELETE(mPathBar);
     DESTROY_DELETE(mStatusBar);
@@ -617,7 +664,10 @@ void ExplorerPane::setExplorerOption(ExplorerCtrl *aExplorerCtrl, const Option &
     sOption.mNoSort                           = aOption.mConfig.mFileListNoSort;
     sOption.mClassicThemeStyle                = aOption.mConfig.mFileListClassicThemeStyle;
     sOption.mGridLines                        = aOption.mConfig.mFileListGridLines;
+    // One user preference is propagated to every ExplorerCtrl in the active
+    // layout, so 2x2 and all other split layouts use the same focus mode.
     sOption.mFullRowSelect                    = aOption.mConfig.mFileListFullRowSelect;
+    sOption.mRowFocusColor                    = aOption.mConfig.mFileListRowFocusColor[mViewIndex];
 
     sOption.mThumbnailWidth                   = aOption.mConfig.mThumbnailWidth;
     sOption.mThumbnailHeight                  = aOption.mConfig.mThumbnailHeight;
@@ -653,24 +703,32 @@ void ExplorerPane::destroySubPane(xpr_uint_t aId)
         return;
 
     ExplorerCtrlData *sExplorerCtrlData = sIterator->second;
-    XPR_SAFE_DELETE(sExplorerCtrlData);
-
+    // Make the pane unreachable before DestroyWindow() can synchronously
+    // re-enter tab/pane callbacks.
     mExplorerCtrlMap.erase(sIterator);
+    if (mCurExplorerCtrlId == aId)
+        mCurExplorerCtrlId = InvalidId;
+
+    XPR_SAFE_DELETE(sExplorerCtrlData);
 }
 
 void ExplorerPane::destroySubPane(void)
 {
+    ExplorerCtrlMap sExplorerCtrlMap;
+    sExplorerCtrlMap.swap(mExplorerCtrlMap);
+    mCurExplorerCtrlId = InvalidId;
+
     ExplorerCtrlData *sExplorerCtrlData;
     ExplorerCtrlMap::iterator sIterator;
 
-    sIterator = mExplorerCtrlMap.begin();
-    for (; sIterator != mExplorerCtrlMap.end(); ++sIterator)
+    sIterator = sExplorerCtrlMap.begin();
+    for (; sIterator != sExplorerCtrlMap.end(); ++sIterator)
     {
         sExplorerCtrlData = sIterator->second;
         XPR_SAFE_DELETE(sExplorerCtrlData);
     }
 
-    mExplorerCtrlMap.clear();
+    sExplorerCtrlMap.clear();
 }
 
 xpr_size_t ExplorerPane::getSubPaneCount(void) const
@@ -931,8 +989,17 @@ void ExplorerPane::destroyDrivePathBar(void)
     if (XPR_IS_NULL(mDrivePathBar))
         return;
 
-    mDrivePathBar->destroyDriveBar();
-    DESTROY_DELETE(mDrivePathBar);
+    // DestroyWindow can synchronously re-enter the parent through WM_SIZE.
+    // Detach the member first so that a nested layout pass cannot use a bar
+    // whose native window is already being destroyed.  DriveToolBar::OnDestroy
+    // is the single owner of its button/thread cleanup.
+    DrivePathBar *sDrivePathBar = mDrivePathBar;
+    mDrivePathBar = XPR_NULL;
+
+    if (::IsWindow(sDrivePathBar->GetSafeHwnd()))
+        sDrivePathBar->DestroyWindow();
+
+    XPR_SAFE_DELETE(sDrivePathBar);
 }
 
 DrivePathBar *ExplorerPane::getDrivePathBar(void) const

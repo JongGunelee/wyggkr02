@@ -34,6 +34,7 @@ void CfgAppearanceColorDlg::DoDataExchange(CDataExchange* pDX)
     super::DoDataExchange(pDX);
     DDX_Control(pDX, IDC_CFG_COLOR_FILE_LIST_TEXT_CUSTOM_COLOR,          mFileListTextCustomColorCtrl);
     DDX_Control(pDX, IDC_CFG_COLOR_FILE_LIST_BKGND_CUSTOM_COLOR,         mFileListBkgndCustomColorCtrl);
+    DDX_Control(pDX, IDC_CFG_COLOR_FILE_LIST_ROW_FOCUS_COLOR,            mFileListRowFocusColorCtrl);
     DDX_Control(pDX, IDC_CFG_COLOR_FOLDER_TREE_TEXT_CUSTOM_COLOR,        mFolderTreeTextCustomColorCtrl);
     DDX_Control(pDX, IDC_CFG_COLOR_FOLDER_TREE_BKGND_CUSTOM_COLOR,       mFolderTreeBkgndCustomColorCtrl);
     DDX_Control(pDX, IDC_CFG_COLOR_FOLDER_TREE_INACTIVE_HIGHLIGHT_COLOR, mFolderTreeInactiveHighlightColorCtrl);
@@ -57,6 +58,7 @@ xpr_bool_t CfgAppearanceColorDlg::OnInitDialog(void)
     // disable apply button event
     addIgnoreApply(IDC_CFG_COLOR_FILE_LIST_TEXT_CUSTOM_COLOR);
     addIgnoreApply(IDC_CFG_COLOR_FILE_LIST_BKGND_CUSTOM_COLOR);
+    addIgnoreApply(IDC_CFG_COLOR_FILE_LIST_ROW_FOCUS_COLOR);
     addIgnoreApply(IDC_CFG_COLOR_FOLDER_TREE_TEXT_CUSTOM_COLOR);
     addIgnoreApply(IDC_CFG_COLOR_FOLDER_TREE_BKGND_CUSTOM_COLOR);
     addIgnoreApply(IDC_CFG_COLOR_FOLDER_TREE_INACTIVE_HIGHLIGHT_COLOR);
@@ -97,6 +99,10 @@ xpr_bool_t CfgAppearanceColorDlg::OnInitDialog(void)
     mFileListBkgndCustomColorCtrl.SetCustomText(gApp.loadString(XPR_STRING_LITERAL("popup.common.color_ctrl.other_color")));
     mFileListBkgndCustomColorCtrl.SetDefaultColor(::GetSysColor(COLOR_WINDOW));
 
+    mFileListRowFocusColorCtrl.SetDefaultText(gApp.loadString(XPR_STRING_LITERAL("popup.common.color_ctrl.automatic")));
+    mFileListRowFocusColorCtrl.SetCustomText(gApp.loadString(XPR_STRING_LITERAL("popup.common.color_ctrl.other_color")));
+    mFileListRowFocusColorCtrl.SetDefaultColor(DEF_FILE_LIST_ROW_FOCUS_COLOR);
+
     mFolderTreeTextCustomColorCtrl.SetDefaultText(gApp.loadString(XPR_STRING_LITERAL("popup.common.color_ctrl.automatic")));
     mFolderTreeTextCustomColorCtrl.SetCustomText(gApp.loadString(XPR_STRING_LITERAL("popup.common.color_ctrl.other_color")));
     mFolderTreeTextCustomColorCtrl.SetDefaultColor(::GetSysColor(COLOR_WINDOWTEXT));
@@ -124,6 +130,7 @@ xpr_bool_t CfgAppearanceColorDlg::OnInitDialog(void)
     SetDlgItemText(IDC_CFG_COLOR_APPLY_ALL,                      gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.button.apply_all")));
     SetDlgItemText(IDC_CFG_COLOR_LABEL_FILE_LIST_TEXT_COLOR,     gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.view.label.file_list_text_color")));
     SetDlgItemText(IDC_CFG_COLOR_LABEL_FILE_LIST_BKGND_COLOR,    gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.view.label.file_list_background_color")));
+    SetDlgItemText(IDC_CFG_COLOR_LABEL_FILE_LIST_ROW_FOCUS_COLOR,gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.view.label.file_list_row_focus_color")));
     SetDlgItemText(IDC_CFG_COLOR_LABEL_FOLDER_TREE_TEXT_COLOR,   gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.view.label.folder_tree_text_color")));
     SetDlgItemText(IDC_CFG_COLOR_LABEL_FOLDER_TREE_BKGND_COLOR,  gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.view.label.folder_tree_background_color")));
     SetDlgItemText(IDC_CFG_COLOR_FILE_LIST_BKGND_IMAGE,          gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.color.view.check.file_list_background_image")));
@@ -171,6 +178,7 @@ void CfgAppearanceColorDlg::onInit(const Option::Config &aConfig)
         pViewColor = new ViewColor;
         pViewColor->mFileListTextColorType    = aConfig.mFileListTextColorType[i];
         pViewColor->mFileListTextColor        = aConfig.mFileListTextColor[i];
+        pViewColor->mFileListRowFocusColor    = aConfig.mFileListRowFocusColor[i];
         pViewColor->mFileListBkgndColorType   = aConfig.mFileListBkgndColorType[i];
         pViewColor->mFileListBkgndColor       = aConfig.mFileListBkgndColor[i];
         pViewColor->mFolderTreeTextColorType  = aConfig.mFolderTreeTextColorType[i];
@@ -216,6 +224,7 @@ void CfgAppearanceColorDlg::onApply(Option::Config &aConfig)
 
         aConfig.mFileListTextColorType[i]    = sViewColor->mFileListTextColorType;
         aConfig.mFileListTextColor[i]        = sViewColor->mFileListTextColor;
+        aConfig.mFileListRowFocusColor[i]    = sViewColor->mFileListRowFocusColor;
         aConfig.mFileListBkgndColorType[i]   = sViewColor->mFileListBkgndColorType;
         aConfig.mFileListBkgndColor[i]       = sViewColor->mFileListBkgndColor;
         aConfig.mFolderTreeTextColorType[i]  = sViewColor->mFolderTreeTextColorType;
@@ -316,6 +325,7 @@ void CfgAppearanceColorDlg::loadViewColor(const ViewColor &aViewColor)
 
     mFileListTextCustomColorCtrl.SetColor(aViewColor.mFileListTextColor);
     mFileListBkgndCustomColorCtrl.SetColor(aViewColor.mFileListBkgndColor);
+    mFileListRowFocusColorCtrl.SetColor(aViewColor.mFileListRowFocusColor);
     mFolderTreeTextCustomColorCtrl.SetColor(aViewColor.mFolderTreeTextColor);
     mFolderTreeBkgndCustomColorCtrl.SetColor(aViewColor.mFolderTreeBkgndColor);
     mFolderTreeInactiveHighlightColorCtrl.SetColor(aViewColor.mFolderTreeHighlightColor);
@@ -410,6 +420,7 @@ void CfgAppearanceColorDlg::saveViewColor(ViewColor &aViewColor)
 
     aViewColor.mFileListTextColor        = mFileListTextCustomColorCtrl.GetColor();
     aViewColor.mFileListBkgndColor       = mFileListBkgndCustomColorCtrl.GetColor();
+    aViewColor.mFileListRowFocusColor    = mFileListRowFocusColorCtrl.GetColor();
     aViewColor.mFolderTreeTextColor      = mFolderTreeTextCustomColorCtrl.GetColor();
     aViewColor.mFolderTreeBkgndColor     = mFolderTreeBkgndCustomColorCtrl.GetColor();
     aViewColor.mFolderTreeHighlightColor = mFolderTreeInactiveHighlightColorCtrl.GetColor();
@@ -422,6 +433,7 @@ void CfgAppearanceColorDlg::saveViewColor(ViewColor &aViewColor)
 
     if (aViewColor.mFileListTextColor        == CLR_DEFAULT) aViewColor.mFileListTextColor        = mFileListTextCustomColorCtrl.GetDefaultColor();
     if (aViewColor.mFileListBkgndColor       == CLR_DEFAULT) aViewColor.mFileListBkgndColor       = mFileListBkgndCustomColorCtrl.GetDefaultColor();
+    if (aViewColor.mFileListRowFocusColor    == CLR_DEFAULT) aViewColor.mFileListRowFocusColor    = mFileListRowFocusColorCtrl.GetDefaultColor();
     if (aViewColor.mFolderTreeTextColor      == CLR_DEFAULT) aViewColor.mFolderTreeTextColor      = mFolderTreeTextCustomColorCtrl.GetDefaultColor();
     if (aViewColor.mFolderTreeBkgndColor     == CLR_DEFAULT) aViewColor.mFolderTreeBkgndColor     = mFolderTreeBkgndCustomColorCtrl.GetDefaultColor();
     if (aViewColor.mFolderTreeHighlightColor == CLR_DEFAULT) aViewColor.mFolderTreeHighlightColor = mFolderTreeInactiveHighlightColorCtrl.GetDefaultColor();

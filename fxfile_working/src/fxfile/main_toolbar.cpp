@@ -35,6 +35,15 @@ const xpr_byte_t TBSTYLE_2 = TBSTYLE_SEP;
 const xpr_byte_t TBSTYLE_3 = TBSTYLE_BUTTON | TBSTYLE_DROPDOWN;
 const xpr_byte_t TBSTYLE_4 = TBSTYLE_DROPDOWN | BTNS_WHOLEDROPDOWN;
 
+const xpr_sint_t kClockButtonGap          = 15;
+const xpr_sint_t kClockRightMargin        = 5;
+const xpr_sint_t kClockVerticalGap        = 2;
+const xpr_sint_t kClockPreferredWidth     = 320;
+const xpr_sint_t kClockMinimumWidth       = 90;
+const xpr_sint_t kClockFullTextWidth      = 280;
+const xpr_sint_t kClockMediumTextWidth    = 190;
+const xpr_sint_t kClockCompactTextWidth   = 110;
+
 TBBUTTONEX kTbButtons[] = {
     { {  0, ID_GO_BACK,               TBSTATE_ENABLED, TBSTYLE_3, 0, 0, 0 }, 1 },
     { {  1, ID_GO_FORWARD,            TBSTATE_ENABLED, TBSTYLE_3, 0, 0, 0 }, 1 },
@@ -90,6 +99,7 @@ TBBUTTONEX kTbButtons[] = {
 
 MainToolBar::MainToolBar(void)
     : mOldDragId(0)
+    , mClockSeparateRow(XPR_FALSE)
 {
     mDragDropIds.push_back(ID_GO_BOOKMARK);
     mDragDropIds.push_back(ID_FILE_VIEW);
@@ -142,6 +152,18 @@ void MainToolBar::OnTimer(UINT_PTR nIDEvent)
 {
     if (nIDEvent == 1055)
     {
+        // During startup the toolbar can be initialized while an ancestor is
+        // still hidden. IsWindowVisible() is false in that phase even though
+        // the clock itself has WS_VISIBLE, so repair a zero-sized clock after
+        // the frame/rebar has received its final size.
+        if (XPR_TEST_BITS(mClockCtrl.GetStyle(), WS_VISIBLE))
+        {
+            CRect sClockRect;
+            mClockCtrl.GetWindowRect(&sClockRect);
+            if (sClockRect.Width() <= 0 || sClockRect.Height() <= 0)
+                updateClockLayout();
+        }
+
         updateClock();
         return;
     }
@@ -177,12 +199,41 @@ void MainToolBar::updateClock(void)
         sDisp12Hour = 12;
 
     xpr_tchar_t sClockText[128] = {0};
-    _stprintf(sClockText,
-              _T("%04d-%02d-%02d (%s) %s %02d:%02d:%02d"),
-              st.wYear, st.wMonth, st.wDay,
-              sWeekDays[st.wDayOfWeek % 7],
-              sAmPm,
-              sDisp12Hour, st.wMinute, st.wSecond);
+
+    CRect sClockRect;
+    mClockCtrl.GetClientRect(&sClockRect);
+
+    double sScale = Option::getToolbarScaleFactor();
+    xpr_sint_t sFullTextWidth    = (xpr_sint_t)(kClockFullTextWidth    * sScale);
+    xpr_sint_t sMediumTextWidth  = (xpr_sint_t)(kClockMediumTextWidth  * sScale);
+    xpr_sint_t sCompactTextWidth = (xpr_sint_t)(kClockCompactTextWidth * sScale);
+
+    if (sClockRect.Width() >= sFullTextWidth)
+    {
+        _stprintf(sClockText,
+                  _T("%04d-%02d-%02d (%s) %s %02d:%02d:%02d"),
+                  st.wYear, st.wMonth, st.wDay,
+                  sWeekDays[st.wDayOfWeek % 7],
+                  sAmPm,
+                  sDisp12Hour, st.wMinute, st.wSecond);
+    }
+    else if (sClockRect.Width() >= sMediumTextWidth)
+    {
+        _stprintf(sClockText,
+                  _T("%04d-%02d-%02d %02d:%02d:%02d"),
+                  st.wYear, st.wMonth, st.wDay,
+                  st.wHour, st.wMinute, st.wSecond);
+    }
+    else if (sClockRect.Width() >= sCompactTextWidth)
+    {
+        _stprintf(sClockText,
+                  _T("%s %02d:%02d:%02d"),
+                  sAmPm, sDisp12Hour, st.wMinute, st.wSecond);
+    }
+    else
+    {
+        _stprintf(sClockText, _T("%02d:%02d"), st.wHour, st.wMinute);
+    }
 
     mClockCtrl.setText(sClockText);
 }
@@ -192,8 +243,53 @@ void MainToolBar::showClock(xpr_bool_t aShow)
     if (mClockCtrl.m_hWnd != XPR_NULL)
     {
         mClockCtrl.ShowWindow(aShow ? SW_SHOW : SW_HIDE);
+        if (XPR_IS_FALSE(aShow))
+            mClockSeparateRow = XPR_FALSE;
+
+        // The clock is a child of the toolbar rather than a toolbar button.
+        // Recalculate the rebar band so a checked clock cannot be clipped by
+        // a saved/customized button-only band width.
+        UpdateToolbarSize();
+
+        CFrameWnd *sFrameWnd = GetParentFrame();
+        if (sFrameWnd != XPR_NULL && ::IsWindow(sFrameWnd->m_hWnd))
+            sFrameWnd->RecalcLayout();
+
         updateClockLayout();
+        updateClock();
     }
+}
+
+xpr_sint_t MainToolBar::getClockIdealReservedWidth(void) const
+{
+    if (mClockCtrl.m_hWnd == XPR_NULL || !XPR_TEST_BITS(mClockCtrl.GetStyle(), WS_VISIBLE))
+        return 0;
+
+    double sScale = Option::getToolbarScaleFactor();
+    return (xpr_sint_t)((kClockButtonGap + kClockPreferredWidth + kClockRightMargin) * sScale);
+}
+
+xpr_sint_t MainToolBar::getClockMinimumReservedWidth(void) const
+{
+    if (mClockCtrl.m_hWnd == XPR_NULL || !XPR_TEST_BITS(mClockCtrl.GetStyle(), WS_VISIBLE))
+        return 0;
+
+    double sScale = Option::getToolbarScaleFactor();
+    return (xpr_sint_t)((kClockButtonGap + kClockMinimumWidth + kClockRightMargin) * sScale);
+}
+
+xpr_sint_t MainToolBar::getClockRowHeight(void) const
+{
+    if (mClockCtrl.m_hWnd == XPR_NULL || !XPR_TEST_BITS(mClockCtrl.GetStyle(), WS_VISIBLE))
+        return 0;
+
+    double sScale = Option::getToolbarScaleFactor();
+    return max(28, (xpr_sint_t)(30 * sScale));
+}
+
+xpr_bool_t MainToolBar::isClockSeparateRow(void) const
+{
+    return mClockSeparateRow;
 }
 
 void MainToolBar::updateClockLayout(void)
@@ -209,6 +305,7 @@ void MainToolBar::updateClockLayout(void)
     xpr_sint_t sBtnCount = sToolBarCtrl.GetButtonCount();
 
     int sMaxRight = 0;
+    int sMaxBottom = 0;
     CRect sBtnRect;
     TBBUTTON sButton;
 
@@ -221,6 +318,8 @@ void MainToolBar::updateClockLayout(void)
                 GetItemRect(i, &sBtnRect);
                 if (sBtnRect.right > sMaxRight)
                     sMaxRight = sBtnRect.right;
+                if (sBtnRect.bottom > sMaxBottom)
+                    sMaxBottom = sBtnRect.bottom;
             }
         }
     }
@@ -231,19 +330,54 @@ void MainToolBar::updateClockLayout(void)
     if (sBarRect.Width() <= 0 || sBarRect.Height() <= 0)
         return;
 
-    xpr_sint_t minLeft = (sMaxRight > 0) ? (sMaxRight + 15) : 5;
-    xpr_sint_t sWidth = (xpr_sint_t)(320 * sScale);
-    xpr_sint_t sHeight = max(24, min(sBarRect.Height() - 4, (xpr_sint_t)(26 * sScale)));
-    xpr_sint_t sTop = (sBarRect.Height() - sHeight) / 2;
+    xpr_sint_t sGap = (xpr_sint_t)(kClockButtonGap * sScale);
+    xpr_sint_t sRightMargin = (xpr_sint_t)(kClockRightMargin * sScale);
+    xpr_sint_t minLeft = (sMaxRight > 0) ? (sMaxRight + sGap) : sRightMargin;
+    xpr_sint_t sPreferredWidth = (xpr_sint_t)(kClockPreferredWidth * sScale);
+    xpr_sint_t sMinimumWidth = (xpr_sint_t)(kClockMinimumWidth * sScale);
+    xpr_sint_t sAvailableWidth = max(0, (xpr_sint_t)(sBarRect.Width() - minLeft - sRightMargin));
+
+    xpr_bool_t sClockRequestedVisible = XPR_TEST_BITS(mClockCtrl.GetStyle(), WS_VISIBLE) ? XPR_TRUE : XPR_FALSE;
+    xpr_bool_t sSeparateRow = (XPR_IS_TRUE(sClockRequestedVisible) && sAvailableWidth < sMinimumWidth) ? XPR_TRUE : XPR_FALSE;
+    if (mClockSeparateRow != sSeparateRow)
+    {
+        mClockSeparateRow = sSeparateRow;
+        UpdateToolbarSize();
+
+        CFrameWnd *sFrameWnd = GetParentFrame();
+        if (sFrameWnd != XPR_NULL && ::IsWindow(sFrameWnd->m_hWnd))
+            sFrameWnd->RecalcLayout();
+
+        GetClientRect(&sBarRect);
+    }
+
+    xpr_sint_t sTop;
+    if (XPR_IS_TRUE(mClockSeparateRow))
+    {
+        minLeft = sRightMargin;
+        sAvailableWidth = max(0, (xpr_sint_t)(sBarRect.Width() - minLeft - sRightMargin));
+        sTop = sMaxBottom + (xpr_sint_t)(kClockVerticalGap * sScale);
+    }
+    else
+    {
+        sTop = 0;
+    }
+
+    xpr_sint_t sWidth = min(sPreferredWidth, sAvailableWidth);
+    xpr_sint_t sMaxHeight = max(0, (xpr_sint_t)(sBarRect.Height() - sTop - 2));
+    xpr_sint_t sHeight = min(sMaxHeight, max(24, (xpr_sint_t)(26 * sScale)));
+    if (XPR_IS_FALSE(mClockSeparateRow))
+        sTop = (sBarRect.Height() - sHeight) / 2;
 
     xpr_sint_t sLeft = minLeft;
     if (gOpt != XPR_NULL && gOpt->mMain.mClockPosX >= minLeft)
     {
-        xpr_sint_t maxLeft = max(minLeft, (xpr_sint_t)(sBarRect.Width() - sWidth - 5));
+        xpr_sint_t maxLeft = max(minLeft, (xpr_sint_t)(sBarRect.Width() - sWidth - sRightMargin));
         sLeft = min(maxLeft, (xpr_sint_t)gOpt->mMain.mClockPosX);
     }
 
     mClockCtrl.MoveWindow(sLeft, sTop, sWidth, sHeight, TRUE);
+    updateClock();
     mClockCtrl.Invalidate(FALSE);
 }
 

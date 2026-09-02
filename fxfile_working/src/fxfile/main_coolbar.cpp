@@ -353,12 +353,38 @@ void MainCoolBar::onUpdatedToolbarSize(CToolBarEx &theToolBar)
         }
     }
 
-    // Modify parent band info accordingly
+    xpr_sint_t sMinChildWidth = 0;
+    if (&theToolBar == &mMainToolBar)
+    {
+        xpr_sint_t sClockRowHeight = mMainToolBar.getClockRowHeight();
+        if (sClockRowHeight > 0)
+        {
+            // A saved rebar state can restore a zero-height main-toolbar
+            // band before button rectangles are ready. The requested-visible
+            // clock still needs one real row so its child HWND is not left at
+            // 0x0 indefinitely.
+            cyChild = max(cyChild, sClockRowHeight);
+            sMinChildWidth = mMainToolBar.getClockMinimumReservedWidth();
+        }
+
+        if (XPR_IS_TRUE(mMainToolBar.isClockSeparateRow()))
+        {
+            cxIdeal = max(cxIdeal, mMainToolBar.getClockIdealReservedWidth());
+            cyChild += sClockRowHeight;
+        }
+        else
+        {
+            cxIdeal += mMainToolBar.getClockIdealReservedWidth();
+        }
+    }
+
+    // Modify parent band info accordingly. The clock is a child window, not
+    // a toolbar button, so its width must be included explicitly.
     REBARBANDINFO sRebarBandInfo;
     sRebarBandInfo.cbSize     = sizeof(sRebarBandInfo);
     sRebarBandInfo.fMask      = RBBIM_CHILDSIZE | RBBIM_IDEALSIZE;
     sRebarBandInfo.cxIdeal    = cxIdeal;
-    sRebarBandInfo.cxMinChild = 0;
+    sRebarBandInfo.cxMinChild = sMinChildWidth;
     sRebarBandInfo.cyMinChild = cyChild;
     VERIFY(sReBarCtrl.SetBandInfo(sBandIndex, &sRebarBandInfo));
 }

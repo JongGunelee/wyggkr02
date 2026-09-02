@@ -393,7 +393,7 @@ xpr_bool_t MainFrame::OnCreateClient(LPCREATESTRUCT aCreateStruct, CCreateContex
             sRowCount = sCmdRowCount;
 
         if (XPR_IS_RANGE(1, sCmdColumnCount, MAX_VIEW_SPLIT_COLUMN))
-            sRowCount = sCmdColumnCount;
+            sColumnCount = sCmdColumnCount;
     }
 
     if (!XPR_IS_RANGE(1, sRowCount, MAX_VIEW_SPLIT_ROW))
@@ -974,6 +974,7 @@ void MainFrame::setChangedOption(Option &aOption)
         sExplorerView = getExplorerView(i);
         if (XPR_IS_NOT_NULL(sExplorerView))
         {
+            sExplorerView->setViewIndex(i);
             sExplorerView->setChangedOption(aOption);
         }
     }
@@ -3553,6 +3554,31 @@ void MainFrame::splitView(xpr_sint_t aRowCount, xpr_sint_t aColumnCount, xpr_boo
 
     // split view
     mSplitter.split(aRowCount, aColumnCount);
+
+    // Splitter retains windows that occupy the same physical cell.  Their
+    // former view index is not necessarily valid in the new row/column shape
+    // (for example 2x2 -> 2x3).  Canonicalize before any option-dependent
+    // work so every pane consumes its own #1-#6 settings.
+    for (xpr_sint_t sRow = 0; sRow < aRowCount; ++sRow)
+    {
+        for (xpr_sint_t sColumn = 0; sColumn < aColumnCount; ++sColumn)
+        {
+            ExplorerView *sExplorerView =
+                dynamic_cast<ExplorerView *>(mSplitter.getPaneWnd(sRow, sColumn));
+            if (XPR_IS_NULL(sExplorerView))
+                continue;
+
+            xpr_sint_t sViewIndex = 0;
+            if (XPR_IS_TRUE(getViewIndexFromViewSplit(aRowCount,
+                                                     aColumnCount,
+                                                     sRow,
+                                                     sColumn,
+                                                     sViewIndex)))
+            {
+                sExplorerView->setViewIndex(sViewIndex);
+            }
+        }
+    }
 
     // evaluate ratio for new view split
     if (aRowCount == 1 && aColumnCount == 2)

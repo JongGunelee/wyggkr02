@@ -48,6 +48,7 @@ public:
 
 public:
     void setExplorerObserver(ExplorerPaneObserver *aExplorerPaneObserver);
+    void setViewIndex(xpr_sint_t aViewIndex);
 
     xpr_bool_t Create(CWnd *aParentWnd, xpr_uint_t aId, const RECT &aRect);
 

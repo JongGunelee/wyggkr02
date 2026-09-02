@@ -134,6 +134,7 @@ FolderCtrl::FolderCtrl(void)
     mOldSelTreeItem     = XPR_NULL;
 
     mShcnId             = 0;
+    mDestroying         = XPR_FALSE;
 }
 
 FolderCtrl::~FolderCtrl(void)
@@ -233,6 +234,10 @@ xpr_sint_t FolderCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
 
 void FolderCtrl::OnDestroy(void) 
 {
+    // Shell notifications are posted asynchronously.  Make every handler
+    // reject new work before the tree window and its item data are torn down.
+    mDestroying = XPR_TRUE;
+
     ShellChangeNotify::instance().unregisterWatch(mShcnId);
 
     if (XPR_IS_NOT_NULL(mShellIcon))
@@ -1548,6 +1553,9 @@ xpr_bool_t FolderCtrl::PreTranslateMessage(MSG* pMsg)
 
 LRESULT FolderCtrl::OnFileChangeNotify(WPARAM wParam, LPARAM lParam)
 {
+    if (XPR_IS_FALSE(canProcessShellChange()))
+        return 0;
+
     FileChangeWatcher::WatchId sWatchId = (FileChangeWatcher::WatchId)wParam;
     HTREEITEM sTreeItem = (HTREEITEM)lParam;
 
@@ -1581,6 +1589,13 @@ LRESULT FolderCtrl::OnShellChangeNotify(WPARAM wParam, LPARAM lParam)
 
     if (XPR_IS_NULL(sShcn))
         return 0;
+
+    if (XPR_IS_FALSE(canProcessShellChange()))
+    {
+        sShcn->Free();
+        XPR_SAFE_DELETE(sShcn);
+        return 0;
+    }
 
 #ifdef XPR_CFG_BUILD_DEBUG
     xpr::string sMsg(XPR_STRING_LITERAL(""));
@@ -1974,8 +1989,16 @@ xpr_bool_t FolderCtrl::OnShcnDriveRemove(Shcn *aShcn)
     return sResult;
 }
 
+xpr_bool_t FolderCtrl::canProcessShellChange(void) const
+{
+    return (XPR_IS_FALSE(mDestroying) && ::IsWindow(m_hWnd)) ? XPR_TRUE : XPR_FALSE;
+}
+
 xpr_bool_t FolderCtrl::beginShcn(xpr_slong_t aEventId, xpr_tchar_t *aFullPath1, xpr_tchar_t *aFullPath2, ShNotifyInfo *aShNotifyInfo)
 {
+    if (XPR_IS_FALSE(canProcessShellChange()))
+        return XPR_FALSE;
+
     // Search Parent Path
     HTREEITEM sParentTreeItem = XPR_NULL;
     if (aEventId == SHCNE_UPDATEDIR)
@@ -2024,6 +2047,9 @@ xpr_bool_t FolderCtrl::beginShcn(xpr_slong_t aEventId, xpr_tchar_t *aFullPath1, 
 
 xpr_bool_t FolderCtrl::endShcn(HTREEITEM aTreeItem)
 {
+    if (XPR_IS_FALSE(canProcessShellChange()) || XPR_IS_NULL(aTreeItem))
+        return XPR_FALSE;
+
     LPTVITEMDATA sTvItemData = (LPTVITEMDATA)GetItemData(aTreeItem);
     if (XPR_IS_NULL(sTvItemData))
         return XPR_FALSE;
@@ -2052,7 +2078,7 @@ xpr_bool_t FolderCtrl::endShcn(HTREEITEM aTreeItem)
 
 void FolderCtrl::enumerateShcn(HTREEITEM aParentTreeItem, ShNotifyInfo *aShNotifyInfo)
 {
-    if (XPR_IS_NULL(aParentTreeItem))
+    if (XPR_IS_FALSE(canProcessShellChange()) || XPR_IS_NULL(aParentTreeItem))
     {
         return;
     }
@@ -2124,6 +2150,12 @@ xpr_bool_t FolderCtrl::updateShcnPidlItem(LPSHELLFOLDER  aShellFolder,
                                           HTREEITEM      aParentTreeItem,
                                           ShNotifyInfo  *aShNotifyInfo)
 {
+    if (XPR_IS_FALSE(canProcessShellChange()))
+    {
+        COM_FREE(aPidl);
+        return XPR_TRUE;
+    }
+
     xpr_ulong_t  sShellAttributes = 0;
     DWORD        sFileAttributes  = 0;
     LPTVITEMDATA sTvItemData;
@@ -2184,11 +2216,14 @@ xpr_bool_t FolderCtrl::updateShcnPidlItem(LPSHELLFOLDER  aShellFolder,
 
 xpr_bool_t FolderCtrl::updateShcnTvItemData(LPTVITEMDATA aTvItemData, HTREEITEM aParentTreeItem, ShNotifyInfo *aShNotifyInfo)
 {
+    if (XPR_IS_FALSE(canProcessShellChange()))
+        return XPR_FALSE;
+
     xpr_tchar_t sParsing1[XPR_MAX_PATH + 1];
     GetName(aShNotifyInfo->mShcn->mPidl1, SHGDN_FORPARSING, sParsing1);
     GetName(aTvItemData->mShellFolder, aTvItemData->mPidl, SHGDN_INFOLDER, aShNotifyInfo->mNewName);
 
-    if (GetChildItem(aParentTreeItem) == XPR_NULL)
+    if (XPR_IS_FALSE(canProcessShellChange()) || GetChildItem(aParentTreeItem) == XPR_NULL)
         return XPR_FALSE;
 
     TVITEM sTvItem = {0};
@@ -2199,6 +2234,9 @@ xpr_bool_t FolderCtrl::updateShcnTvItemData(LPTVITEMDATA aTvItemData, HTREEITEM 
     HTREEITEM sTreeItem = GetChildItem(aParentTreeItem);
     while (XPR_IS_NOT_NULL(sTreeItem))
     {
+        if (XPR_IS_FALSE(canProcessShellChange()))
+            return XPR_FALSE;
+
         sName = GetItemText(sTreeItem);
         if (sName.compare_case(aShNotifyInfo->mNewName) == 0)
         {
@@ -2212,18 +2250,26 @@ xpr_bool_t FolderCtrl::updateShcnTvItemData(LPTVITEMDATA aTvItemData, HTREEITEM 
             // folder name upper/lower case
             if (sName != aShNotifyInfo->mNewName || sIconIndex != sTvItem.iImage)
             {
-                SetItemText(sTreeItem, aShNotifyInfo->mNewName);
-
                 sTvItemData2 = (LPTVITEMDATA)GetItemData(sTreeItem);
+                if (XPR_IS_NULL(sTvItemData2) || XPR_IS_FALSE(canProcessShellChange()))
+                    return XPR_FALSE;
+
+                SetItemText(sTreeItem, aShNotifyInfo->mNewName);
                 SetItemData(sTreeItem, (DWORD_PTR)aTvItemData);
 
-                getTreeIcon(aTvItemData->mShellFolder, aTvItemData->mPidl, aTvItemData->mFullPidl, &sTvItem);
-                SetItem(&sTvItem);
-
+                // Ownership of aTvItemData now belongs to the tree control.
+                // Do not let the caller free it if shutdown begins here.
                 COM_RELEASE(sTvItemData2->mShellFolder);
                 COM_FREE(sTvItemData2->mFullPidl);
                 COM_FREE(sTvItemData2->mPidl);
                 XPR_SAFE_DELETE(sTvItemData2);
+
+                if (XPR_IS_FALSE(canProcessShellChange()))
+                    return XPR_TRUE;
+
+                getTreeIcon(aTvItemData->mShellFolder, aTvItemData->mPidl, aTvItemData->mFullPidl, &sTvItem);
+                if (XPR_IS_TRUE(canProcessShellChange()))
+                    SetItem(&sTvItem);
 
                 return XPR_TRUE;
             }
@@ -2249,13 +2295,16 @@ xpr_bool_t FolderCtrl::updateShcnTvItemData(LPTVITEMDATA aTvItemData, HTREEITEM 
 
     sTvInsertStruct.hInsertAfter = TVI_LAST;
     sTvInsertStruct.hParent      = aParentTreeItem;
-    if (InsertItem(&sTvInsertStruct) != XPR_NULL)
+    if (XPR_IS_TRUE(canProcessShellChange()) && InsertItem(&sTvInsertStruct) != XPR_NULL)
         sResult = XPR_TRUE;
 
-    sTvSortCb.hParent     = aParentTreeItem;
-    sTvSortCb.lParam      = 0;
-    sTvSortCb.lpfnCompare = TreeViewCompareProc;
-    SortChildrenCB(&sTvSortCb);
+    if (XPR_IS_TRUE(sResult) && XPR_IS_TRUE(canProcessShellChange()))
+    {
+        sTvSortCb.hParent     = aParentTreeItem;
+        sTvSortCb.lParam      = 0;
+        sTvSortCb.lpfnCompare = TreeViewCompareProc;
+        SortChildrenCB(&sTvSortCb);
+    }
 
     return sResult;
 }

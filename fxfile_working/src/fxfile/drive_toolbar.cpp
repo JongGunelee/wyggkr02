@@ -131,6 +131,9 @@ DWORD DriveToolBar::OnDriveProc(void)
 
 LRESULT DriveToolBar::OnDriveIconUpdate(WPARAM wParam, LPARAM lParam)
 {
+    if (::IsWindow(GetSafeHwnd()) == FALSE)
+        return 0;
+
     xpr_sint_t sIndex = (xpr_sint_t)wParam;
     xpr_sint_t sIconIndex  = (xpr_sint_t)lParam;
 
@@ -225,6 +228,15 @@ void DriveToolBar::destroyDriveBar(void)
     }
 
     mDriveDeque.clear();
+
+    // The parent can be in DestroyWindow re-entrancy.  There is no toolbar
+    // control left to edit in that state, but the worker and data above still
+    // have to be released exactly once.
+    if (::IsWindow(GetSafeHwnd()) == FALSE)
+    {
+        mBarCreated = XPR_FALSE;
+        return;
+    }
 
     CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
 

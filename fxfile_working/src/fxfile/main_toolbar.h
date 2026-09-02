@@ -39,6 +39,10 @@ public:
     void updateClock(void);
     void showClock(xpr_bool_t aShow);
     void updateClockLayout(void);
+    xpr_sint_t getClockIdealReservedWidth(void) const;
+    xpr_sint_t getClockMinimumReservedWidth(void) const;
+    xpr_sint_t getClockRowHeight(void) const;
+    xpr_bool_t isClockSeparateRow(void) const;
 
 protected:
     // from DropTargetObserver
@@ -67,6 +71,7 @@ protected:
 
 protected:
     ClockCtrl mClockCtrl;
+    xpr_bool_t mClockSeparateRow;
 
 protected:
     DECLARE_MESSAGE_MAP()

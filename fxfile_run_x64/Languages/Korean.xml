@@ -1514,6 +1514,7 @@
             <String ID="popup.cfg.body.appearance.color.view.file_list_text_color.custom">사용자 정의 색</String>
             <String ID="popup.cfg.body.appearance.color.view.file_list_text_color.filtering">필터링에 의한 색</String>
             <String ID="popup.cfg.body.appearance.color.view.label.file_list_background_color">파일 리스트의 배경색(&amp;B):</String>
+            <String ID="popup.cfg.body.appearance.color.view.label.file_list_row_focus_color">선택 행 포커스 색(&amp;R):</String>
             <String ID="popup.cfg.body.appearance.color.view.file_list_background_color.default">기본색</String>
             <String ID="popup.cfg.body.appearance.color.view.file_list_background_color.custom">사용자 정의 색</String>
             <String ID="popup.cfg.body.appearance.color.view.file_list_background_color.filtering">필터링에 의한 색</String>
@@ -1543,7 +1544,7 @@
             <String ID="popup.cfg.body.appearance.file_list.check.show_2_digits_year">2자리 년도 사용(&amp;Y)</String>
             <String ID="popup.cfg.body.appearance.file_list.check.show_grid_lines">그리드 라인(&amp;G)</String>
             <String ID="popup.cfg.body.appearance.file_list.check.classic_theme_style">고전 테마 적용(&amp;M)</String>
-            <String ID="popup.cfg.body.appearance.file_list.check.full_row_selection">전체 행 선택(&amp;F)</String>
+            <String ID="popup.cfg.body.appearance.file_list.check.full_row_selection">전체 행 포커스 사용(&amp;F)</String>
             <String ID="popup.cfg.body.appearance.file_list.check.use_custom_icon">사용자 정의 아이콘 사용하기(&amp;I):</String>
             <String ID="popup.cfg.body.appearance.file_list.label.show_list_type">항목 표시(&amp;L):</String>
             <String ID="popup.cfg.body.appearance.file_list.list_type.default">폴더와 파일 표시 (기본값)</String>

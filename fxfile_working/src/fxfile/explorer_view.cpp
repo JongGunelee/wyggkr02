@@ -66,6 +66,27 @@ enum
     CTRL_ID_ACTIVATE_BAR,
     CTRL_ID_TAB_PANE = 200,
 };
+
+// Keep a saved lock path for removable/offline drives, but do not hand an
+// absent drive root to the Shell while opening every startup pane.  The next
+// startup will use that same saved lock again as soon as the volume returns.
+xpr_bool_t isAvailableStartupPath(const xpr_tchar_t *aPath)
+{
+    if (XPR_IS_NULL(aPath) || aPath[0] == XPR_STRING_LITERAL('\0'))
+        return XPR_FALSE;
+
+    if (aPath[1] == XPR_STRING_LITERAL(':') &&
+        (aPath[2] == XPR_STRING_LITERAL('\\') || aPath[2] == XPR_STRING_LITERAL('/')))
+    {
+        xpr_tchar_t sRoot[] =
+        {
+            aPath[0], XPR_STRING_LITERAL(':'), XPR_STRING_LITERAL('\\'), XPR_STRING_LITERAL('\0')
+        };
+        return (::GetDriveType(sRoot) == DRIVE_NO_ROOT_DIR) ? XPR_FALSE : XPR_TRUE;
+    }
+
+    return XPR_TRUE;
+}
 } // namespace anonymous
 
 class ExplorerView::TabData
@@ -207,21 +228,26 @@ xpr_sint_t ExplorerView::getViewIndex(void) const
 
 void ExplorerView::setViewIndex(xpr_sint_t aViewIndex)
 {
-    if (aViewIndex == mViewIndex)
-        return;
-
     mViewIndex = aViewIndex;
 
     FolderPane *sFolderPane = getFolderPane();
     if (XPR_IS_NOT_NULL(sFolderPane))
         sFolderPane->setViewIndex(mViewIndex);
 
+    if (XPR_IS_NOT_NULL(mExplorerPane))
+        mExplorerPane->setViewIndex(mViewIndex);
+
     xpr_sint_t i, sTabCount;
     ExplorerCtrl *sExplorerCtrl;
+    TabPane *sTabPane;
 
     sTabCount = getTabCount();
     for (i = 0; i < sTabCount; ++i)
     {
+        sTabPane = getTabPane(i);
+        if (XPR_IS_NOT_NULL(sTabPane))
+            sTabPane->setViewIndex(aViewIndex);
+
         sExplorerCtrl = getExplorerCtrl(i);
         if (XPR_IS_NOT_NULL(sExplorerCtrl))
             sExplorerCtrl->setViewIndex(aViewIndex);
@@ -326,7 +352,8 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
     const xpr_tchar_t *sLockedPath = XPR_NULL;
     if (XPR_IS_TRUE(gOpt->mMain.mViewPathLocked) &&
         XPR_IS_RANGE(0, mViewIndex, MAX_VIEW_SPLIT - 1) &&
-        gOpt->mMain.mLockedViewPath[mViewIndex][0] != XPR_STRING_LITERAL('\0'))
+        gOpt->mMain.mLockedViewPath[mViewIndex][0] != XPR_STRING_LITERAL('\0') &&
+        XPR_IS_TRUE(isAvailableStartupPath(gOpt->mMain.mLockedViewPath[mViewIndex])))
     {
         sLockedPath = gOpt->mMain.mLockedViewPath[mViewIndex];
     }
@@ -640,6 +667,11 @@ void ExplorerView::OnDestroy(void)
 {
     mStartupInitPending = XPR_FALSE;
     mStartupHistoryPending = XPR_FALSE;
+
+    // Shared ExplorerCtrl instances belong to ExplorerPane, not TabCtrl. Drain
+    // them while both owners are alive; TabData callbacks then become no-ops.
+    if (XPR_IS_NOT_NULL(mExplorerPane))
+        mExplorerPane->destroySubPane();
 
     DESTROY_DELETE(mTabCtrl);
     DESTROY_DELETE(mFolderPane);

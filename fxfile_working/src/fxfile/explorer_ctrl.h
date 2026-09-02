@@ -109,6 +109,7 @@ public:
         xpr_bool_t  mClassicThemeStyle;
         xpr_bool_t  mGridLines;
         xpr_bool_t  mFullRowSelect;
+        xpr_uint_t  mRowFocusColor;
 
         xpr_sint_t  mThumbnailWidth;
         xpr_sint_t  mThumbnailHeight;
@@ -323,6 +324,13 @@ public:
     xpr_bool_t  isShellItem(xpr_sint_t aItem) const;
     xpr_tchar_t getDriveFromItemType(DWORD aItemDataType) const;
     static void verifyItemData(LPLVITEMDATA *aLvItemData);
+    void        cacheRowFocusOption(const Option &aOption);
+    void        snapshotRowFocusItem(void);
+    xpr_bool_t  isFocusedSelectedItem(xpr_sint_t aItem);
+    void        resetCustomDrawColors(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        applyCustomDrawFiltering(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        fillRowFocusBackground(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        applyRowFocusDrawState(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
     xpr_sint_t  getLastInsertIndex(void) const;
 
     void setDragContents(xpr_bool_t aDragContents = XPR_TRUE);
@@ -494,6 +502,7 @@ protected:
     // option
     Option       mOption;
     Option      *mNewOption;
+    COLORREF      mRowFocusTextColor;
 
     // folder information
     LPTVITEMDATA mTvItemData;
@@ -515,6 +524,7 @@ protected:
     FileChangeWatcher::WatchId       mWatchId;
     AdvFileChangeWatcher::AdvWatchId mAdvWatchId;
     xpr_bool_t                       mNotify;
+    xpr_bool_t                       mDestroying;
 
     typedef std::tr1::unordered_multimap<xpr::string, LPLVITEMDATA> NameMap;
     typedef std::pair<NameMap::iterator, NameMap::iterator> NameMapPairIterator;
@@ -542,6 +552,8 @@ protected:
     xpr_size_t  mRealSelCount;
     xpr_size_t  mRealSelFolderCount;
     xpr_size_t  mRealSelFileCount;
+    xpr_sint_t  mFocusedItemIndex;
+    xpr_sint_t  mRowFocusPaintItemIndex;
 
     LPITEMIDLIST mCopyFullPidl;
     LPITEMIDLIST mMoveFullPidl;

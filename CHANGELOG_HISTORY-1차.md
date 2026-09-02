@@ -1,10 +1,11 @@
-# 📁 Windows 11 최적화 fxfile 소스 코드 및 기술 이력 가이드
+# 📁 Windows 10/11 최적화 fxfile 소스 코드 및 기술 이력 가이드
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 운영 기준: 2026-08-27 — Task 073 (레거시/임시 산출물 정리 완료, bin 재생성 후 최종 통합 배포·VerifyOnly 완료)_  
-_현재 기능/배포 기준: Task 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
+_현재 문서·정리 운영 기준: 2026-09-02 — Task 096 (Task 094의 현재 호스트 D: 경로 기준을 유지하며 Task 095 빌드 캐시를 정리)_  
+_현재 기능/배포 기준: Task 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
+_현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절대경로는 당시 증거로 보존하며, 현재 실행 명령으로 복사하지 않는다._
 
 > **[DISK SAFETY GATE — 매 실행 직전 재측정]** 기본 경로는 C: **5GiB 이상 그리고 5% 이상**이다. 다만 사용자가 저용량 위험을 명시적으로 승인한 경우에만 Task 059의 감사형 예외(`-AllowLowSystemDriveWithDTemp` + 정확한 승인 문구)를 사용할 수 있다. 예외도 C: 1GiB 비상 하한, D: 고정 로컬 20GiB 이상, 비-reparse·비클라우드 경계, 프로세스 범위 D: TEMP/TMP, 단계별 C:/D: 재검사와 실패 시 롤백을 강제한다. 스위치가 없으면 종전 하드게이트가 그대로 적용된다. 실제 판정은 `0.7.1`과 자동 프리플라이트의 새 측정값을 따른다.
 
@@ -24,6 +25,7 @@ _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNI
 
 | 역할 | 현재 정본 |
 |---|---|
+| 작업공간 루트 | `D:\03 금일작업\00 임시\0000 FxFile` |
 | 수정할 소스 | `D:\03 금일작업\00 임시\0000 FxFile\fxfile_working` |
 | 설치 운영본 x64 | `D:\00 소프트웨어\04 Fxfile` |
 | 휴대용 x64 | `D:\03 금일작업\00 임시\0000 FxFile\fxfile_run_x64` |
@@ -34,6 +36,8 @@ _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNI
 | 사용자 환경 정본 | 설치 운영본의 `fxfile\` 아래 필수 설정 10개. 배포 시 두 run으로 동기화 |
 
 세 패키지 루트에는 `fxfile.ini`와 `.fxfile`을 두지 않는다. `fxfile\fxfile.conf`와 `fxfile\fxfile-main.conf` 핵심 쌍을 로컬 설정으로 자동 탐지한다(Task 032~033). `fxfile-operation-locks.conf`는 절대경로를 포함할 수 있는 **패키지별 런타임 상태**이므로 세 패키지 공통 설정 10개에 포함하거나 다른 PC로 복제하지 않는다(Task 053~054).
+
+현재 PC는 작업공간·포터블본·프로젝트 TEMP/TMP를 D:의 위 작업공간 안에 두고, 설치 운영본 x64도 D:의 위 설치 경로에 둔다. `C:\Users\PC\Downloads\01 코딩\0000 FxFile`, `C:\00 소프트웨어\04 Fxfile` 및 그 파생 경로는 이전 PC의 역사적 증거이며 현재 실행 기본값이 아니다. 현재 PC에서 통합 도구를 실행할 때는 작업공간의 `fxfile_working`에서 시작하고 `-TargetX64`, `-RunX64`, `-RunX32`를 위 표의 절대경로로 모두 명시한다. 코드·빌드 작업을 시작하기 전에는 Task 094의 경로 기준과 `0.7.1`의 드라이브·TEMP/TMP 사전 게이트를 함께 적용하고, 디스크·프로세스·도구 상태는 매번 새로 측정한다.
 
 ### 0.3 새 작업의 최소 읽기 순서
 
@@ -50,10 +54,12 @@ _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNI
 | 작업 목적 | 먼저 읽을 Task | 문서/소스 검색어 |
 |---|---|---|
 | 새 PC 준비, 도구 설치, 전체 빌드 | 035, 034, 054 | `프리플라이트`, `BuildDeployVerify`, `Visual Studio`, `Windows SDK`, `manifest` |
+| 다른 PC에서 복사한 문서·경로 이관, D: 작업공간/설치본 기준 정정 | 094, 074 | `현재 정본`, `현재 PC 절대경로`, `historical evidence`, `TargetX64`, `RunX64`, `RunX32` |
 | 빌드 전 디스크·TEMP/TMP·C: 저용량 | 035.7, 054~057, 059 | `SystemDrive`, `TEMP`, `TMP`, `FreeGiB`, `FreePercent`, `preflight`, `build_temp`, `AllowLowSystemDriveWithDTemp` |
 | 실행 파일·DLL·언어·설정 세 패키지 배포 | 034~035, 052.7, 053.2~53.3, 054 | `Release EXE`, `ArtifactRoots`, `Korean.xml`, `rollback`, `ConfigMatchesCanonical` |
 | INI 없는 로컬 설정, AppData 간섭, 포터블 이식 | 031~035, 042 | `fxfile.ini`, `.fxfile`, `conf_home`, `CanonicalConfig`, `local pair`, `AppData` |
 | 레이아웃·북마크·도구 모음·메뉴 복원 | 036~038, 043~048 | `saveAllOptions`, `bookmark`, `coolbar`, `toolbar`, `window.position`, `lock` |
+| 도구 메뉴의 시계 보이기·위치 잠금·가변 창 폭 | 095, 045~046 | `main.clock.show`, `ClockCtrl`, `updateClockLayout`, `WS_VISIBLE`, `rebar`, `zero-height`, `시계 보이기` |
 | 시작 클릭 후 창/2×2 표시 지연·흰 화면 | 039~041, 049~050 | `SkeletonSeconds`, `ReadySeconds`, `atomic`, `ExplorerView`, `WM_SETREDRAW` |
 | 설정 파일 위치 옵션 3개 | 042 | `%AppData%`, `프로그램 설치 폴더`, `사용자 정의`, `ConfDir::save` |
 | 파일 크기 바이트 표시 | 043~044 | `size_unit`, `KB`, `byte`, `file list` |
@@ -64,9 +70,10 @@ _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNI
 | 복사 실패 후 응답 없음·종료 불가·삭제/이동 잔상 | 069, 060, 067, 051~052 | `AdvFileChangeWatcher`, `CancelIoEx`, `IOCP`, `ResultNotApplicable`, `rollbackTargets`, `reconcileOperationResult`, `SHCNE_DELETE`, `SHCNE_RENAMEITEM`, `FileOpThread` |
 | 삭제·휴지통·Shift+Delete·부분 실패 | 052.1~52.6 | `FOFX_RECYCLEONDELETE`, `permanent delete`, `WRP`, `remaining count` |
 | 파일·폴더 작업 잠금·Windows 보안·호버 설명 | 052.5, 053 | `FileOperationLockStore`, `Restart Manager`, `SHObjectProperties`, `ToolTip` |
-| 종료 Access Violation·오류 보고서 | 030, 035.8 | `Access Violation`, `crash`, `error report`, `checkChangedConfDir` |
+| 종료 Access Violation·오류 보고서 | 077, 069, 030, 035.8 | `Access Violation`, `crash`, `error report`, `FolderCtrl`, `updateShcnTvItemData`, `shell notification` |
 | Windows 11/API/64비트 초기 호환성 | TASK-001~009, 035 | `WINVER`, `RtlGetVersion`, `SIZE_T`, `DPI`, `Thread::join` |
 | OBJ·더미 시험 파일·C:/D: 용량·작업공간 정리 | 054~055, 061 | `stray artifact`, `/Fo`, `RESULTS.md`, `synthetic fixture`, `staging`, `FreeGiB`, `TeraBox`, `cleanup`, `retention` |
+| 파일/폴더 선택 시 열 단위·행 전체 포커스 전환, 창별 색상, Ctrl/Shift 다중 선택, 모든 분할 pane·콘텐츠/타일/상세 보기 일관성 | 092, 091, 090, 089, 088, 087, 086, 083, 077, 076, 075 | `Shift`, `SelectionMark`, `row_focus_color`, `full_row_select`, `isReportView`, `VIEW_STYLE_CONTENT`, `LVS_REPORT`, `LVIR_BOUNDS`, `LVIR_SELECTBOUNDS`, `LVS_EX_FULLROWSELECT`, `mRowFocusColor`, `OnCustomdraw`, `전체 행 포커스`, `ExplorerPane`, `ExplorerCtrl` |
 | 일괄 이름 변경·열 말줄임·수동 열폭·창/분할 폭 연동·썸네일 캐시·간헐 무응답 | 072, 069, 056, 058~059 | `BatchRename`, `Repeat=0`, `column_ellipsis`, `OnHdnItemChanged`, `manual width`, `responsive`, `OnSize`, `viewport`, `thumbnail`, `IOCP`, `응답 없음` |
 | 자동 갱신·갱신 시 자동 정렬·2×2 패널 변경 반영 | 071, 070, 069 | `config.refresh.no`, `config.refresh.sort`, `파일 변경 즉시 화면 갱신`, `화면 갱신 후 자동 정렬`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
 | 대형/특수 폴더(`00 월마감`/`0000 FxFile`) 응답 없음·폴더 아이콘 깨짐·전 파일 비동기 아이콘 | 064~066 | `CSparseImageList`, `ForceImagePresent`, `SHDefExtractIconW`, `COleMessageFilter`, `FileIconInit`, `GetFileExtIconIndex`, `TypeIconIndex`, `dummy` |
@@ -103,6 +110,7 @@ rg -n "AdaptiveFileOperation|IFileOperation|FOFX_RECYCLEONDELETE" fxfile_working
 - 세 패키지 설정 10개·언어·아키텍처·루트 INI 부재를 검증한다.
 - 격리 no-INI x64/x32 실제 실행·정상 종료 smoke를 통과한다.
 - GUI 작업이면 실제 설치본 화면에서도 확인하되 설정이 갱신되면 다시 세 패키지를 동기화한다.
+- GUI의 보이기/숨기기 결함은 메뉴 체크와 `IsWindowVisible()`만으로 합격시키지 않는다. 실제 자식 HWND의 `Visible=True`, 너비·높이 양수, 부모 영역 안 배치를 창 폭별로 측정한다(Task 095).
 - 마지막 `VerifyOnly`가 성공하고 FxFile 프로세스가 0개인지 확인한다.
 - `0.7.1`의 드라이브·TEMP/TMP 사전 게이트와 단계별 재검사를 통과하고, manifest에 저장소 체크포인트가 기록됐는지 확인한다.
 - **[C/D 드라이브 임시·중복·불필요 파일 전수 정리]**: 무결성 보증 리팩토링 및 빌드·배포·스모크 검증 완료 즉시, 코딩 AI 및 IDE/도구가 C: 및 D: 드라이브에 임시 생성한 불필요한 빌드 임시 폴더(`build_temp_*`), 구버전 배포 백업(`unified_deploy_*` 중 최신 1세대 초과분), `%LOCALAPPDATA%\Temp` 잔재, stray `.obj/.tmp` 등을 전수 점검하여 즉시 삭제·정리하고 C/D 드라이브 공간을 최적화한다.
@@ -134,7 +142,7 @@ rg -n "AdaptiveFileOperation|IFileOperation|FOFX_RECYCLEONDELETE" fxfile_working
 | `__BUILD_TEMP_BACKUP__\build_temp_*` | 통합 도구가 드라이브 게이트 통과 뒤 만드는 프로세스 범위 TEMP/TMP. 정상 종료 시 자동 정리한다. 관련 빌드 프로세스가 남았거나 출처가 불명확하면 삭제하지 않고 PID·경로를 먼저 감사한다. |
 | Task 시험의 복제 대상·대용량 더미·중간 EXE/OBJ/PCH | 결과 확정 뒤 제거 가능한 합성 임시물. 실제 사용자 자료가 아님을 확인하고 정확한 Task 경로만 정리한다. |
 | 작업공간 루트 또는 `fxfile_working` 바로 아래 `.obj/.pch/.tmp/.ilk/.idb/.tlog` | 비정상 stray 산출물. 수동 `cl` 시험의 `/Fo` 누락 여부를 감사한 뒤 제거한다. |
-| `C:\Users\ADMIN\.codex\.tmp\bundled-marketplaces\openai-bundled.staging-*` | 플러그인 동기화 중간본. 여러 세대가 오래 남으면 실패 잔재다. Codex 활성 동기화의 최신 1개는 건드리지 않고, 앱 재시작 후에도 남은 오래된 staging만 정리한다. `openai-bundled` 정본은 자동 삭제하지 않는다. |
+| `%USERPROFILE%\.codex\.tmp\bundled-marketplaces\openai-bundled.staging-*` | 플러그인 동기화 중간본. 여러 세대가 오래 남으면 실패 잔재다. Codex 활성 동기화의 최신 1개는 건드리지 않고, 앱 재시작 후에도 남은 오래된 staging만 정리한다. `openai-bundled` 정본은 자동 삭제하지 않는다. 현재 확인 사용자 프로필은 `C:\Users\ADMIN`이며, 명령에서는 하드코딩 대신 `%USERPROFILE%`를 사용한다. |
 | `%LOCALAPPDATA%\Temp`의 Codex/PowerShell 시험 `.tmp.js`, Add-Type `.dll/.cs/.out/.err` | 프로세스 참조가 없고 생성 시각이 해당 Task와 일치할 때만 제거한다. 잠긴 파일은 강제 해제하지 않고 다음 재부팅/앱 종료 뒤 재점검한다. `codex-clipboard-*.png`는 사용자 첨부 증거이므로 자동 삭제 금지. |
 | `C:\`/`D:\` 루트의 합성 시험 폴더 | 원칙적으로 생성 금지. 불가피한 교차 볼륨 시험은 Task 전용 하위 폴더에서 수행한다. 발견 시 이름만 보지 말고 **작업 시작 전 스냅샷·이전 화면/문서·생성시각·해시·내용·활성 프로세스**를 함께 확인한다. 출처가 불명확하거나 작업 전부터 보였던 항목은 합성처럼 보여도 자동 삭제하지 않는다. 삭제 뒤 재생성되면 클라우드 앱 하나를 원인으로 단정하지 말고 경로를 보존한 채 FileIO/PID 증거를 먼저 확보한다. |
 | `.codex\sessions`, `.codex\archived_sessions`, `.codex\plugins`, `__BACKUP_보존용__` | 사용자 대화 기록·실제 플러그인·명시적 보존본이다. 용량이 커도 자동 삭제 금지. 이동·압축·삭제는 별도 사용자 승인과 복구성 검토가 필요하다. |
@@ -159,7 +167,7 @@ cl ... /Fo"D:\...\__BUILD_TEMP_BACKUP__\taskNNN\obj\\" /Fe:"D:\...\taskNNN\probe
 5. **[필수 정리 및 최적화]**: 무결성 보증 리팩토링, 빌드 및 배포 완료 후 C드라이브 및 D드라이브에서 코딩 AI/도구가 생성한 모든 임시·중복·불필요 파일 및 폴더를 전수 점검하여 즉시 삭제한다:
    - `__BUILD_TEMP_BACKUP__\unified_deploy_*`: 최신 성공 1세대만 보존하고 이전 세대 전체 삭제
    - `__BUILD_TEMP_BACKUP__\build_temp_*`: 빌드 프로세스 종료 후 즉시 전수 삭제
-   - `C:\Users\ADMIN\AppData\Local\Temp`: 해당 Task에서 파생된 `.tmp`, `.ps1`, `.cs` 등 임시 잔재 정리
+   - `%LOCALAPPDATA%\Temp` (현재 `C:\Users\ADMIN\AppData\Local\Temp`): 해당 Task에서 파생된 `.tmp`, `.ps1`, `.cs` 등 임시 잔재 정리. 이 세션의 실제 `TEMP/TMP`는 D: 작업용 경로일 수 있으므로 두 위치를 혼동하지 않는다.
    - 작업 디렉토리 내 임시 산출물 및 중복 파일 정리
 6. **재생성 감시**: 삭제 직후와 30초 이후, Task 종료 직전에 같은 경로와 staging 수를 다시 확인한다. 재생성되면 삭제 성공으로 보고하지 않으며, 생성 프로세스가 입증될 때까지 다시 삭제하지 않는다.
 7. **최종 무결성**: 설치본 x64/run_x64/run_x32 실행 파일 해시, 로컬 설정 핵심 쌍, 루트 `fxfile.ini`/`.fxfile` 부재, FxFile 프로세스 0개를 다시 확인한다.
@@ -173,7 +181,7 @@ Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:' OR DeviceID='D:'" |
     @{n='FreePercent';e={[math]::Round(100*$_.FreeSpace/$_.Size,2)}}
 
 Get-Process fxfile,fxfile-launcher,fxfile-upchecker -ErrorAction SilentlyContinue
-Get-ChildItem 'C:\Users\ADMIN\.codex\.tmp\bundled-marketplaces' -Directory -Filter 'openai-bundled.staging-*' -Force
+Get-ChildItem (Join-Path $env:USERPROFILE '.codex\.tmp\bundled-marketplaces') -Directory -Filter 'openai-bundled.staging-*' -Force
 Get-ChildItem '__BUILD_TEMP_BACKUP__' -Directory -Filter 'unified_deploy_*' -Force
 ```
 
@@ -2283,6 +2291,8 @@ Release x64와 Release x32를 모두 새로 빌드한 뒤 세 패키지에 배�
 1. 설치본 x64: `D:\00 소프트웨어\04 Fxfile`
 2. 포터블 x64: `D:\03 금일작업\00 임시\0000 FxFile\fxfile_run_x64`
 3. 포터블 x32: `D:\03 금일작업\00 임시\0000 FxFile\fxfile_run_x32`
+
+> **후속 정정(Task 074, 2026-08-28):** 위 절대경로와 이 Task 안의 `C:\Users\ADMIN` 경로는 2026-08-10 이전 PC에서 검증한 당시 기록이다. 현재 PC의 실행 정본은 초입 `0.2`와 Task 074이며, 현재 경로와 다른 이 Task의 명령은 그대로 복사해 실행하지 않는다. 절차·필수 구성 요소·합격 기준은 계속 유효하고, 현재 PC에서는 세 배포 대상을 명시적 매개변수로 전달한다.
 
 Task 001~034는 원인 분석과 해결 이력으로 보존한다. 그러나 실제 명령과 배포 판정이 충돌할 때는 본 Task 035가 우선한다. 현재의 핵심 원칙은 다음과 같다.
 
@@ -6935,3 +6945,1158 @@ _작업 기준: 초입 §0.6~0.7, Task 054~055·061·072의 보존/정리 정책
 ---
 
 **— 최신 Task 072 수정 소스의 세 패키지 무결성을 보존하면서 레거시/임시 산출물을 정리하고, TeraBox 잠금 해제 후 잔여 95.44MiB까지 삭제했으며, `bin` 재생성용 preflight → BuildDeployVerify → 최종 VerifyOnly까지 완료 (2026-08-27) —**
+
+---
+
+## Task 074 — 새 PC 로컬 경로·도구 환경 이관 및 코드 미접촉 작업 준비 (2026-08-28)
+
+_작업 유형: 다른 PC에서 복사된 작업공간의 로컬 환경 이관 + 현재 정본 경로 갱신 + 비침습 준비 점검_  
+_작업 기준: 사용자 지시에 따라 이 가이드만 수정하고, 프로젝트 소스·빌드 스크립트·제품 설정 내용은 읽거나 수정하지 않으며 configure·빌드·배포·smoke를 실행하지 않음_  
+_후속 정정: Task 001~073의 `D:\03 금일작업\00 임시\0000 FxFile`, `D:\00 소프트웨어\04 Fxfile`, `C:\Users\ADMIN` 절대경로는 이전 PC에서 생성된 역사적 증거다. 현재 작업의 절대경로 정본은 초입 `0.2`와 이 Task다._
+
+> **[후속 정정 — Task 094, 2026-09-02]** 이 Task 안의 `C:\Users\PC\Downloads\01 코딩\0000 FxFile`, `C:\00 소프트웨어\04 Fxfile`, `C:\Users\PC`는 2026-08-28 당시 다른 호스트의 관측 증거다. 현재 호스트의 실행·빌드·배포 정본은 문서 초입 `0.2`와 Task 094의 `D:\03 금일작업\00 임시\0000 FxFile`, `D:\00 소프트웨어\04 Fxfile`, `C:\Users\ADMIN`이다. 이 Task의 표·명령은 현재 호스트에서 그대로 실행하지 않는다.
+
+### 74.1 요청과 최종 판정
+
+다른 컴퓨터에서 작성한 가이드와 작업공간을 현재 PC로 복사한 상태에서, 코드는 건드리지 않고 현재 PC의 환경만 작업 가능한 기준으로 정리했다. 최종 판정은 다음과 같다.
+
+1. 현재 OS는 **64비트 Windows 10 Home 22H2, Build 19045**다. 문서와 빌드 절차의 지원 기준인 64비트 Windows 10/11에 포함되므로 문서 제목을 `Windows 10/11`로 정정했다.
+2. 현재 작업공간은 `C:\Users\PC\Downloads\01 코딩\0000 FxFile`, 운영 x64는 `C:\00 소프트웨어\04 Fxfile`이다. x64/x32 포터블본과 `fxfile_working`은 작업공간 아래에 모두 존재한다.
+3. C:는 223.00GiB 중 41.34GiB(18.54%) 여유로, 측정 시점에 `0.7.1`의 기본 하드게이트 5GiB/5%와 권장 10GiB/10%를 모두 충족했다. 이 수치는 준비 스냅샷이며 실제 빌드 직전에 반드시 재측정한다.
+4. 필수 빌드 도구와 x64/x86 구성 요소는 이미 설치돼 있어 추가 설치·업데이트가 필요하지 않았다. 검증된 조합을 작업 중간에 교체하지 않는 원칙에 따라 WinGet upgrade나 Visual Studio 수정 설치를 실행하지 않았다.
+5. 세 패키지의 존재 계약은 준비 수준에서 충족했다. 실행 파일, `fxfile\fxfile.conf`, `fxfile\fxfile-main.conf`, `Languages\Korean.xml`이 모두 있고 루트 `fxfile.ini`와 `.fxfile`은 없다.
+6. 점검 당시 운영본 `fxfile.exe`와 TeraBox가 실행 중이었다. 이는 복사된 파일의 결함이 아니라 향후 preflight/빌드 시작 전 정상 종료해야 할 준비 조건이다. 이번에는 사용 중인 앱을 강제 종료하지 않았다.
+
+### 74.2 현재 PC 경로 정본
+
+| 역할 | 현재 PC 절대경로 |
+|---|---|
+| 작업공간 루트 | `C:\Users\PC\Downloads\01 코딩\0000 FxFile` |
+| 수정할 소스 | `C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_working` |
+| 설치 운영본 x64 | `C:\00 소프트웨어\04 Fxfile` |
+| 휴대용 x64 | `C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_run_x64` |
+| 휴대용 x32 | `C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_run_x32` |
+| 사용자 프로필 | `C:\Users\PC` |
+| 사용자 TEMP/TMP | `C:\Users\PC\AppData\Local\Temp` |
+
+과거 Task의 D: manifest·preflight·시험 경로는 당시 증거 식별자이므로 현재 C: 경로로 일괄 치환하지 않았다. 그렇게 치환하면 존재하지 않는 과거 증거가 현재 PC에서 생성된 것처럼 왜곡된다.
+
+### 74.3 현재 PC 도구 기준선
+
+| 항목 | 2026-08-28 확인 값 | 준비 판정 |
+|---|---|---|
+| Windows | Windows 10 Home 64비트, 10.0.19045 | 지원 OS 기준 충족 |
+| Visual Studio Build Tools | 2022 17.14.28, installation 17.14.37027.9 | 완료·실행 가능·재부팅 불필요 |
+| MSVC toolset | 14.44.35207 | v143 x64/x86 `cl.exe` 존재 |
+| MFC | `afxwin.h`, x64/x86 `mfc140.lib` 존재 | 필수 구성 충족 |
+| Windows SDK | 10.0.26100.0 | `Windows.h`, x64/x86 `User32.Lib` 존재 |
+| CMake | 4.4.2 | 최소 3.21 충족 |
+| PowerShell 7 | 7.6.4 | 통합 스크립트 우선 엔진 사용 가능 |
+| Windows PowerShell | 5.1.19041.6456 | 기본 대체 엔진 사용 가능 |
+| Git for Windows | 2.52.0.windows.1 | 명령 사용 가능; 저장소 건강성은 이번 범위에서 검사하지 않음 |
+| WinGet | 1.29.290 | 도구 유지보수 시 사용 가능 |
+| 실행 정책 | LocalMachine `RemoteSigned` | 로컬 스크립트 실행 기준 충족 |
+| Windows 긴 경로 정책 | `LongPathsEnabled=0` | 현재 경로에서 준비 차단 요인은 아님; 시스템 전역 변경은 하지 않음 |
+
+Visual Studio 구성 요소 ID `VCTools`, `VC.Tools.x86.x64`, `VC.ATLMFC`, `VC.CMake.Project`, `Windows11SDK.26100`은 모두 설치된 Build Tools 인스턴스에서 확인했다. 프로젝트 파일을 열지 않고 설치 관리자 메타데이터와 도구 파일의 존재만 확인했다.
+
+### 74.4 로컬 환경 최적화 원칙과 적용 결과
+
+1. 모든 역할을 C:의 현재 절대경로로 명시해 이전 PC의 D: 기본값으로 오배포될 가능성을 차단했다.
+2. 사용자 종속 경로는 현재값을 함께 기록하되 점검 명령은 `%USERPROFILE%`, `%LOCALAPPDATA%`를 사용하도록 초입 정책을 수정했다.
+3. 전역 TEMP/TMP, PATH, 실행 정책, 긴 경로 레지스트리는 변경하지 않았다. 현재 필수 기준을 충족하며, 전역 변경은 다른 작업과 앱에 영향을 줄 수 있기 때문이다.
+4. 필수 도구가 모두 존재하므로 중복 설치나 최신 버전 강제 업그레이드를 하지 않았다. 현재 검증 조합을 유지하는 것이 이관 직후의 재현성 기준이다.
+5. `__BACKUP_보존용__`, 기존 `__BUILD_TEMP_BACKUP__`, 운영본, 포터블본은 삭제·이동·정리하지 않았다. 이번 작업에서 별도 보고서·임시 스크립트·빌드 산출물을 만들지 않았다.
+6. 운영 중인 FxFile/TeraBox/OneDrive는 강제 종료하지 않았다. 다음 빌드 작업의 preflight 직전에 정상 종료 여부를 다시 확인한다.
+
+### 74.5 다음 코드 작업 직전 실행 준비 카드
+
+이번 Task에서는 아래 명령을 **실행하지 않았다**. 향후 사용자가 코드 작업을 명시적으로 요청한 경우에만 FxFile 관련 프로세스를 정상 종료하고, 현재 경로를 명시해 다음 순서로 실행한다.
+
+```powershell
+Set-Location -LiteralPath 'C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_working'
+.\preflight_build_environment.bat
+if ($LASTEXITCODE -ne 0) {
+    throw '필수 프리플라이트 실패 — 코드 수정·빌드·배포 중단'
+}
+
+.\tools\Build-Deploy-Verify.ps1 `
+  -Mode BuildDeployVerify `
+  -TargetX64 'C:\00 소프트웨어\04 Fxfile' `
+  -RunX64 'C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_run_x64' `
+  -RunX32 'C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_run_x32'
+```
+
+실제 통합 진입점이 `build_deploy_all.bat`인 작업에서는 preflight 성공 후 해당 진입점을 사용하되, 내부 기본 대상이 이전 PC D:를 가리키지 않는지 먼저 확인하고 현재 세 대상 경로를 명시한다. 경로 전달 방식이 도구 계약과 다르면 코드를 임의 수정하지 말고 해당 작업 범위에서 문서와 스크립트를 함께 검토한다.
+
+### 74.6 수행하지 않은 항목과 남은 조건
+
+- 프로젝트 소스 코드, CMakeLists, 빌드/배포 스크립트 내용, 제품 설정 내용은 읽거나 수정하지 않았다.
+- Git 저장소 건강성, 최신 manifest 내용, 실행 파일 해시·PE 아키텍처, 설정 10개 내용 일치 여부는 검사하지 않았다. 이는 코드·배포 검증 작업이 시작될 때 공식 preflight/VerifyOnly로 확인할 항목이다.
+- configure, x64/x32 컴파일, 배포, GUI 실행, no-INI smoke, VerifyOnly를 실행하지 않았다. 따라서 이 Task는 새 빌드나 배포 성공을 주장하지 않는다.
+- 현재 실행 중인 FxFile 때문에 공식 preflight를 지금 실행하면 프로세스 종료 조건에서 실패하는 것이 정상이다. 다음 작업 직전 정상 종료 후 새 디스크 측정과 함께 실행한다.
+- 긴 경로 정책은 비활성 상태지만 현재 작업 루트 길이에서는 즉시 차단 요인으로 확인되지 않았다. 실제 configure가 경로 길이 오류를 보고할 때만 원인 증거를 확보한 뒤 시스템 정책 변경 여부를 별도 판단한다.
+
+### 74.7 교훈과 재발 방지
+
+1. 다른 PC로 복사한 뒤에는 코드보다 먼저 초입의 현재 정본 경로와 사용자 프로필을 갱신한다.
+2. 과거 Task의 절대경로는 증거이므로 일괄 치환하지 않는다. 현재 실행 기준은 초입과 최신 이관 Task에서만 후속 정정한다.
+3. 설치된 도구가 최소 기준을 충족하면 이관 도중 강제 업그레이드하지 않는다. 도구 업데이트는 별도 변경으로 취급하고 전체 preflight와 x64/x32 재검증을 요구한다.
+4. 작업공간과 운영본이 같은 C:에 있으면 저용량 D: 예외를 적용하지 않는다. 기본 5GiB/5% 게이트를 모든 단계에서 그대로 적용한다.
+5. 작업 준비 점검과 빌드 성공 검증을 혼동하지 않는다. 파일 존재와 도구 구성 확인만으로 컴파일·배포 성공을 선언하지 않는다.
+
+---
+
+**— 현재 Windows 10 PC의 C: 작업공간·운영본 경로와 설치 도구 기준선을 가이드에 반영하고, 코드·빌드·배포를 건드리지 않은 상태로 다음 작업의 사전 준비만 완료 (2026-08-28) —**
+
+---
+
+## Task 075 — 파일·폴더 선택 행 전체 포커스의 선택형 보장 및 2×2 일관성 (2026-08-28)
+
+_작업 유형: 파일 목록 선택 표시 무결성 리팩터링 + 기존 사용자 설정 호환 + x64/x32 통합 빌드·배포·검증_  
+_작업 기준: 초입 §0.1~0.8, Task 072·056의 모든 Explorer pane 독립성·반응형 컬럼 계약, Task 074의 현재 C: 절대경로 기준_  
+_요청 확정: 폴더·파일을 선택할 때 선택 대상의 첫 열/현재 열만 강조하는 이전 방식을 선택적으로 유지할 수 있게 하되, 기본값은 선택된 항목의 모든 열을 강조하는 행 전체 포커스로 한다._
+
+### 75.1 원인과 보장할 동작
+
+`ExplorerCtrl::applyOption()`은 Win32 보고서형 목록의 `LVS_EX_FULLROWSELECT` 확장 스타일을 `config.file_list.full_row_select` 하나에 직접 연결했다. 이 키의 이전 기본값과 복사된 세 패키지의 명시값이 모두 `0`이어서, 2×2를 포함한 분할 pane은 선택 대상의 이름/첫 열 중심 표시로 동작할 수 있었다.
+
+이번 변경의 불변조건은 다음과 같다.
+
+1. 파일과 폴더의 선택 상태, 다중 선택, 키보드 이동, 정렬과 실제 파일 작업 대상은 바꾸지 않는다.
+2. `전체 행 포커스 사용`이 켜진 경우, 활성 Explorer pane의 선택 항목은 `LVS_EX_FULLROWSELECT`로 현재 표시 중인 모든 열에 걸쳐 포커스·선택 표시를 한다.
+3. 이 설정은 `ExplorerPane`이 현재 레이아웃에 소속된 모든 `ExplorerCtrl`로 전파하므로 1×1, 1×2, 2×2 및 그 밖의 분할 배열에서 서로 다른 선택 표시가 섞이지 않는다.
+4. 사용자가 설정을 끄면 확장 스타일만 해제되어 이전의 열 중심 표시로 돌아간다. 선택된 파일/폴더와 명령 대상 자체는 변하지 않는다.
+
+### 75.2 구현과 환경설정 선택지
+
+- `src\fxfile\option.cpp`
+  - `config.file_list.full_row_select`의 새 프로필 기본값을 `XPR_TRUE`로 변경했다.
+  - 기존 설정 파일의 명시값은 계속 읽으므로 사용자는 이전 방식으로 되돌릴 수 있다.
+- `src\fxfile\cfg\cfg_appearance_file_list_dlg.cpp`, `Languages\Korean.xml`, `fxfile.rc`
+  - 환경설정의 기존 체크 항목을 `전체 행 포커스 사용(&F)`으로 명확히 표기했다.
+  - 체크 ON은 행 전체 포커스, OFF는 이전 열 중심 포커스다. 항목은 비활성화하지 않으며 저장·재실행 후에도 선택값을 유지한다.
+- `src\fxfile\explorer_pane.cpp`, `src\fxfile\explorer_ctrl.cpp`
+  - 저장된 하나의 값을 모든 Explorer pane에 전달하고, 각 컨트롤이 `LVS_EX_FULLROWSELECT`만 설정/해제하도록 유지했다.
+  - 선택 행·선택 mark·`LVIS_SELECTED`·`LVIS_FOCUSED` 변경 로직을 건드리지 않아 파일/폴더 선택의 의미와 다중 선택 동작을 보존했다.
+- `tools\test_task075_full_row_focus_contracts.ps1`
+  - 새 프로필 기본값, 환경설정 ON/OFF 저장, 모든 pane 전파, 스타일 적용, 한글/리소스 문구를 정적 계약으로 고정했다.
+
+### 75.3 현재 패키지의 기본값 이관
+
+새 프로필의 코드 기본값만 바꾸면, 다른 PC에서 복사된 기존 `fxfile.conf`의 명시적 `0`이 계속 이전 방식을 강제한다. 따라서 UTF-16LE/BOM 형식을 보존한 채 다음 세 정본의 정확한 키 한 개를 `0 → 1`로 이관했다.
+
+| 패키지 | 설정 파일 | 최종값 |
+|---|---|---:|
+| 설치 운영본 x64 | `C:\00 소프트웨어\04 Fxfile\fxfile\fxfile.conf` | `config.file_list.full_row_select = 1` |
+| 휴대용 x64 | `C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_run_x64\fxfile\fxfile.conf` | `1` |
+| 휴대용 x32 | `C:\Users\PC\Downloads\01 코딩\0000 FxFile\fxfile_run_x32\fxfile\fxfile.conf` | `1` |
+
+각 파일은 키가 정확히 한 번 존재하고 기존 값이 `0`인 것을 먼저 확인했다. 인코딩을 UTF-8로 바꾸지 않고 값 문자 두 바이트만 같은 길이로 교체했다. 이후 사용자가 환경설정에서 체크를 해제하면 `0`을 저장해 이전 방식을 선택할 수 있다.
+
+### 75.4 새 PC 이관 캐시 정정
+
+첫 통합 빌드는 복사된 `build_cmake`와 `build_cmake_x32`의 이전 PC 캐시가 `C:/Program Files/Microsoft Visual Studio/2022/Community` 인스턴스를 고정해 x64 configure에서 실패했다. 실패 manifest는 `FailedAndRolledBack`으로 끝나 배포 패키지를 바꾸지 않았다.
+
+두 폴더는 재생성 가능한 CMake 캐시이며, 이 세션의 재귀 삭제 보호에 따라 삭제 대신 두 `CMakeCache.txt`의 정확한 `CMAKE_GENERATOR_INSTANCE`만 현재 PC의 `C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools`로 정정했다. 새 preflight는 x64/x32 configure를 모두 다시 통과했다. 이는 제품 소스·사용자 설정·배포 패키지에 대한 변경이 아니라 이전 PC 도구 경로 캐시의 이관 정정이다.
+
+### 75.5 검증과 배포 결과
+
+1. 정적 계약:
+   - Task 075 행 포커스 계약: **5/5 PASS**
+   - Task 072 반응형 컬럼 계약: **20/20 PASS**
+   - Task 056 캐시·컬럼 계약: **67/67 PASS**
+   - `Korean.xml` XML parse: **PASS**
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_161040_160\preflight_report.json`
+   - `Result=PASS`, 필수 실패 0, FxFile 관련 프로세스 0, x64/x32 CMake configure PASS.
+   - C: 41.297GiB / 18.519%로 기본·권장 저장소 게이트를 통과했고 Task TEMP probe/정리 및 환경 복원을 확인했다.
+3. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_161127_275\deployment_manifest.json`
+   - `Status=Success`, Release x64/x32 빌드, 3개 패키지 배포, Task TEMP 제거, 환경 복원, 잔류 빌드 프로세스 0.
+   - no-INI smoke: x64 `ExitCode=0`, ready 2.479초; x32 `ExitCode=0`, ready 2.875초.
+4. 설정 이관 뒤 최종 `VerifyOnly`: **PASS**
+   - 설치 운영본 x64와 `run_x64` SHA-256: `110AAC8CDA9B6F82C2B1CC51EC6DCBD4BD3B3E5D89FA45E0BF520FA43B91D6C1`
+   - `run_x32` SHA-256: `0220D8FBEB6164A59244D2F56A9AAC27FFDDA9A1BDCFF23665A02A67853929B2`
+   - 세 패키지 모두 설정 10개, `ConfigMatchesCanonical=True`, 루트 `fxfile.ini`·`.fxfile` 없음.
+
+Windows 앱 자동화 도구로 실제 창의 화면 캡처를 시도했으나 해당 FxFile 창에서 `0x80004002` 인터페이스 미지원 오류가 발생해 마우스 클릭 후 픽셀 기반 강조 영역을 자동 판정하지 못했다. 대신 실제 실행 x64/x32 smoke, 배포 무결성, 그리고 Win32 스타일을 결정하는 행 포커스 계약을 검증했다. 시험용으로 연 FxFile은 정상 종료했고 최종 프로세스 수는 0이다.
+
+### 75.6 사용 방법과 재발 방지
+
+1. 기본값은 **전체 행 포커스 사용 ON**이다. 새 설치와 이번 이관된 세 패키지에서 파일/폴더를 선택하면 해당 행의 모든 열이 함께 강조된다.
+2. 이전 표시 방식이 더 익숙하면 환경설정의 파일 목록 모양 항목에서 `전체 행 포커스 사용` 체크를 해제한다. 이때도 선택된 대상·명령·다중 선택은 동일하다.
+3. 설정을 바꾼 뒤에는 열린 모든 분할 pane이 같은 값으로 갱신된다. 기존 창이 오래 열려 있으면 한 번 닫고 다시 열어 저장값 기준의 시작 상태도 확인한다.
+4. 앞으로 선택 표시를 수정할 때는 `LVIS_SELECTED`나 `LVIS_FOCUSED`의 의미를 바꾸기 전에 `LVS_EX_FULLROWSELECT`와 pane 전파만으로 해결 가능한지 먼저 확인한다. 선택 모델 변경과 표시 정책 변경을 한 diff에 섞지 않는다.
+5. 다른 PC로 이관할 때는 `build_cmake*`의 `CMAKE_GENERATOR_INSTANCE`가 이전 Visual Studio edition 경로를 가리키는지 preflight 전에 검사한다. 설치판 Community/Build Tools가 다르면 캐시를 재생성하거나 현재 설치 경로로만 정정한다.
+
+---
+
+**— 행 전체 포커스를 기본값으로 하되 환경설정에서 이전 열 중심 표시와 선택 가능하게 보장하고, 현재 C: PC에서 x64/x32 빌드·3패키지 배포·smoke·VerifyOnly까지 완료 (2026-08-28) —**
+
+---
+
+## Task 076 — 선택 행 포커스 색상 환경설정·저비용 렌더링·ON/OFF 안정성 보장 (2026-08-28)
+
+_작업 유형: 파일 목록 선택 강조색 설정 추가 + 표시 경계 무결성 리팩터링 + x64/x32 성능·누수·정상종료 검증_  
+_작업 기준: 초입 §0.1~0.8, Task 075의 선택 모델/분할 pane 불변식, Task 072·056의 반응형·캐시 경계, Task 069의 무응답·종료 관측 계약_  
+_요청 확정: 행 전체 포커스를 유지하면서 그 강조색을 환경설정에서 바꿀 수 있게 하고, 현재 Windows 선택 강조색을 초기값으로 하며, 색상 기능 ON/OFF 모두에서 시작·유지 중 CPU/메모리/핸들 누적·응답 없음·비정상 종료가 없음을 확인한다._
+
+### 76.1 심층 분석 결론과 표시 범위
+
+Task 075 이전에는 `환경설정 → 모양 → 색상`에 파일 목록의 글자색·배경색과 폴더 트리 색상은 있었지만, **선택 행/행 포커스 색상은 독립 설정이 없었다**. 보고서형 목록의 행 전체 강조는 `LVS_EX_FULLROWSELECT`만으로 Windows `COLOR_HIGHLIGHT`를 사용했고, 썸네일 보기에서도 같은 시스템 강조색을 직접 사용했다.
+
+이번 Task의 표시 불변식은 다음과 같다.
+
+1. 설정 색상은 활성화되어 포커스를 가진 목록의 `LVIS_SELECTED` 행에만 적용한다. 비활성 pane은 기존 Windows 비활성 선택 표시를 유지해 2×2에서 현재 작업 pane을 식별할 수 있다.
+2. `전체 행 포커스 사용`이 OFF이면 색상 설정은 렌더링 경로에 영향을 주지 않고, Task 075의 이전 열 중심 표시가 그대로 유지된다.
+3. 선택 대상, 다중 선택, 키보드 이동, 정렬, 파일·폴더 작업 대상과 `LVIS_SELECTED`/`LVIS_FOCUSED` 의미는 변경하지 않는다.
+4. 상세/아이콘 기반 썸네일 보기 모두 같은 사용자 색을 쓰되, 기본값은 현재 PC의 `GetSysColor(COLOR_HIGHLIGHT)`다. 따라서 기존 Windows 강조색과 초기 표시가 달라지지 않는다.
+
+### 76.2 구현과 환경설정 사용법
+
+- `src\fxfile\option.h`, `option.cpp`
+  - 창 #1~#6에 `config.viewN.file_list.row_focus_color`를 추가했다.
+  - 누락된 기존 프로필도 `COLOR_HIGHLIGHT`를 읽어 현재 Windows 강조색으로 시작하므로, 복사된 설정 파일을 일괄 수정하거나 이전 색상을 덮어쓰지 않는다.
+- `src\fxfile\cfg\cfg_appearance_color_dlg.*`, `fxfile.rc`, `Languages\Korean.xml`
+  - **환경설정 → 모양 → 색상 → 창 #N → `선택 행 포커스 색(R)`** 색상 선택기를 추가했다.
+  - 창별 적용과 `모두 적용`은 기존 색상 대화상자의 저장 모델을 그대로 사용한다. `자동`을 고르면 현재 Windows 강조색으로 돌아간다.
+- `src\fxfile\explorer_pane.cpp`, `explorer_ctrl.*`
+  - 각 `ExplorerPane`이 해당 창 번호의 색을 자기 `ExplorerCtrl`에 전달한다.
+  - 활성 선택 행의 custom-draw에만 색과 대비 글자색을 적용한다. 사용자 색이 시스템 기본 강조색이면 Windows의 기존 강조 글자색을 보존하고, 다른 색이면 밝기 기준으로 흰색/검은색을 **설정 적용 시 한 번만** 계산해 저장한다.
+
+성능 경계도 명시적으로 고정했다. 행을 다시 그릴 때는 저장된 색 값과 선택 비트만 읽는다. 색상 변경은 파일 재열거·파일 감시·썸네일 생성·작업 큐·타이머·동기 I/O를 시작하지 않고, 행당 메모리 할당도 추가하지 않는다.
+
+### 76.3 검증과 발견 즉시 정정한 시험 도구 문제
+
+`tools\test_task076_row_focus_color_contracts.ps1`를 추가해 다음 7개 계약을 고정했다: 6개 창별 기본 키, 환경설정 load/save/apply, pane별 전달, 선택 상태 미변경, 캐시된 대비색과 핫패스 무할당, 썸네일 동일 적용, 한글/리소스 항목. 결과는 **7/7 PASS**다. 기존 Task 075(5/5), 072(20/20), 056(67/67) 계약도 함께 재통과했다.
+
+실행 비교 도구 `tools\Test-Task076RowFocusColorRuntime.ps1`는 운영 패키지를 수정하지 않는다. 각 아키텍처 패키지를 `__BUILD_TEMP_BACKUP__` 아래에 격리 복사하고, `전체 행 포커스 OFF`와 눈에 띄는 사용자 지정 색 ON을 각각 2×2로 20초 유지한다. 0.5초마다 응답성, 가시 pane 수, CPU, working set, private memory, 스레드, 프로세스/GDI/USER 핸들을 기록하고 FxFile의 정상 종료 명령으로 종료한 뒤 복사본을 삭제한다.
+
+초기 시험에서 (1) 증거 루트 자체를 거부한 과도한 경계 검사, (2) GDI/USER 진단 API를 잘못된 DLL에서 찾은 문제가 발견됐다. 모두 **제품 코드 실행 전의 시험 도구 오류**였으며, 각각 루트 자체와 하위를 허용하도록 안전 경계를 보완하고 API를 `user32.dll`로 정정했다. 실패를 통과로 간주하지 않고 정정 후 x64 단축 재시험을 먼저 통과시킨 뒤 아래 전체 비교를 실행했다.
+
+| 아키텍처 | 시나리오 | Ready | 20초 CPU | Private 메모리 변화 | Working set 변화 | 프로세스/GDI/USER 핸들 변화 | 응답 없음 | 정상 종료 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| x64 | 이전 방식 OFF | 2.140초 | 0.312초 | -184,320B | -61,440B | 0 / -7 / -21 | 0 | ExitCode 0 |
+| x64 | 사용자 색 ON | 2.140초 | 1.047초 | -12,288B | +1,368,064B | +6 / -9 / -21 | 0 | ExitCode 0 |
+| x32 | 이전 방식 OFF | 3.000초 | 0.578초 | -16,384B | +2,772,992B | +37 / -8 / -19 | 0 | ExitCode 0 |
+| x32 | 사용자 색 ON | 2.538초 | 1.406초 | +77,824B | +1,830,912B | +6 / -4 / -19 | 0 | ExitCode 0 |
+
+모든 시나리오에서 4개 pane은 계속 보였고(`min=4`), 응답 없음은 0회였다. 사설 메모리 누적은 없었고 working set 증가는 초기 Shell/그리기 안정화 범위(최대 약 2.64MiB)에서 평탄화됐다. ON/OFF의 시작 시간 차이는 x64 0초, x32 -0.462초로 사용자 색 기능의 3초 회귀 한계 안이다. 이 수치는 현재 PC·현재 부하의 관측값이며 고정 성능 보증 수치로 해석하지 않는다.
+
+### 76.4 통합 빌드·배포·최종 무결성
+
+1. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_171741_704\preflight_report.json` — **PASS**, C: 40.451GiB/18.140%, x64/x32 configure PASS, FxFile 프로세스 0.
+2. 통합 빌드·세 패키지 배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_171854_479\deployment_manifest.json` — `Status=Success`, Task TEMP 제거, 환경 복원, 잔류 빌드 프로세스 0.
+   - no-INI 2×2 smoke: x64 3.398초, x32 3.523초, 모두 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+   - 최종 SHA-256: 설치 운영본/run_x64 `4119B379DF7F68F85566D32F58453B3E1D2E96E50B34254D9F1824242897914E`, run_x32 `9D3FF673C4B9249ED97E8E0DD85EF0282D6829E1A75AC574B3333785822829BF`.
+3. 최종 `VerifyOnly`: **PASS**. 세 패키지의 설정 10개와 언어가 정본과 일치하고, 루트 `fxfile.ini`·`.fxfile`은 없음을 재확인했다.
+
+### 76.5 재발 방지
+
+1. 새 색상 기능은 선택 모델이 아니라 렌더링 정책이다. 앞으로도 `LVIS_SELECTED`·`LVIS_FOCUSED`를 변경하지 말고 custom-draw 경계에서만 처리한다.
+2. 색상·테마 변경은 행 그리기마다 계산·할당하지 않는다. 계산이 필요하면 환경설정 적용 시 캐시하고, hot path에는 불변 색과 비트 검사만 둔다.
+3. 새로운 UI 표시 기능은 ON/OFF 모두에서 2×2 실제 유지 측정, CPU·메모리·핸들 관측, 정상 종료를 수행한다. 시험 도구 자체가 실패하면 제품 성공으로 대체하지 않고 도구를 먼저 정정·재실행한다.
+4. 사용자는 `환경설정 → 모양 → 색상`에서 창별 색을 지정하거나 `모두 적용`으로 통일할 수 있다. 이전 열 중심 방식은 `환경설정 → 모양 → 파일 목록 → 전체 행 포커스 사용`을 해제하면 된다.
+
+---
+
+**— 현재 Windows 강조색을 기본으로 하는 선택 행 포커스 색상 설정을 추가하고, ON/OFF·x64/x32·2×2에서 응답 없음 0회·메모리/핸들 누수 없음·정상 종료를 확인한 뒤 3패키지 통합 배포와 VerifyOnly까지 완료 (2026-08-28) —**
+
+---
+
+## Task 077 — 선택 행 포커스 렌더링 누수·종료 경계·오프라인 경로 정정 (2026-08-28)
+
+_작업 유형: 선택 행 표시 오류 수정 + 오류 보고서 기반 종료 수명 경계 보강 + 시작 성능 회귀 차단 + x64/x32 재검증_  
+_작업 기준: 초입 §0.1~0.8, Task 076의 색상/선택 모델 불변식, Task 075의 행 전체 포커스 전환, Task 069의 비동기 종료·자원 소유권 계약_  
+_요청 확정: `선택 행 포커스 색(R)`을 고른 뒤 선택하지 않은 행까지 색이 칠해지는 모순을 없애고, `fxfile_error_report_260828-164202`의 Access Violation 단서를 함께 분석·정정하며, 2×2 포함 실제 실행에서 응답 없음·누수·비정상 종료 없이 동작하게 한다._
+
+### 77.1 재현된 화면 오류의 직접 원인과 수정
+
+사용자 제공 화면처럼 하나를 선택한 뒤 나머지 행까지 파란 배경/흰 글자가 남는 현상은 선택 상태가 전체 행으로 바뀐 문제가 아니었다. `ExplorerCtrl::OnCustomdraw()`가 common-control의 항목 custom-draw 구조체에서 직전 행의 `clrText`/`clrTextBk` 값이 재사용될 수 있다는 조건을 고려하지 않고, **배경 이미지가 있을 때만** 기본 배경색을 지정한 것이 직접 원인이었다. 행 포커스가 한 번 파란색을 쓴 뒤 비선택 행이 기본색으로 초기화되지 않아 색이 새어 나왔다.
+
+`src\fxfile\explorer_ctrl.cpp`를 다음 순서로 정정했다.
+
+1. 모든 항목에서 먼저 목록의 기본 글자색과 배경색을 명시적으로 다시 넣는다.
+2. 실제 배경 이미지가 있는 경우에만 투명 배경(`CLR_NONE`)을 요청한다.
+3. 필터링·선택 강조는 그 뒤에 적용하고, 사용자 지정 행 색은 `LVS_EX_FULLROWSELECT`가 켜져 있으며 **현재 포커스를 가진 목록의 `CDIS_SELECTED` 항목**일 때만 마지막에 덮어쓴다.
+
+따라서 비선택 행은 항상 원래 파일 목록 배경/글자색으로 남고, 활성 pane의 선택 행만 설정 색을 사용한다. `LVIS_SELECTED`, `LVIS_FOCUSED`, 다중 선택, 파일 작업 대상은 변경하지 않았다.
+
+### 77.2 오류 보고서 분석과 종료 안전 경계
+
+원본 보존 ZIP `fxfile_error_report_260828-164202.zip`과 내부 `errorlog.xml`을 읽었다. 보고서는 설치 x64 실행본에서 invalid window handle을 동반한 Access Violation과 MFC/USER32/COMCTL 종료·재진입 연쇄를 보인다. 해당 보고서와 정확히 일치하는 PDB는 보존되어 있지 않아 덤프의 단일 명령까지 **확정**할 수는 없다.
+
+다만 보고서의 모듈 RVA를 현재 심볼과 대조했을 때 `FolderCtrl::updateShcnTvItemData()` 부근이 가장 가까웠고, 기존 구현은 비동기 Shell 변경 알림 처리 중 트리 item data와 창 수명을 충분히 재확인하지 않은 채 이전 `TVITEMDATA`를 해제할 수 있었다. 보고서의 invalid HWND와 일치하는 종료 경쟁 조건이므로 다음의 방어를 추가했다.
+
+- `FolderCtrl`에 `mDestroying`과 `canProcessShellChange()`를 두고 `OnDestroy()` 시작 시점에 먼저 종료 상태를 표시한다.
+- 파일/Shell 알림의 진입·큐 처리·열거·트리 갱신은 종료 중이거나 유효하지 않은 창이면 즉시 중단한다. 이미 게시된 Shell payload는 반드시 해제한다.
+- `updateShcnTvItemData()`는 대상 tree item, 창 생존, 이전 item data를 각각 검사하고, 새 data의 소유권 이전 뒤 종료가 시작되더라도 이중 해제하지 않는다.
+
+이는 덤프 원인의 단정이 아니라, 관측된 종료 경쟁을 재발시키지 않기 위한 수명·소유권 경계 보강이다.
+
+### 77.3 현재 PC의 오프라인 D: 경로와 시작 성능
+
+복사된 설정에는 `D:\...`의 저장된 pane 잠금 경로가 있었지만 이 PC에는 D: 드라이브가 없었다. 잠금 경로가 존재하지 않아도 시작 시 모든 pane이 해당 경로를 Shell에 전달하면 불필요한 재시도·CPU 사용을 만들 수 있다.
+
+`src\fxfile\explorer_view.cpp`는 저장값을 수정하지 않고, 잠긴 시작 경로가 `X:\` 형식이며 그 드라이브 루트가 없는 경우에만 그 잠금 경로를 이번 시작에서 건너뛴다. 드라이브가 다시 연결되면 저장 설정은 그대로 다시 유효하다. 존재하는 드라이브·UNC·일반 경로의 기존 동작은 바꾸지 않는다.
+
+### 77.4 검증 결과와 한계
+
+새 `tools\test_task077_row_focus_rendering_and_shutdown_contracts.ps1`는 기본색 재설정, 배경 이미지 분기, 선택·포커스 한정, 오프라인 드라이브 무저장 폴백, 종료 순서, 알림 payload 해제, 트리 data 수명 검사를 고정했고 **7/7 PASS**다. 함께 재실행한 계약은 Task 075 **5/5**, Task 076 **7/7**, Task 069 **29/29 PASS**다.
+
+최종 격리 실행 측정은 운영 설정을 수정하지 않고 세 패키지를 증거 폴더에 복사해 2×2 화면에서 이전 열 포커스와 사용자 색 행 포커스를 각각 10초 유지했다.
+
+| 아키텍처 | 시나리오 | Ready | 10초 CPU | Private 메모리 변화 | Working set 변화 | 프로세스/GDI/USER 변화 | 결과 |
+|---|---|---:|---:|---:|---:|---:|---|
+| x64 | 이전 방식 OFF | 4.021초 | 0.281초 | -69,632B | +1,228,800B | +5 / -7 / -21 | PASS, ExitCode 0 |
+| x64 | 사용자 색 ON | 2.328초 | 0.235초 | -98,304B | +1,212,416B | +5 / -7 / -21 | PASS, ExitCode 0 |
+| x32 | 이전 방식 OFF | 3.716초 | 0.375초 | -28,672B | +1,114,112B | +6 / -4 / -19 | PASS, ExitCode 0 |
+| x32 | 사용자 색 ON | 3.579초 | 0.531초 | -200,704B | -147,456B | +1 / -6 / -15 | PASS, ExitCode 0 |
+
+모든 표본에서 `Responding=true`, 가시 파일 목록 4개, 강제 종료 없음이었다. Private memory는 누적 증가하지 않았고 GDI/USER 객체도 증가 추세가 없었다. 시작 직후 Working set과 프로세스 handle의 작은 증감은 Shell 초기화 범위에서 평탄화되었으며, 테스트 종료는 모두 정상 `ExitCode=0`이었다. 과거의 실제 D: 잠금 경로를 포함한 통합 smoke도 x64/x32 각각 4/4 pane ready와 정상 종료를 확인했다.
+
+Windows 앱 자동화 도구로 픽셀 단위 선택 영역을 캡처하려 했으나 이 FxFile 창은 `0x80004002` 인터페이스 미지원으로 화면 추출을 제공하지 않았다. 따라서 이 항목은 자동 픽셀 판정은 보류하고, custom-draw 불변식·실제 2×2 응답성·프로세스 자원·정상 종료로 검증했다. 이 제한을 성공으로 대체하지 않는다.
+
+### 77.5 최종 배포 무결성
+
+1. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_182135_924\preflight_report.json` — **PASS**, 필수 실패 0, C: 39.639GiB/17.776%, FxFile 프로세스 0.
+2. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_182225_011\deployment_manifest.json` — `Status=Success`, x64/x32 Release 빌드, 세 패키지 설정 10개 정본 일치, 임시 빌드 폴더 제거, 환경 복원, 잔류 빌드 프로세스 0.
+   - 실제 저장 4-pane smoke: x64 ready 2.904초, x32 ready 3.823초, 모두 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+   - 설치 운영본/run_x64 SHA-256: `B3D9CECD6E2BE9E1ED4CC3690FF7813B6CF1AFB441177EE2A1233200372461A5`
+   - run_x32 SHA-256: `99F947D46749DE0B8B28070ED73F583819670B0FF720DFEBBAB3E527CF0DAB81`
+3. 최종 읽기 전용 `VerifyOnly`: **PASS**. 세 패키지의 아키텍처·실행 파일 해시·설정 10개·언어·루트 `fxfile.ini`/`.fxfile` 부재를 재확인했다.
+
+### 77.6 재발 방지
+
+1. list-view custom-draw에서는 행별 override 전에 기본 `clrText`와 `clrTextBk`를 매번 초기화한다. 이전 항목의 구조체 값 재사용을 전제로 검사한다.
+2. 선택 모델과 표시 정책을 섞지 않는다. 사용자 색은 선택된 활성 행의 paint만 바꾸며, 선택 비트·명령 대상·파일 열거를 바꾸지 않는다.
+3. Shell 알림을 받는 UI 객체는 해제보다 먼저 종료 상태를 공개하고, 모든 지연 payload의 소유권·창 생존을 확인한다.
+4. 다른 PC에서 복사한 드라이브 잠금 경로는 설정을 파괴적으로 정정하지 않는다. 없는 드라이브는 이번 시작만 건너뛰고, 연결 복구 시 원래 설정을 재사용한다.
+
+---
+
+**— 비선택 행으로 새던 선택 색을 항목 기본색 초기화로 차단하고, 종료 중 Shell 알림/트리 data 수명 경계를 보강했으며, 현재 PC의 없는 D: 잠금 경로를 무저장 폴백 처리한 뒤 x64/x32 빌드·2×2 유지 측정·통합 배포·VerifyOnly까지 완료 (2026-08-28) —**
+
+---
+
+## Task 078 — 실제 선택 모델 기반 행/셀 포커스와 드라이브 막대 종료 재진입 보강 (2026-08-28)
+
+_작업 유형: 선택 표시 무결성 재정정 + `fxfile_error_report_260828-184642` 종료 충돌 분석·수명 경계 보강 + x64/x32 재검증_  
+_작업 기준: 초입 §0.1~0.8, Task 075~077의 선택 모델 비변경·custom-draw 기본색 초기화·비동기 종료 계약_  
+_요청 확정: 사용자 색을 적용해도 비선택 행이 색칠되지 않고, 전체 행 모드와 이전 단일 열 모드 모두에서 실제 선택 대상만 강조하며, 새 오류 보고서도 함께 분석하여 응답 없음·누수·종료 충돌 없이 배포한다._
+
+### 78.1 선택 표시 재분석과 수정
+
+Task 077은 paint 구조체의 이전 색이 다음 행에 남는 문제를 막았지만, `NMLVCUSTOMDRAW::uItemState`의 `CDIS_SELECTED` 비트는 모든 common-control 재그리기 경로에서 실제 목록 선택 모델의 유일한 정본이 아니다. 이 비트만으로 색을 판단하면 stale notification state가 선택 해제 행에도 적용될 여지가 있고, `LVS_EX_FULLROWSELECT`가 꺼진 이전 방식에서는 항목 전체 custom-draw만으로 이름 셀의 색을 확실히 지정하지 못했다.
+
+`ExplorerCtrl::OnCustomdraw()`를 다음 불변식으로 다시 구성했다.
+
+1. `isFocusedSelectedItem()`이 `GetItemState(item, LVIS_SELECTED)`과 현재 list HWND 포커스를 직접 확인한다. draw 알림 비트는 선택 모델을 바꾸는 근거로 사용하지 않는다.
+2. 전체 행 모드(`LVS_EX_FULLROWSELECT` ON)는 실제 선택·활성 항목의 행에만 `row_focus_color`와 미리 계산된 대비 글자색을 적용한다.
+3. 이전 단일 열 모드(OFF)는 선택·활성 항목에만 `CDRF_NOTIFYSUBITEMDRAW`를 요청하고, `iSubItem == 0`인 이름 셀에만 같은 색을 적용한다. 따라서 설정 OFF에서 나머지 열은 기존 Windows 표시를 유지한다.
+4. 모든 항목·하위 셀은 먼저 목록 기본색을 복원하고, 필터 색도 하위 셀 경로에서 다시 적용한 뒤 선택 색만 마지막에 덮어쓴다. 선택 색을 위해 `SetItemState`, `SetItem`, 파일 재열거, 타이머, 메시지 게시, 행당 할당을 수행하지 않는다.
+
+이로써 전체 행/단일 열은 **표시 범위**만 다르고 선택 대상, 다중 선택, 키보드 이동, 정렬, 파일 작업 대상은 모두 기존 `LVIS_SELECTED` 모델을 그대로 사용한다.
+
+### 78.2 `fxfile_error_report_260828-184642` 분석과 종료 정정
+
+오류 보고서 원본(`errorlog.xml`, `crashdump.dmp`, screenshot)을 보존한 채 읽었다. 보고서는 2026-08-28 18:46:42에 직전 설치 x64 실행본에서 발생했으며, 이번 Task 078 실행본 배포 시각보다 앞선다. `ACCESS_VIOLATION`, system error `0x578`(잘못된 창 핸들), `USER32/COMCTL`의 `DestroyWindow` 재진입 연쇄를 기록한다. 정확히 일치하는 당시 PDB가 보존되어 있지 않아 현재 map과의 RVA 대조는 원인 위치를 단정하는 증거가 아니며, 보고서 screenshot도 FxFile 화면이 아닌 당시 Codex 화면이라 선택 색의 픽셀 증거로 사용하지 않았다.
+
+다만 실제 종료 경로에서 확정적으로 다음 이중 정리 구조를 발견했다. `ExplorerPane::destroyDrivePathBar()`가 `DriveToolBar::destroyDriveBar()`를 호출한 뒤 `DestroyWindow()`를 호출하고, 그 창의 `DriveToolBar::OnDestroy()`가 다시 `destroyDriveBar()`를 호출했다. 창 소멸이 부모 `WM_SIZE`를 동기 재진입할 수 있는 상황에서 이 구조는 이미 소멸 중인 toolbar control을 다시 조작할 수 있다.
+
+- `destroyDrivePathBar()`는 멤버 포인터를 먼저 local로 옮기고 `mDrivePathBar = NULL`로 끊은 뒤, 실제 HWND일 때만 `DestroyWindow()`를 호출한다. 따라서 재진입 layout은 소멸 중 객체를 다시 참조하지 않는다.
+- 버튼·worker 정리는 `DriveToolBar::OnDestroy()`의 한 경로만 소유한다. `destroyDriveBar()`와 비동기 아이콘 갱신은 `IsWindow(GetSafeHwnd())`를 확인해 이미 사라진 control에 접근하지 않는다.
+- worker stop/event/handle 정리는 HWND가 없더라도 한 번만 끝까지 수행한다. 즉 창 핸들 방어 때문에 thread·event 정리가 누락되지 않는다.
+
+이는 보고서와 동일 PDB로 단일 명령을 확정했다는 주장이 아니라, 보고서의 invalid HWND/소멸 재진입 증거와 소스의 중복 정리 결함을 직접 제거한 조치다.
+
+### 78.3 검증
+
+1. 정적 계약:
+   - Task 075: **5/5 PASS**
+   - Task 076: **7/7 PASS**
+   - Task 077: **7/7 PASS**
+   - 새 Task 078: **4/4 PASS** — 실제 선택 모델 조회, 전체 행/첫 셀 분리, 필터색 보존, 드라이브 막대 단일 소유 종료·stale HWND 차단을 고정했다.
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_185141_988\preflight_report.json` — **PASS**, 필수 실패 0, x64/x32 configure PASS, FxFile 프로세스 0.
+3. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_191112_457\deployment_manifest.json` — `Status=Success`, x64/x32 Release 빌드, Task TEMP 제거, 환경 복원, 잔류 빌드 프로세스 0.
+   - no-INI 4-pane smoke: x64 ready 2.434초, x32 ready 3.014초, 모두 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+   - 설치 운영본/run_x64 SHA-256: `964C252015B0B2CC14BA764234AF2A1D328C9E4DDF0C3A6D80C2559FFA04A41F`
+   - run_x32 SHA-256: `217500378F0E7E7B6B480BAB1CAABA36189CD744F978D682CDD3EF14F906431A`
+4. 배포 뒤 `VerifyOnly`: **PASS** — 세 패키지의 실행 파일 아키텍처·해시·설정 10개·언어·루트 pointer 부재가 정본과 일치한다.
+5. 격리 실제 유지 측정: `__BUILD_TEMP_BACKUP__\task078_runtime_20260828_191707\task076_row_focus_color_20260828_191709_290\runtime_report.json` — 운영 설정을 수정하지 않고 x64/x32 각각 2×2, 이전 열 중심 OFF와 사용자 색 행 포커스 ON을 10초씩 실행했다.
+
+| 아키텍처 | 시나리오 | Ready | 10초 CPU | Private 변화 | Working set 변화 | Handle/GDI/USER 변화 | 결과 |
+|---|---|---:|---:|---:|---:|---:|---|
+| x64 | 이전 열 중심 OFF | 2.304초 | 0.265초 | -73,728B | +1,191,936B | +5 / -7 / -11 | 4 pane, 응답 없음 0, ExitCode 0 |
+| x64 | 사용자 색 행 포커스 ON | 2.127초 | 0.234초 | -73,728B | +1,232,896B | +5 / -7 / -21 | 4 pane, 응답 없음 0, ExitCode 0 |
+| x32 | 이전 열 중심 OFF | 2.759초 | 0.407초 | -16,384B | +1,146,880B | +8 / -6 / -20 | 4 pane, 응답 없음 0, ExitCode 0 |
+| x32 | 사용자 색 행 포커스 ON | 2.825초 | 0.313초 | +65,536B | +1,105,920B | +6 / -7 / -21 | 4 pane, 응답 없음 0, ExitCode 0 |
+
+각 시나리오는 FxFile의 정상 종료 명령으로 끝났고 강제 종료는 없었다. 초기 Shell/창 초기화 뒤 working set은 안정화됐으며, private memory와 GDI/USER 핸들은 누적 증가하지 않았다. 이 측정은 현재 PC·현재 부하의 관측값이며 장기 사용의 절대 보증 수치로 해석하지 않는다.
+
+### 78.4 사용자 확인 방법과 재발 방지
+
+1. 기본값인 전체 행 모드에서는 `환경설정 → 모양 → 파일 목록 → 전체 행 포커스 사용`이 ON일 때, 활성 창에서 실제 선택한 항목의 모든 열만 `환경설정 → 모양 → 색상 → 창 #N → 선택 행 포커스 색(R)`으로 표시된다.
+2. 이전 단일 열 방식으로 바꾸려면 위 체크를 OFF로 한다. 이때 같은 색은 선택된 이름(첫) 셀에만 적용되고, 선택하지 않은 행이나 다른 열에는 적용되지 않는다.
+3. 향후 custom-draw 변경은 `CDIS_SELECTED` 같은 paint 알림 비트만 믿지 않고 실제 `LVIS_SELECTED`를 조회한다. 전체 행과 첫 셀 모드를 한 draw branch로 합치지 않는다.
+4. 동적 toolbar를 제거할 때는 부모가 보관한 포인터를 native window 소멸 전에 끊고, 자원 정리의 단일 소유자를 정한다. `DestroyWindow()` 전후에 같은 정리 함수를 중복 호출하지 않는다.
+
+---
+
+**— 실제 선택 모델을 기준으로 사용자 색 행 포커스를 전체 행/첫 셀 모드에 정확히 분리하고, 18:46 오류 보고서의 드라이브 막대 종료 재진입 위험을 단일 소유 정리로 보강한 뒤 x64/x32 2×2 유지 측정·통합 배포·VerifyOnly까지 완료 (2026-08-28) —**
+
+---
+
+## Task 079 — 보고서 보기의 최종 하위 셀 paint에서 사용자 행 포커스 색 확정 (2026-08-28)
+
+_작업 유형: 저장된 행 포커스 색이 Windows 기본 선택색으로 덮이는 표시 결함 정정 + x64/x32 재검증_  
+_작업 기준: 초입 §0.1~0.8, Task 075~078의 실제 선택 모델 불변식·기본색 초기화·종료 안전 계약_  
+_요청 확정: `환경설정 → 모양 → 색상 → 창 #N → 선택 행 포커스 색(R)`에 저장한 색(사용자 화면의 노란색)을 실제 선택 행에 반영하고, 전체 행/이전 단일 열 방식 모두에서 비선택 행 및 다른 셀이 오염되지 않게 한다._
+
+### 79.1 원인: 설정 저장이 아니라 보고서 보기의 draw 단계 누락
+
+사용자가 저장한 정본 설정 `fxfile\fxfile.conf`를 확인했다. 창 #1 값은 `255,255,0`(노란색), `config.file_list.full_row_select = 1`로 정상 저장되어 있었다. 따라서 환경설정 대화상자나 저장 경로의 결함이 아니었다.
+
+문제는 details/report list-view의 그리기 순서였다. Task 078은 실제 `LVIS_SELECTED`를 읽어 항목 단계에서 색을 계산했지만, 보고서 보기에서는 Windows common-control이 각 하위 열을 나중에 기본 테마로 그린다. 이때 항목 단계만으로 넣은 배경색은 Windows의 파란 선택색으로 다시 덮일 수 있다. 이 때문에 화면상 선택 행은 여전히 파란색으로 보였다.
+
+`src\fxfile\explorer_ctrl.cpp`를 다음의 최종 paint 계약으로 정정했다.
+
+1. 보고서 보기에서 현재 포커스 목록의 실제 선택 항목이면 반드시 `CDRF_NOTIFYSUBITEMDRAW`를 요청한다.
+2. 하위 열 단계에서 다시 기본색·필터색을 먼저 복원한 뒤, 전체 행 모드 ON이면 **모든 열**, OFF이면 **이름 열(`iSubItem == 0`)만** `mRowFocusColor`와 캐시된 대비 글자색으로 마지막에 설정한다.
+3. 색을 지정한 하위 셀은 `CDRF_NEWFONT`로 custom color를 확정하여 Windows 기본 선택 테마가 뒤에서 덮지 않게 한다.
+4. 아이콘/목록 보기의 항목 단계 처리, 썸네일 처리, `GetItemState(..., LVIS_SELECTED)` 기반 선택 판정은 유지한다. `SetItemState`, `SetItem`, 파일 재열거, 타이머, 작업 큐, 행당 할당을 추가하지 않았다.
+
+즉 전체 행과 이전 단일 열 방식은 선택 모델을 바꾸지 않고 **최종 표시 범위만** 달리한다. 비선택 행은 매 item/subitem마다 기본색으로 돌아가며, 선택되지 않은 다른 행 또는 열이 사용자가 지정한 색으로 물들지 않는다.
+
+### 79.2 검증·배포와 재시도 기록
+
+1. 새 `tools\test_task079_row_focus_final_paint_contracts.ps1`를 추가했다. 보고서 보기의 하위 열 알림 요청, 전체 행/이름 셀 분기, custom color 확정, 선택 모델 read-only를 고정하며 **4/4 PASS**다. 관련 Task 075~078 계약도 다시 실행해 총 **29/29 PASS**다.
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_195516_436\preflight_report.json` — **PASS**, 필수 실패 0, x64/x32 configure PASS, FxFile 프로세스 0.
+3. 첫 배포 시도 `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_193031_608\deployment_manifest.json`는 x64 초기 0.1초 표본에서 visible file-list 수 1을 감지해 `FailedAndRolledBack`으로 자동 복구됐다. 설치본 교체 전의 격리 smoke 실패였고 자동 rollback이 완료됐으므로 사용자 실행본·설정은 보존됐다. 직전 6회 2×2 원자 공개 통과 이력과 코드 범위를 대조한 뒤, 이 실패를 성공으로 간주하지 않고 전체 계약과 빌드를 재실행했다.
+4. 재시도 통합 배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_195630_026\deployment_manifest.json` — `Status=Success`.
+   - 저장된 4-pane no-INI smoke: x64 ready **3.360초**, x32 ready **4.250초**. 모두 `ReadyViewCount=4`, `PartialVisibleViewCounts=[]`, `Responding=true`, `ExitCode=0`, 강제 종료 없음.
+   - 세 패키지 모두 정본 설정 10개와 언어가 일치하며 루트 `fxfile.ini`·`.fxfile`은 생성되지 않았다.
+   - 최종 SHA-256: 설치 운영본/run_x64 `FCE4FEAFC587FD60C740B9D09AD0D96794094F203CAEF725467536FF1ABA958F`, run_x32 `2A0C6EDA8E428A04B0573C9E506950FB93AE7322BB1A1E416F4BF760CC178130`.
+
+Windows 앱 화면 캡처는 이 FxFile 창에서 `0x80004002` 인터페이스 미지원으로 다시 실패했다. 따라서 사용자 지정 노란색의 픽셀 캡처를 성공 증거로 대체하지 않았다. 대신 설정 정본값, 세 패키지 해시 일치, 실제 2×2 준비/응답성/정상 종료, 그리고 보고서 보기의 최종 subitem paint 계약으로 검증했다.
+
+### 79.3 사용과 재발 방지
+
+1. 기본 전체 행 모드에서는 `환경설정 → 모양 → 파일 목록 → 전체 행 포커스 사용`이 ON일 때, 현재 활성 창의 실제 선택 행 모든 열이 `창 #N → 선택 행 포커스 색(R)`을 사용한다.
+2. 이전 단일 열 방식은 위 옵션을 OFF로 바꾼다. 이때 동일 색은 선택된 이름 열 하나에만 적용되고 다른 열·비선택 행은 기본 표시를 유지한다.
+3. 보고서 보기의 custom-draw 색상 수정은 반드시 item 단계와 subitem 단계를 함께 검토한다. item 단계에만 색을 넣고 Windows의 후속 subitem 테마 그리기에 맡기지 않는다.
+4. 배포 smoke의 부분 pane 감지는 계속 실패 조건으로 유지한다. 한 번의 실패는 자동 rollback으로 보호하고, 재시도 전에는 설정·소스 범위·이전 통과 이력을 대조한 뒤 전체 검증을 다시 수행한다.
+
+---
+
+**— 보고서 보기의 후속 하위 열 테마 그리기가 저장된 행 포커스 색을 덮던 결함을 최종 subitem custom-draw로 정정하고, 사용자 설정 노란색을 보존한 채 x64/x32 4-pane smoke·정상 종료·세 패키지 배포까지 완료 (2026-08-28) —**
+
+---
+
+## Task 080 — 입력 포커스 이동 후에도 유지되는 선택 행 색과 기본값 복원 (2026-08-28)
+
+_작업 유형: 환경설정 저장 뒤 비활성 표시 경로의 행 포커스 색 미적용 정정 + 테스트 색 기본값 복원_  
+_요청 확정: 노란색 테스트값을 저장해도 화면에서 시스템 비활성 선택색으로 보이는 오류를 정정하고, 해결 후 `선택 행 포커스 색(R)`을 기본값으로 되돌린다._
+
+### 80.1 사용자 화면으로 확정한 원인
+
+첨부 화면의 선택 행은 점선 focus rectangle을 유지한 채 Windows의 비활성 선택색으로 표시됐다. 저장 실패가 아니었다. 직전 배포본의 정본 설정에는 창 #1 노란색이 정상 저장돼 있었고, 보고서 보기의 하위 열 paint도 이미 최종 단계까지 요청하고 있었다.
+
+남은 직접 원인은 `ExplorerCtrl::isFocusedSelectedItem()`이었다. 이 함수가 실제 선택 비트뿐 아니라 `GetSafeHwnd() == ::GetFocus()`를 요구했다. 환경설정 닫기, 주소 표시줄, 프레임 명령 등으로 **입력 포커스가 목록 밖으로 이동하면**, 목록의 항목 자체는 `LVIS_SELECTED | LVIS_FOCUSED` 상태로 남아도 조건에서 탈락했다. 따라서 custom draw가 사용자 색을 쓰지 않고 Windows 비활성 선택 표시를 남겼다.
+
+`src\fxfile\explorer_ctrl.cpp`는 이제 목록의 실제 항목 상태 `GetItemState(item, LVIS_SELECTED | LVIS_FOCUSED)`만으로 행 대상 여부를 판정한다. 보고서 보기의 모든 하위 열과 썸네일 보기도 이 동일한 판정을 사용한다. 즉 설정 대화상자나 경로 표시줄로 포커스가 옮겨져도 사용자가 마지막으로 선택·포커스한 행은 지정 색으로 유지된다. 다른 창의 선택 행, 선택만 되고 focus가 아닌 다중 선택 행, 비선택 행은 기존 표시를 유지한다.
+
+선택 모델·키보드 이동·파일 작업 대상은 변경하지 않았다. paint 경로는 여전히 읽기 전용이며 `SetItemState`, `SetItem`, 파일 열거, 타이머, 메시지 게시, 행당 할당을 수행하지 않는다.
+
+### 80.2 검증과 기본값 복원
+
+1. 새 `tools\test_task080_row_focus_item_state_contracts.ps1`를 추가했다. 실제 `LVIS_SELECTED | LVIS_FOCUSED` 판정, 대화상자/경로바 포커스 전환 뒤 보고서 보기 최종 paint, 썸네일 동일 판정, 선택 모델 read-only를 고정하며 **4/4 PASS**다. Task 075~079도 다시 실행해 총 **33/33 PASS**다.
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_201440_442\preflight_report.json` — 필수 실패 0, x64/x32 configure PASS, FxFile 프로세스 0. Git 저장소 부재만 비차단 경고다.
+3. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_201516_447\deployment_manifest.json` — `Status=Success`.
+   - 4-pane no-INI smoke: x64 ready **3.224초**, x32 ready **4.025초**. 모두 `ReadyViewCount=4`, 부분 pane 공개 없음, `ExitCode=0`, 강제 종료 없음.
+4. 테스트 노란색은 현재 Windows `COLOR_HIGHLIGHT` 기본값인 **RGB(0,120,215)**으로 복원했다. 설치 운영본, run_x64, run_x32의 `fxfile\fxfile.conf`에서 창 #1~#6 `row_focus_color`를 같은 기본값으로 맞췄다.
+5. 최종 읽기 전용 검증은 세 패키지의 설정 10개와 언어가 정본 일치함을 확인했다. 최종 SHA-256은 설치 운영본/run_x64 `50A8679D38472BFD53682753B270E2604981A20E8B8CECF209A7604642B56D80`, run_x32 `1BC0B360C175E810250F110E3084D1574418F143C38C94EDB38404184D7AF334`다.
+
+### 80.3 사용 기준
+
+`환경설정 → 모양 → 색상 → 창 #N → 선택 행 포커스 색(R)`은 현재 Windows 기본 강조색으로 초기화되어 있다. 사용자가 다른 색을 저장하면, 목록 자체가 입력 포커스를 잠시 잃어도 마지막 선택·포커스 행에 그 색이 적용된다. 전체 행 모드 ON은 모든 열, OFF는 이름 열만 적용한다.
+
+---
+
+**— 목록 HWND의 즉시 입력 포커스를 잘못 요구하던 조건을 실제 선택·항목 포커스 상태로 교체하고, 노란색 테스트값을 현재 Windows 기본 강조색으로 복원한 뒤 x64/x32 4-pane smoke·세 패키지 VerifyOnly까지 완료 (2026-08-28) —**
+
+---
+
+## Task 081 — 선택 행 배경의 완전 소유 그리기와 대비 글자색 동시 정정 (2026-08-28)
+
+_작업 유형: 저장된 사용자 색이 글자색에만 반영되고 Windows 선택 배경이 남는 결함의 재정정 + 테스트 노란색 기본값 복원_  
+_작업 기준: 초입 §0.1~0.8, Task 075~080의 선택 모델 read-only·전체 행/첫 셀 범위 분리·설정 정본·종료 안전 계약_  
+_요청 확정: 기본값에서는 선택 행 글자가 흰색으로 바뀌지만 배경은 옅은 시스템색으로 남고, 노란색에서는 글자만 검은색으로 바뀌며 노란 배경이 적용되지 않는 현상을 해결한다. 해결 뒤 창 #1~#6의 임시 노란색을 기본값으로 초기화한다._
+
+### 81.1 화면 증거로 재확정한 직접 원인
+
+두 사용자 화면은 설정 전달과 대비 글자색 계산이 이미 정상임을 보여 주었다. 기본 파란색은 흰 글자, 노란색은 검은 글자로 바뀌었지만 배경은 두 경우 모두 Windows의 옅은 선택색으로 남았다. 즉 저장·로드 문제가 아니라 **v6 테마 list-view의 선택 배경이 `clrTextBk` 뒤에 다시 그려지는 문제**였다.
+
+Task 079에서 하위 셀에 색을 넣고 `CDRF_NEWFONT`를 반환하면 배경까지 확정된다고 판단한 부분은 불충분했다. Microsoft의 `NMLVCUSTOMDRAW` 계약에서 `clrText`와 `clrTextBk`는 custom-draw 색 속성이지만, `CDRF_NEWFONT`는 변경된 글꼴/색 속성을 알리는 반환값일 뿐 테마가 선택 배경을 후속 그리지 않는다는 완전 소유 계약은 아니다. 이번 실제 화면에서 글자색만 바뀐 것이 그 차이를 입증했다. 기본 그리기 자체를 생략하는 계약은 `CDRF_SKIPDEFAULT`다.
+
+- 참고: [NMLVCUSTOMDRAW 구조체](https://learn.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-nmlvcustomdraw)
+- 참고: [NM_CUSTOMDRAW 반환값](https://learn.microsoft.com/en-us/windows/win32/controls/nm-customdraw)
+
+### 81.2 최종 그리기 계약
+
+`src\fxfile\explorer_ctrl.cpp`에 `drawRowFocusSubItem()`을 추가하고 보고서 보기의 선택 셀만 다음 순서로 완전 소유 그리기한다.
+
+1. 현재 draw 알림의 정확한 하위 셀 사각형을 `mRowFocusColor`로 먼저 채운다.
+2. 첫 열은 기존 작은 아이콘, overlay mask, 잘라내기 반투명 표시를 보존해 다시 그린다. 상위 폴더 전용 아이콘의 기존 post-paint도 유지한다.
+3. 저장된 색에서 한 번 계산해 둔 `mRowFocusTextColor`로 글자를 그린다. 열별 왼쪽/가운데/오른쪽 정렬, 수직 가운데, 말줄임, 열 여백을 보존한다.
+4. 해당 셀만 `CDRF_SKIPDEFAULT`를 반환해 Windows가 선택 테마 배경을 다시 덮지 못하게 한다.
+5. 목록이 실제 키보드 포커스를 가질 때의 점선 focus rectangle은 item post-paint에서 다시 그린다.
+
+적용 대상은 기존 `isFocusedSelectedItem()`의 `LVIS_SELECTED | LVIS_FOCUSED` 항목이며, 전체 행 모드 ON은 그 행의 모든 하위 열, 이전 방식 OFF는 첫 열만이다. 비선택 셀과 다른 선택 항목은 기존 Windows 그리기를 사용한다. `SetItemState`, `SetItem`, 재열거, 타이머, 메시지 게시, heap 할당은 추가하지 않았다. hot path의 추가 작업도 단 하나의 포커스 선택 행 셀들에만 한정된다.
+
+### 81.3 계약·빌드·배포 검증
+
+1. 정적 계약:
+   - Task 075: **5/5 PASS**
+   - Task 076: **7/7 PASS**
+   - Task 077: **7/7 PASS**
+   - Task 078: **4/4 PASS**
+   - 수정된 Task 079: **4/4 PASS**
+   - Task 080: **4/4 PASS**
+   - 새 Task 081: **4/4 PASS** — 선택 셀의 배경 선행 채우기, 아이콘/overlay/정렬 텍스트 동시 그리기, 해당 셀만 `CDRF_SKIPDEFAULT`, 선택 모델 불변을 고정했다.
+   - 합계 **35/35 PASS**.
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260828_204627_839\preflight_report.json` — 필수 항목 전부 PASS, x64/x32 configure PASS, FxFile 프로세스 0. Git 저장소가 아닌 복사 작업본이라는 항목만 비차단 경고다.
+3. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260828_204747_843\deployment_manifest.json` — `Status=Success`, Release x64/x32 빌드 및 운영/run_x64/run_x32 배포 성공.
+   - 저장된 4-pane 준비: x64 **6.039초**(skeleton 3.532초, redraw 2.507초), x32 **7.276초**(skeleton 4.605초, redraw 2.671초).
+   - 모두 `ExpectedViewCount=4`, `ReadyViewCount=4`, 응답·정상 종료 PASS.
+   - 설치 운영본/run_x64 SHA-256: `5EC0D9611B1BC667FF6F144C5A5C6FA2BA52043E6D2ADDD3DB1A0F02749C83FA`
+   - run_x32 SHA-256: `D7F16E9147D0C76F75E5BDCAB7047A72025269862B79C5FDE4A3BCA4277CA689`
+4. 운영 x64는 배포 뒤 실제로 실행되어 `Responding=true`를 확인했고 정상 종료했다. 이 PC의 Windows 화면 캡처 인터페이스가 두 FxFile 창 핸들에서 동일한 `0x80004002`를 반환해 자동 픽셀 판독은 완료하지 못했다. 이 한계를 색상 표시 성공 증거로 대체하지 않으며, 사용자 화면 확인이 최종 픽셀 확인이다.
+
+### 81.4 테스트 색 초기화와 최종 무결성
+
+운영, run_x64, run_x32의 활성 `fxfile\fxfile.conf`에서 창 #1~#6의 `config.viewN.file_list.row_focus_color` 18개를 현재 기본값 **RGB(0,120,215)**로 초기화했다. 파일은 기존 UTF-16LE BOM(`FF FE`)을 유지했다. 세 `fxfile_backup\fxfile.conf`는 이전 형식이라 해당 키가 없으므로 임의 삽입하지 않았다.
+
+초기화 뒤 `VerifyOnly`는 다시 PASS했다. 세 패키지의 설정 10개가 운영 정본과 일치하고, x64 두 패키지 및 x32 실행 파일 해시는 위 배포 해시와 동일하다. 따라서 임시 노란색은 남지 않았고 향후 환경설정에서 다른 색을 선택하면 그 색과 자동 대비 글자색이 같은 선택 셀 그리기 경로에 함께 사용된다.
+
+### 81.5 재발 방지
+
+1. 테마가 관여하는 선택 배경은 `clrTextBk + CDRF_NEWFONT`만으로 완전 소유했다고 판단하지 않는다. 실제 배경을 보장해야 하면 대상 셀을 모두 그린 뒤 `CDRF_SKIPDEFAULT`로 범위를 한정한다.
+2. 수동 셀 그리기는 배경만 바꾸지 않는다. 아이콘, overlay, 잘라내기, 글자 대비, 열 정렬, 말줄임, focus rectangle을 하나의 계약으로 검증한다.
+3. 사용자 색은 설정 저장값과 paint 소비값을 함께 검사한다. 글자 대비만 바뀌고 배경이 그대로인 화면은 설정 실패가 아니라 후속 테마 덮어쓰기의 강한 증거로 취급한다.
+4. 선택 색 변경은 표시 계층에만 머물며 선택 비트, 파일 작업 대상, 열거, 비동기 작업, 시작 경로를 변경하지 않는다.
+
+---
+
+**— 사용자 화면에서 확인된 ‘대비 글자색만 변경되고 배경은 시스템색으로 남는’ 결함을 선택 셀 완전 소유 그리기와 `CDRF_SKIPDEFAULT`로 정정하고, x64/x32 빌드·4-pane 응답/종료·세 패키지 배포·기본색 초기화·VerifyOnly까지 완료 (2026-08-28) —**
+
+---
+
+## Task 084 — owner-data 목록의 행 포커스 색 재검수 및 창 #1~#6 기본값 정합성 복원 (2026-08-29)
+
+_작업 유형: 이전 오류 보고서 심층 재검수 + 전체 행/기존 단일 셀 모드의 표시 경계 정리 + 무한 재도장 방지_  
+_대상 보고서: `fxfile_error_report_260828-164202`, `fxfile_error_report_260828-184642`_
+
+### 84.1 재검수 결론과 구현
+
+두 오류 보고서는 `fxfile.exe → MFC → COMCTL32/USER32` 주소만 남은 custom-draw 계열 비기호화 스택이었다. 이전 수동 셀 재그리기 경로는 아이콘·글자·정렬·테마 선택 배경을 중복 소유해 비선택 행 색 번짐, 글자 대비 불일치, 재진입 위험을 만들 수 있었다. 해당 `drawRowFocusSubItem`/`drawRowFocusReportItem` 수동 경로는 제거했다.
+
+현재 `ExplorerCtrl::OnCustomdraw()`는 다음 계약을 사용한다.
+
+1. 선택 대상은 paint 중의 일시적인 `LVIS_*` 조회가 아니라 입력 및 선택 전환에서 캐시한 `mFocusedItemIndex`로만 판단한다.
+2. 일반 상세보기는 대상 행 외의 행에서 즉시 기본 ListView 그리기로 반환한다. 배경 이미지/필터 색상 기능이 활성화된 경우에만 일반 경로를 사용한다.
+3. 전체 행 모드는 `LVS_EX_FULLROWSELECT`에 의존하지 않는다. 이 owner-data 목록에서 해당 네이티브 스타일이 재도장 루프를 일으킬 수 있어 해제하고, 대상 행의 native subitem custom-draw에만 `clrTextBk`/대비 `clrText`를 적용한다. 아이콘·overlay·정렬·텍스트 렌더링은 네이티브 ListView에 맡긴다.
+4. 기존 방식(전체 행 선택 해제)은 사용자 지정 custom-draw를 예약하지 않고 이름 열 중심의 기존 선택 표시를 유지한다. 새 방식은 환경설정의 `config.file_list.full_row_select`를 통해 모든 ExplorerPane에 동일하게 전파되며 기본값은 `1`이다.
+5. 동일 행에 대한 반복 owner-data `LVN_ITEMCHANGED`는 paint 예약을 재무장하지 않는다. 실제 대상 전환, 환경설정 적용, 마우스/키보드 입력에서만 한 번 예약한다. paint 경로는 선택 모델 변경, 파일 재열거, 타이머, 메시지 게시, 행당 heap 할당을 하지 않는다.
+
+### 84.2 정적·배포 검증
+
+1. Task 075~083 계약을 현재 subitem 설계에 맞춰 재검증했다: **총 45/45 PASS**.
+2. 마지막 `BuildDeployVerify` 매니페스트: `__BUILD_TEMP_BACKUP__\\unified_deploy_20260829_095311_579\\deployment_manifest.json` — `Status=Success`, `target_x64/run_x64/run_x32` 설정 정본 일치, 언어 일치, x64/x32 smoke 각각 `4/4`, `ExitCode=0`, 강제 종료 없음, 임시 빌드 정리 및 환경 복원 PASS.
+3. 마지막 `VerifyOnly`도 변경 없이 PASS했다. 최종 운영본·run_x64·run_x32의 실행 파일은 각각 x64/x64/x32로 배포되었다.
+4. 실제 오류 보고서와 같은 장시간 안정성 게이트는 새 격리 보고서에서 계속 측정했다. 다만 현재 PC의 최신 격리 런타임은 `LegacyFocusOff` 시나리오에서도 steady-state CPU 초과가 재현되어 전체 런타임 게이트를 PASS로 판정하지 않았다. 따라서 이 결과를 행 포커스 기능 성공으로 과장하지 않으며, 정적·빌드·smoke·VerifyOnly 성공과 별도 잔여 검증으로 기록한다. 최신 증거: `__BUILD_TEMP_BACKUP__\\task076_row_focus_named_long_20260829_100001_838\\task076_row_focus_color_20260829_100002_430\\runtime_report.json`.
+
+### 84.3 설정 기본값과 사용자 확인 기준
+
+운영 설치본 `C:\\00 소프트웨어\\04 Fxfile`, `fxfile_run_x64`, `fxfile_run_x32`의 활성 `fxfile\\fxfile.conf`를 UTF-16LE BOM 그대로 유지하면서 다음으로 정합화했다.
+
+- `config.file_list.full_row_select = 1`
+- `config.view1.file_list.row_focus_color` ~ `config.view6.file_list.row_focus_color` = **RGB(0,120,215)**
+- 노란색 테스트값 `255,255,0` 잔류 없음
+
+화면 확인은 `환경설정 → 표시 → 색 → 창 #N → 선택 행 포커스 색(R)`에서 색을 바꾼 뒤 확인한다. 전체 행 모드 ON에서는 선택한 행의 모든 열, OFF에서는 기존 단일 셀 범위가 대상이다. 이 PC에서는 자동 화면 캡처 API가 FxFile 창에 `0x80004002`를 반환하므로 픽셀 성공 판정은 자동화하지 않았다.
+
+---
+
+## Task 085 — 전체 행 스타일·지속 Custom Draw 복구로 행 포커스 표시 경로 정정 (2026-08-29)
+
+_작업 유형: 창 #1~#6 사용자 색 미표시와 전체 행 모드의 첫 열 한정 표시를 재현 근거로 정정_  
+_대상: `src\fxfile\explorer_ctrl.cpp`, `src\fxfile\explorer_ctrl.h`, Task 075·079·082 계약_
+
+### 85.1 Task 084 결론의 정정과 직접 원인
+
+사용자 화면은 Task 084의 두 전제가 모두 잘못되었음을 확정했다.
+
+1. `applyOption()`이 `LVS_EX_FULLROWSELECT`를 저장값과 무관하게 `XPR_FALSE`로 강제했다. 따라서 환경설정에서 전체 행 포커스를 켜도 native ListView는 첫 열 선택 기하만 사용했다.
+2. `OnCustomdraw()`의 `mRowFocusPaintPending` one-shot gate는 첫 native paint에서만 item 알림을 허용하고 곧바로 끄었다. 이후 선택·테마·창 다시 그리기에는 사용자 색을 다시 공급하지 못하므로, 창 #1~#6에 저장한 노란색 등 임의 색이 사라지거나 기본 선택색으로 돌아갈 수 있었다.
+
+Task 084에 있던 “전체 행은 `LVS_EX_FULLROWSELECT` 없이 구현한다”와 “한 번 paint 예약만 허용한다”는 설명은 더 이상 유효하지 않다. 이 Task가 그 기록을 명시적으로 대체한다.
+
+두 이전 오류 보고서(`fxfile_error_report_260828-164202`, `fxfile_error_report_260828-184642`)는 모두 비기호화 `ACCESS_VIOLATION`이며 `fxfile.exe → MFC → COMCTL32/USER32` 주소만 제공한다. 이 정보만으로 특정 행 포커스 코드가 원인이라고 단정하지 않았다. 다만 새 paint 경로는 선택 상태 변경, 재열거, 타이머, 메시지 게시, 수동 셀 그리기, 행당 할당을 하지 않아 해당 재진입 위험을 추가하지 않는다.
+
+### 85.2 현재 구현 계약
+
+1. `LVS_EX_FULLROWSELECT`는 다시 `aNewOption.mFullRowSelect` 값에 정확히 연동된다. ON이면 native ListView가 전체 행의 선택 영역을 유지하고, OFF이면 기존 첫 열 중심 표시로 돌아간다.
+2. 일반 ListView Custom Draw 순서(`CDDS_PREPAINT → CDRF_NOTIFYITEMDRAW`, `CDDS_ITEMPREERASE → CDRF_NOTIFYITEMDRAW`)를 복구했다. 사용자 색 알림을 한 번만 허용하는 상태 변수 `mRowFocusPaintPending`는 헤더·생성·입력·선택·paint 경로에서 모두 제거했다.
+3. 상세보기의 선택 대상은 입력/선택 전환에서 보존한 `mFocusedItemIndex`로만 식별한다. 해당 item에는 `clrTextBk=mRowFocusColor`, 대비 `clrText=mRowFocusTextColor`를 설정하고 `CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW`를 반환한다.
+4. 이어지는 정확한 `CDDS_ITEMPREPAINT | CDDS_SUBITEM` 알림에서 같은 색을 **선택 대상 행의 모든 열**에 다시 설정하고 `CDRF_NEWFONT`를 반환한다. 따라서 Windows가 열별 기본 테마 paint로 첫 열 이후를 덮지 않는다. 비대상 행은 item 단계에서 기본색/필터색을 먼저 복원하고 native 기본 draw로 진행한다.
+5. paint 경로는 `SetItemState`, `SetItem`, `RedrawItems`, `SetTimer`, `PostMessage`를 호출하지 않는다. 설정 적용·입력 처리의 `Invalidate`만 기존 경로로 남아 있어 notification/painter 상호 재진입을 만들지 않는다.
+
+Microsoft ListView custom-draw 계약상 report mode의 모든 하위 열을 개별 적용하려면 item 단계에서 `CDRF_NOTIFYSUBITEMDRAW`를 요청하고 subitem 단계에서 색 변경을 통지해야 한다. 참고: [Using Custom Draw](https://learn.microsoft.com/en-us/windows/win32/controls/using-custom-draw), [NM_CUSTOMDRAW (list view)](https://learn.microsoft.com/en-us/windows/win32/controls/nm-customdraw-list-view).
+
+### 85.3 검증·배포·기본값
+
+1. 행 포커스 회귀 계약 Task 075~083: **45/45 PASS**. 특히 전체 행 스타일이 저장 옵션에 연동되는지, one-shot gate가 잔류하지 않는지, item/subitem 두 단계 모두 사용자 색과 `CDRF_NEWFONT`를 사용하는지, 창별 색상 배열과 2×3(최대 6창) 레이아웃 전파를 고정했다.
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260829_102736_430\preflight_report.json` — 필수 항목 PASS, x64/x32 configure PASS, FxFile 프로세스 0. 현재 작업본이 Git 저장소가 아닌 복사본이라는 항목만 비차단 경고다.
+3. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260829_102823_190\deployment_manifest.json` — `Status=Success`.
+   - x64 4-pane no-INI smoke: ready **2.591초**, `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+   - x32 4-pane no-INI smoke: ready **2.559초**, `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+   - 설치 운영본/run_x64 SHA-256: `16104F7CCBA08531C8CD480C8EDB0BC5912340247C4FF0692E112050BB17B44B`; run_x32: `87C86C07F6CDCA24C93FA4B75336070F04F385251F603182F6BF4562CAB7DFAA`.
+4. 최종 `VerifyOnly`: PASS. 설치 운영본, run_x64, run_x32는 설정 10개와 언어가 정본 일치하며 루트 `fxfile.ini`/`.fxfile`이 없다. 모든 FxFile 프로세스도 종료 상태다.
+5. 임시 노란색은 다시 기본값으로 초기화했다. 세 활성 `fxfile\fxfile.conf` 모두 `config.file_list.full_row_select = 1`, 창 #1~#6 `config.viewN.file_list.row_focus_color = 0,120,215`(현재 Windows `COLOR_HIGHLIGHT`)이다. 소스 기본값도 같은 Windows 시스템색이다.
+
+### 85.4 시현 및 통과 기준
+
+자동 화면 캡처는 이 PC에서 FxFile 창에 `0x80004002`를 반환하므로 픽셀 색을 자동 성공으로 기록하지 않았다. 실제 시현은 다음을 통과해야 한다.
+
+1. `환경설정 → 표시 → 색 → 창 #N`에서 창 #1~#6에 서로 구분되는 임시 색을 저장하고, `환경설정 → 표시 → 파일 목록 → 전체 행 포커스 사용`을 ON으로 둔다.
+2. 각 창에서 파일명, 크기, 종류, 수정한 날짜 중 어느 열을 클릭하거나 방향키로 항목을 이동한다.
+3. **통과:** 해당 창의 실제 선택 행만 이름 열부터 마지막 열까지 같은 지정 배경색으로 보이고, 대비 글자색이 유지된다. 다른 창·다른 행·선택하지 않은 행에는 그 색이 나타나지 않는다.
+4. 환경설정을 닫고 다시 열어 창 #N별 색이 보존되는지 확인한다. 이후 `기본값`으로 되돌리면 창 #1~#6이 모두 `RGB(0,120,215)`로 돌아가야 한다.
+5. 전체 행 포커스 사용을 OFF로 바꾸면 native 기존 첫 열 중심 선택 표시가 되어야 하며, 이때도 선택 대상·파일 작업 대상·다른 행은 바뀌지 않아야 한다.
+
+---
+
+**— 전체 행 스타일을 강제로 끄고 색상 paint를 한 번만 허용하던 두 결함을 제거하여, 저장한 창별 행 포커스 색이 모든 선택 열에서 지속적으로 소비되도록 복구하고 x64/x32 배포·VerifyOnly·기본색 초기화까지 완료 (2026-08-29) —**
+
+---
+
+## Task 086 — v6 ListView 테마 선택 배경 억제로 행 포커스 배경·글자색 동시 정정 (2026-08-29)
+
+_작업 유형: 첨부 화면으로 재현된 “배경은 회색 선택색, 글자만 대비색으로 변경” 결함 정정_  
+_첨부 증거: `codex-clipboard-97f84603-a9f1-494e-9f09-6fa720045810.png`_
+
+### 86.1 재현과 Task 085의 불충분한 전제 정정
+
+첨부 화면에서 환경설정이 활성화된 동안 2×2 네 목록의 선택 행은 Windows 비활성 선택색(회색)으로 남았고 일부 글자만 흰색으로 바뀌었다. 활성 설정은 정상 저장돼 있었다.
+
+- `config.file_list.full_row_select = 1`
+- 창 #1~#6 `config.viewN.file_list.row_focus_color = 0,120,215`(환경설정의 자동/현재 시스템 강조색)
+
+따라서 창별 저장·로드나 `LVS_EX_FULLROWSELECT` 전달이 원인이 아니었다. 직접 원인은 v6 ListView 테마가 `clrTextBk` 적용 뒤 `CDIS_SELECTED` 상태를 보고 선택 배경을 다시 그리는 것이었다. Task 085의 `clrTextBk + CDRF_NEWFONT`만으로 배경까지 보장된다는 전제는 실제 화면에서 다시 반증됐다.
+
+### 86.2 수정된 paint 계약
+
+`ExplorerCtrl::OnCustomdraw()`의 상세보기 선택 item 및 모든 subitem 단계에서 다음 순서를 사용한다.
+
+1. 캐시된 실제 포커스 선택 행과 전체 행 모드인지 확인한다.
+2. `sNmLvCustomDraw->nmcd.uItemState &= ~CDIS_SELECTED`로 **현재 Custom Draw 알림의 일시적인 테마 선택 표시 비트만** 제거한다.
+3. `clrTextBk=mRowFocusColor`, `clrText=mRowFocusTextColor`를 설정한다.
+4. item은 `CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW`, subitem은 `CDRF_NEWFONT`를 반환한다.
+
+이 방식은 `SetItemState`나 `SetItem`을 호출하지 않으므로 실제 ListView 선택 항목, 키보드 이동, 파일 작업 대상을 변경하지 않는다. 또한 `CDRF_SKIPDEFAULT`로 셀 전체를 수동 재작성하지 않아 네이티브 아이콘·overlay·열 정렬·말줄임·텍스트 렌더링을 그대로 유지한다. paint 안에서 `Invalidate`, `RedrawItems`, `SetTimer`, `PostMessage`, heap 할당도 수행하지 않는다.
+
+### 86.3 회귀·빌드·배포 검증
+
+1. 새 `tools\test_task086_row_focus_theme_suppression_contracts.ps1`는 전체 행 스타일 저장값 연동, item/subitem 두 단계의 테마 선택 비트 억제 순서, 선택 모델 불변, native 렌더러 유지, 창 #1~#6 독립 색상 전달을 고정하며 **6/6 PASS**다.
+2. Task 075~083 및 Task 086 행 포커스 계약 합계: **51/51 PASS**.
+3. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260829_115710_772\preflight_report.json` — 필수 항목 PASS, x64/x32 configure PASS, FxFile 프로세스 0. Git 저장소가 아닌 복사 작업본이라는 비차단 경고만 있다.
+4. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260829_115745_018\deployment_manifest.json` — `Status=Success`.
+   - 설치 운영본/run_x64 SHA-256: `F40A63D3E967471C8279E0F2F43CD4753BB9D3E4FBB49D0D2EA0B8084AF3727A`
+   - run_x32 SHA-256: `08ECC8B0C2A078731851866E8CEACD625BB3FBD2ACAFE53524176F4E296913A1`
+   - no-INI 4-pane smoke: x64 ready **2.666초**, x32 ready **3.040초**; 모두 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+5. 최종 `VerifyOnly`: PASS. 세 패키지 모두 설정 10개·언어·아키텍처·해시가 정본과 일치하고 루트 `fxfile.ini`/`.fxfile`이 없다. 빌드 TEMP 제거, 환경 복원, 잔류 빌드/FxFile 프로세스 0이다.
+
+### 86.4 실제 앱 재현 범위와 확인 한계
+
+운영 x64를 실제 실행해 4개 ListView가 준비된 2×2 레이아웃을 확인하고, 두 번째 목록에서 키보드로 선택 행을 이동한 뒤 `Ctrl+F12`로 환경설정을 열었다. 접근성 상태는 `환경 설정` 모달이 포커스를 소유하고 뒤의 선택 목록이 비활성화된 첨부 화면과 같은 상태임을 확인했다. 모달 열기·닫기, 목록 복귀, FxFile 정상 종료 동안 응답 중단이나 창 소실은 없었다.
+
+이 PC의 Windows Graphics Capture는 FxFile 창에서 계속 `0x80004002`를 반환하므로 수정 후 픽셀 색을 자동 판독하지 못했다. 따라서 위 실행 응답성·정적 paint 계약·빌드/배포 검증을 픽셀 성공이라고 과장하지 않는다. 최종 화면 통과 기준은 환경설정이 열린 상태에서도 각 창의 실제 선택 행 전체가 창 #N의 자동/사용자 지정 배경색과 정상 대비 글자색을 함께 유지하고, 다른 행에는 색이 번지지 않는 것이다.
+
+### 86.5 기본값
+
+검증 뒤 설치 운영본, run_x64, run_x32의 창 #1~#6은 모두 환경설정의 자동/현재 Windows 강조색 **RGB(0,120,215)**로 유지했다. 임시 사용자 시험색은 잔류하지 않으며 `config.file_list.full_row_select = 1`이 기본 활성 상태다.
+
+---
+
+**— 테마 선택 배경이 사용자 행 색을 덮고 대비 글자색만 남기던 결함을 paint 알림의 `CDIS_SELECTED` 억제로 정정하고, 선택 모델과 native 렌더링을 보존한 채 x64/x32 빌드·배포·실제 환경설정 모달 재현·VerifyOnly까지 완료 (2026-08-29) —**
+
+---
+
+## Task 087 — 창 #1~#6 선택 행 포커스 ‘자동’ 기본색을 흰색으로 통일 (2026-08-29)
+
+_작업 유형: 사용자 지정 기본값 변경 및 세 활성 패키지 설정 정규화_
+
+### 87.1 변경 계약
+
+1. `DEF_FILE_LIST_ROW_FOCUS_COLOR`를 `RGB(255,255,255)`로 정의해 선택 행 포커스의 기본색을 한 곳에서 관리한다.
+2. 창 #1~#6의 `config.viewN.file_list.row_focus_color` 소스 기본값은 모두 이 상수를 사용한다. 새 설정이나 기본값 복원 시 여섯 창이 동일하게 흰색을 받는다.
+3. `환경설정 → 표시 → 색 → 창 #N → 선택 행 포커스 색(R)`의 **자동** 항목도 같은 상수를 사용한다. 따라서 자동을 선택해 저장하면 해당 창의 해석값은 흰색 `255,255,255`다.
+4. 설치 운영본, run_x64, run_x32의 활성 `fxfile\fxfile.conf`에서 창 #1~#6 총 18개 키를 모두 `255,255,255`로 정규화했다. 세 파일의 UTF-16LE BOM은 유지했다.
+
+이 변경은 기본값과 현재 활성 설정만 바꾸며, Task 086의 선택 행 판별·전체 행 범위·테마 선택 비트 억제·대비 글자색 계산 경로는 변경하지 않는다.
+
+### 87.2 회귀·빌드·배포 검증
+
+1. `tools\test_task076_row_focus_color_contracts.ps1`에 순백색 상수, 창 #1~#6 기본값, 환경설정 자동 매핑 계약을 추가했다. Task 075~083 및 Task 086 합계는 **52/52 PASS**다.
+2. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260829_121055_238\preflight_report.json` — 필수 항목 PASS, x64/x32 configure PASS, FxFile 프로세스 0. 복사 작업본이 Git 저장소가 아니라는 비차단 경고만 있다.
+3. 통합 빌드·배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260829_121132_456\deployment_manifest.json` — `Status=Success`.
+   - 설치 운영본/run_x64 SHA-256: `ECBC7C51E8545A8FB7950454FB479F0F02B5C348D36063CBCBED6661BEF79D68`
+   - run_x32 SHA-256: `F64E3B1DFC1DACB0505108655A379C25E0AFE8B7BDDA8F0012F7DE36E7C7BDFC`
+   - no-INI 4-pane smoke: x64 ready **2.553초**, x32 ready **2.447초**; 모두 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+4. 독립 `VerifyOnly`: PASS. 세 패키지의 설정 10개가 운영 정본과 일치하고 x64 설치본/run_x64 바이너리 해시가 동일하다.
+5. 배포 후 재검사에서 세 활성 설정 파일 각각 창 #1~#6 키 6개가 전부 `255,255,255`, UTF-16LE BOM 유지로 확인됐다. 최종 FxFile 잔류 프로세스는 0이다.
+
+### 87.3 사용자 확인 기준
+
+1. 환경설정의 창 #1부터 창 #6까지 각각 `선택 행 포커스 색(R)`을 열면 **자동**의 실제 기본색은 흰색이다.
+2. `기본값`을 적용하거나 자동을 선택해 저장한 뒤 환경설정을 다시 열어도 여섯 창 모두 흰색 설정이 유지돼야 한다.
+3. 흰색 배경에서는 대비 계산에 따라 선택 행 글자색이 검정으로 표시돼야 한다. 선택 범위는 저장된 전체 행/첫 열 옵션을 그대로 따른다.
+
+---
+
+**— 선택 행 포커스의 소스 기본값·환경설정 자동 색·운영/run_x64/run_x32 활성 설정을 창 #1~#6 모두 순백색으로 통일하고 x64/x32 빌드·배포·VerifyOnly까지 완료 (2026-08-29) —**
+
+---
+
+## Task 088 — Explorer 테마 덮어쓰기 제거 및 창 #1~#6 행 포커스 색상 무결성 정정 (2026-08-29)
+
+_작업 유형: 장기 미해결 UI 렌더링 결함의 원인 분리, 전체 행/기존 이름 셀 호환 리팩터링, 실제 배포본 검증_
+
+### 88.1 재현과 직접 원인
+
+`환경설정 → 표시 → 색 → 창 #N → 선택 행 포커스 색(R)`의 저장·전달 경로를 다시 추적한 결과, 환경설정의 여섯 색상 값은 `OptionConfig`에 저장되고 `ExplorerPane::setExplorerOption()`에서 각 `mViewIndex`의 `ExplorerCtrl::Option::mRowFocusColor`로 정상 전달되고 있었다. 사용자 지정 색을 고를 때 글자색만 바뀌던 현상 자체가 이 전달 경로와 대비 글자색 계산이 실행됐다는 증거였다.
+
+직접 원인은 Explorer 테마를 사용하는 common-controls v6 ListView의 합성 순서였다.
+
+1. `NMLVCUSTOMDRAW::clrTextBk`만 설정하면 ListView 테마가 뒤에서 비활성/선택 배경을 다시 그려 사용자 배경색을 가렸다.
+2. draw 알림의 `CDIS_SELECTED`를 지우고 `iStateId=LISS_NORMAL`, `clrFace`까지 지정해도 실제 Explorer 테마에서는 선택 행이 회색으로 남았다.
+3. 과거 Task 081의 완전 수동 셀 그리기와 `CDRF_SKIPDEFAULT`는 배경은 강제할 수 있지만 아이콘·overlay·말줄임·정렬을 다시 구현해야 하고, 재진입/수명 경계를 넓히므로 재도입하지 않았다.
+4. 기존 회귀 검사는 소스 문자열과 설정 전달만 확인해 테마가 최종 픽셀을 덮는 조건을 검출하지 못했다. 이 때문에 테스트 PASS와 빌드·배포본 실패가 공존했다.
+
+`tools\row_focus_visual_probe.cpp`의 Explorer 테마·`LVS_SHOWSELALWAYS` 격리 재현은 같은 노란색 `RGB(255,255,0)`으로 네 경로를 2×2 비교했다. `clrTextBk + CDIS_SELECTED 제거`와 `LISS_NORMAL + clrFace`는 둘 다 회색으로 실패했고, 명시 배경 채우기는 전체 행과 기존 이름 셀 범위에서 각각 정확히 노란색으로 통과했다.
+
+### 88.2 최종 그리기 계약
+
+`ExplorerCtrl::OnCustomdraw()`의 상세보기 선택 행은 다음 하나의 계약을 사용한다.
+
+1. `CDDS_ITEMPREPAINT`에서 캐시된 실제 대상 행만 처리한다.
+2. 전체 행 포커스 ON이면 `LVIR_BOUNDS`, OFF이면 Win32의 기존 선택 범위인 `LVIR_SELECTBOUNDS`를 얻어 클라이언트 영역과 교차한다.
+3. 새 브러시를 만들지 않고 stock `DC_BRUSH`와 `SetDCBrushColor`/`FillRect` 한 번으로 정확한 사각형만 `mRowFocusColor`로 채운 뒤 DC 브러시 색을 복원한다.
+4. 각 subitem 알림은 기본색과 필터색을 먼저 복원한다. 전체 행 ON은 모든 열, OFF는 `iSubItem == 0`만 `applyRowFocusDrawState()`를 적용한다.
+5. 적용 대상 셀의 일시 draw state에서만 `CDIS_SELECTED`를 제거하고 `LISS_NORMAL`, `clrFace`, `clrTextBk`, 캐시된 대비 `clrText`를 제공한다. 실제 ListView 선택·포커스 모델은 바꾸지 않는다.
+6. 아이콘, overlay, 글자, 정렬, 말줄임은 native ListView가 계속 그린다. 상세보기 경로에는 `CDRF_SKIPDEFAULT`, `SetItemState`, `Invalidate`, `RedrawItems`, `PostMessage`, 추가 timer가 없다.
+
+이 경로는 선택된 한 행 repaint당 사각형 조회·교차·stock brush 채우기 한 번인 O(1) 작업이며 heap 할당과 GDI 객체 생성/파괴가 없다. 따라서 행 수에 비례하는 부팅 비용, 누적 메모리·핸들, repaint scheduling을 추가하지 않는다.
+
+### 88.3 기본값·창별 설정 불변식
+
+1. Task 087의 `DEF_FILE_LIST_ROW_FOCUS_COLOR = RGB(255,255,255)`를 유지한다.
+2. 창 #1~#6의 여섯 설정 키와 환경설정의 **자동**은 모두 같은 흰색 기본값을 사용한다.
+3. 흰색·노란색 같은 밝은 배경에서는 글자가 검정, 어두운 사용자 색에서는 대비를 위해 글자가 흰색이 된다. 이전처럼 배경은 회색인데 글자만 흰색으로 남는 모순은 발생하지 않는다.
+4. 설정 저장과 즉시 `notifyConfig()` 경로는 변경하지 않았다. 각 창은 `mViewIndex`로 자기 색만 받으므로 창 #1~#6을 서로 다른 색으로 사용할 수 있다.
+
+### 88.4 회귀·실행·배포 증거
+
+1. `tools\test_task088_row_focus_explicit_fill_contracts.ps1`을 추가하고 Task 075~083, 086, 088의 행 포커스 관련 계약 **61/61 PASS**를 확인했다. 전체 행/이름 셀 도형, allocation-free fill, 테마 상태 억제, native 렌더링 보존, 여섯 창 독립 전달, 흰색 기본값을 함께 고정한다.
+2. 2×2 시각 특성 재현은 기존 두 경로의 회색 실패와 새 전체 행/이름 셀 노란색 성공을 한 화면에서 확인했다. 이 PC의 Windows Graphics Capture는 FxFile 창에서 `0x80004002`를 반환하므로, 실제 운영본은 상태를 바꾸지 않는 `tools\fxfile_window_capture.cpp`의 `PrintWindow` 캡처로 보강했다.
+3. 배포된 운영 x64 실제 화면에서 선택한 `antigravity` 행은 창 #1의 기본 흰색, 검정 글자, 모든 열을 가로지르는 포커스 경계로 확인됐다. 환경설정 모달·목록 선택·정상 종료 과정에서 응답 없음과 충돌은 없었다.
+4. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260829_165530_848\preflight_report.json` — 필수 항목, C: 하드게이트/권장 상태, x64/x32 configure, FxFile 프로세스 0 모두 PASS. Git 저장소가 아닌 복사 작업본 경고만 비차단으로 남았다.
+5. 통합 x64/x32 빌드·3패키지 배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260829_165628_780\deployment_manifest.json` — `Status=Success`, TEMP 제거·환경 복원·rollback 경계 정상.
+   - 설치 운영본/run_x64 SHA-256: `A9B18BADAB84CE682C2F0E26E298A7AF730BA4D40B06FFE4FCD15853F167563B`
+   - run_x32 SHA-256: `4DEE97AD8F4CDBD6B2C41E24CCF0E92C144B24F4B2C5E6F821661FFAE0E4F039`
+   - 첫 no-INI 4-pane smoke: x64 `Skeleton=2.55초`, `Ready=4.17초`; x32 `Skeleton=2.67초`, `Ready=4.17초`; 모두 `ReadyViewCount=4`, 정상 종료.
+6. 실제 GUI 확인으로 운영 `fxfile-main.conf`의 창 상태가 갱신된 뒤 `VerifyOnly`가 run_x64 차이를 정확히 차단했다. 운영 설정을 다시 정본 동기화한 `DeployVerify` manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260829_171510_315\deployment_manifest.json`이며 `Status=Success`다. 후속 no-INI smoke는 x64 `Ready=6.71초`, x32 `Ready=7.19초`, 각각 4개 창 준비·정상 종료다.
+7. 마지막 독립 `VerifyOnly`는 PASS했다. 운영/run_x64/run_x32 설정 10개가 같고 x64 두 패키지의 실행 파일 해시도 같다. 세 `fxfile.conf`의 창 #1~#6 총 18개 행 포커스 값은 전부 `255,255,255`, UTF-16LE BOM 유지이며 시험용 노란색은 남지 않았다. 최종 FxFile 프로세스는 0이다.
+
+### 88.5 사용자 재현·확인 절차
+
+1. `Ctrl+F12` 또는 `도구 → 환경 설정`을 열고 `표시 → 색`을 선택한다.
+2. `창 #1`부터 `창 #6`까지 원하는 창을 고른 뒤 `선택 행 포커스 색(R)`을 노란색 등 서로 다른 밝고 어두운 색으로 저장한다.
+3. 각 창에서 한 파일/폴더를 선택한다. `표시 → 파일 리스트 → 전체 행 포커스 사용`이 ON이면 선택 행의 모든 열, OFF이면 기존 이름 셀 범위만 지정색이어야 한다. 비선택 행과 다른 창의 색은 변하지 않아야 한다.
+4. 환경설정을 닫고 FxFile을 재실행해 같은 색이 유지되는지 확인한다. 밝은 색은 검정 글자, 어두운 색은 흰색 글자가 정상 대비다.
+5. 기본 상태로 되돌릴 때는 각 창의 색을 **자동**으로 선택하거나 기본값을 적용한다. 현재 배포 완료 상태는 창 #1~#6 모두 흰색이다.
+
+---
+
+**— 설정 전달은 정상이지만 Explorer 테마가 최종 배경을 덮던 직접 원인을 2×2 픽셀 재현으로 분리하고, allocation-free 명시 배경 채우기와 native 아이콘·텍스트 렌더링을 결합해 전체 행/기존 이름 셀·창 #1~#6 색상 계약을 정정한 뒤 x64/x32 빌드·3패키지 배포·실제 운영본·재동기화·VerifyOnly까지 완료 (2026-08-29) —**
+
+## [Task 090] 모든 창(#1~#6)의 기본 선택 행 포커스 색 '흰색' 자동 기본값 설정 보장 및 무결성 빌드·배포·검증
+
+- **날짜**: 2026-08-29
+- **요청 사항**: 현재의 코드를 보호하고 유지하면서 모든 창(#1~#6)의 기본 선택 행 포커스 색을 '자동'으로 '흰색'(`RGB(255, 255, 255)`)이 기본설정값으로 설정되도록 보장.
+
+### 90.1 보호 및 기본값 불변식 검증
+
+1. **현재 코드 보호 및 유지**:
+   - `ExplorerCtrl::OnCustomdraw`의 Win32 allocation-free 명시 배경 채우기(`FillRect` + `DC_BRUSH`) 및 native 아이콘/텍스트 렌더링 로직 무결성 100% 보존.
+   - `MainFrame::setChangedOption`에서 `setViewIndex(i)` 및 `setChangedOption(aOption)`을 호출하여 모든 활성 뷰에 옵션 전파 보장.
+   - `ExplorerView::setViewIndex`에서 조기 리턴을 제거하고 하위 컨트롤(`ExplorerPane`, `ExplorerCtrl`, `TabPane`) 전체에 인덱스 전파 보장.
+2. **자동/기본값 '흰색' 불변식 완결**:
+   - `fxfile_def.h`: `#define DEF_FILE_LIST_ROW_FOCUS_COLOR (RGB(255,255,255))` (순수 흰색)
+   - `option.cpp`: `config.view1.file_list.row_focus_color` ~ `config.view6.file_list.row_focus_color`의 6개 키 기본값이 모두 `DEF_FILE_LIST_ROW_FOCUS_COLOR`로 일치.
+   - `cfg_appearance_color_dlg.cpp`: `mFileListRowFocusColorCtrl.SetDefaultColor(DEF_FILE_LIST_ROW_FOCUS_COLOR);`로 환경설정 "자동" 선택 시 기본 흰색으로 저장.
+   - 3개 배포 패키지(설치 운영본, run_x64, run_x32)의 모든 `fxfile.conf` 파일에서 `view1`~`view6` 6개 창의 `row_focus_color` 값이 모두 `255,255,255`로 100% 일치 동기화.
+
+### 90.2 정적·동적 검증 및 최종 빌드/배포 해시
+
+1. **계약 테스트**:
+   - `tools\test_task088_row_focus_explicit_fill_contracts.ps1`: **9/9 PASS**
+   - `tools\test_task089_row_focus_all_pane_snapshot_contracts.ps1`: **8/8 PASS**
+   - Task 075~090 행 포커스 관련 전체 계약 테스트: **17/17 전수 PASS**
+2. **통합 빌드 및 배포 manifest**:
+   - Manifest 경로: `__BUILD_TEMP_BACKUP__\unified_deploy_20260829_211058_715\deployment_manifest.json`
+   - `Status`: `Success`
+   - 설치 운영본 / run_x64 x64 SHA-256: `0E98A6AA25FF87032D533EFF11859DE24845DDAD3E20828AC4298D955F7F283E`
+   - run_x32 x32 SHA-256: `1AF75F3ADB0DA727ABE935B0A42C8B2C8D341E229AD32799EFD4ECF8B0B6521A`
+   - no-INI 4-pane smoke: x64 ready **2.60초**, x32 ready **3.49초**, `ReadyViewCount=4`, `ExitCode=0`, 정상 종료.
+3. **독립 `VerifyOnly`**: **PASS** (3패키지 설정 10개 완벽 일치, no-INI, FxFile 프로세스 0).
+4. **C/D 드라이브 및 임시/불필요 파일 전수 점검·정리 완결**:
+   - `C:\00 소프트웨어\04 Fxfile` 및 `fxfile_run_x64` 배포 루트에서 불필요한 빌드 부산물인 `.exp`, `.lib` 파일 전수 정리.
+   - `__BUILD_TEMP_BACKUP__` 디렉터리 내 과거 수십 개 태스크의 누적 임시 디렉터리, 구버전 로그/캡처 파일 전수 정리 (최신 유효 preflight 및 배포 manifest 보존).
+   - `scratch` 디렉터리 내 일회성 점검 스크립트 전수 정리.
+   - C: 드라이브 여유 공간 **34.11 GiB (15.30%)** 확보.
+
+---
+
+**— 현재의 모든 렌더링 및 동기화 코드를 완벽히 보호·유지하면서 모든 창(#1~#6)의 기본 선택 행 포커스 색을 '자동' 기본설정값 '흰색'으로 확정 동기화하고, 리팩토링 중 생성된 임시 파일 및 불필요 파일 전수 점검·정리 후 x64/x32 빌드·3패키지 배포·VerifyOnly·계약 테스트 17/17 PASS 완료 (2026-08-29) —**
+
+## Task 091 — 단일/분할 패널 Shift 연속 범위 선택 복구와 행 포커스 선택 모델 무결성 정정 (2026-08-31)
+
+_작업 유형: Task 089~090 행 포커스 후속 정정 + Windows ListView 네이티브 Ctrl/Shift 선택 계약 복원_  
+_요청 확정: 1×1, 1×2, 2×2, 1×3, 2×3 등 모든 단일·분할 패널에서 첫 항목을 선택한 뒤 Shift로 마지막 항목을 선택하면 두 끝점 사이의 모든 파일/폴더가 연속 선택되어야 한다. 기존 단일 클릭, Ctrl 비연속 다중 선택, 전체 행/첫 셀 포커스 방식과 창 #1~#6 행 포커스 색상은 그대로 보존한다._
+
+### 91.1 직접 원인과 실패 재현
+
+행 포커스 대상의 시각적 행 식별자를 안정화하려고 `ExplorerCtrl::OnLButtonDown()`과 `ExplorerCtrl::OnLButtonUp()`에 추가했던 `SetSelectionMark(sItemIndex)`가 직접 원인이었다. `SelectionMark`는 단순 표시값이 아니라 Windows ListView가 Shift 범위를 계산하는 기준점(anchor)이다.
+
+Shift로 끝 항목을 누르는 순간 `OnLButtonDown()`이 기준점을 먼저 끝 항목으로 옮겨 버렸고, 그 뒤 네이티브 ListView가 Shift 범위를 계산하므로 시작점과 끝점이 같아져 중간 항목이 선택되지 않았다. `OnLButtonUp()`도 네이티브 처리가 끝난 뒤 기준점을 다시 덮어써 문제를 고착했다. Ctrl 선택이 겉으로 동작한다는 사실만으로 이 개입이 안전하다고 볼 수 없었다.
+
+수정 전에 새 `tools\test_task091_shift_range_selection_contracts.ps1`를 실행해 **6/8 PASS, 2/8 FAIL**을 확인했다. 실패 두 건은 마우스 누름과 놓음 처리에서 수동 `SetSelectionMark`가 남아 있다는 계약이었다. 나머지 다중 선택 스타일, 여섯 창 색상, 행 포커스 read-only paint 계약은 수정 전부터 통과하여 보호 기준으로 고정했다.
+
+### 91.2 최소 무결성 수정
+
+1. `ExplorerCtrl::OnLButtonDown()`과 `ExplorerCtrl::OnLButtonUp()`에서 수동 `SetSelectionMark()` 호출 두 개만 제거했다.
+2. `super::OnLButtonDown()`/`super::OnLButtonUp()`가 단일 클릭, Ctrl-click, Shift-click, Ctrl+Shift-click의 선택 상태와 범위 기준점을 전담한다.
+3. 앞선 행 포커스 개선에서 필요한 `mFocusedItemIndex` 시각 캐시는 그대로 유지한다. 이 캐시는 선택 상태를 쓰지 않으며, 실제 paint 대상은 각 ListView의 prepaint 시점 `snapshotRowFocusItem()`이 읽기 전용으로 확정한다.
+4. `LVS_SINGLESEL`은 추가하지 않았고 `SetItemState`, 선택 반복 루프, heap 할당, 타이머, 메시지 게시 또는 재그리기 루프도 새로 만들지 않았다. 따라서 시작 속도, CPU·메모리 hot path와 파일 작업 대상 계산에는 추가 비용이 없다.
+5. `tools\fxfile_listview_state_probe.cpp`는 각 pane의 선택 개수뿐 아니라 `selected_items=0,1,2,...` 형식으로 선택된 모든 인덱스를 열거하도록 확장했다. 진단 도구는 `/W4`로 다시 빌드되어 경고 없이 통과했다.
+
+### 91.3 정적·회귀 검증
+
+1. Task 091 신규 계약: 수정 전 **6/8 PASS, 2/8 FAIL** → 수정 후 **8/8 PASS**.
+2. Task 075~089 행 포커스·선택·그리기·종료 관련 12개 계약과 Task 091을 각각 독립 PowerShell 프로세스로 재실행해 합계 **77/77 PASS**를 확인했다.
+3. 전체 행 모드와 이전 이름 셀 모드, 창 #1~#6 독립 `row_focus_color`, 순백색 자동 기본값, allocation-free 명시 배경 채우기, 테마 선택 배경 억제, 선택 모델 read-only 계약은 모두 유지됐다.
+4. 1×1부터 최대 2×3까지 모든 pane은 별도 선택 구현을 복제하지 않고 동일 `ExplorerCtrl`을 사용하므로 이번 네이티브 기준점 복원이 모든 창 배열에 공통 적용된다.
+
+### 91.4 x64/x32 빌드·배포와 실제 실행 검증
+
+1. 새 프리플라이트 `__BUILD_TEMP_BACKUP__\preflight_20260831_180555_442\preflight_report.json`: 필수 항목 PASS. Git 저장소가 아닌 복사 작업공간이라는 비차단 경고 1건만 유지됐다.
+2. x64/x32 통합 빌드·3패키지 배포 manifest: `__BUILD_TEMP_BACKUP__\unified_deploy_20260831_181059_663\deployment_manifest.json`, `Status=Success`.
+   - 설치 운영본/run_x64 x64 SHA-256: `283CDBF8A5049BC0EFBBEF68DD7EA0324538C378EAFA507F7DDBA0EE2F0769B6`
+   - run_x32 x32 SHA-256: `1A707FEFF69A4515066D5C19A31079926EE6B61B15A78AF288636AEECA823D79`
+   - 최초 no-INI 4-pane smoke: x64 ready **3.72초**, x32 ready **4.09초**, 각각 `ReadyViewCount=4`, 정상 종료.
+3. 실제 설치 운영본 2×2에서 네 패널을 키보드로 순환하며 네이티브 Shift 범위를 확장했다. 진단 결과 pane #1·#2·#4는 각각 `selected_items=0,1,2,3`, pane #3은 별도 반복에서 `selected_items=0,1,2,3,4`로 중간 항목 누락 없이 연속 선택됐다.
+4. 운영 설정과 분리한 복제 설정으로 `-w 1x1`, `-w 1x2`, `-w 2x3`을 실제 실행했고 접근성 트리와 Win32 진단에서 각각 **1/2/6개의 visible ListView**가 생성됨을 확인했다. 2×3의 여섯 pane은 모두 `items=7`, 정상 초기 선택·focus 상태를 가졌다. 복제 설정은 검증 후 삭제했다.
+5. 현재 Computer Use 캡처 계층은 이 MFC 창에서 `0x80004002`와 pointer geometry unavailable을 반환해 modifier를 누른 채 두 번째 좌표 click을 자동 생성하지 못했다. 따라서 마우스 Shift-click 자체를 화면 픽셀 성공으로 과장하지 않는다. 대신 결함이 있던 정확한 두 마우스 handler에서 기준점 쓰기가 사라졌음을 계약으로 고정하고, 동일 네이티브 기준점의 실제 연속 범위를 운영본에서 전 인덱스로 확인했다.
+6. GUI 실행 뒤 갱신 가능한 운영 설정을 다시 동기화한 최종 `DeployVerify` manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260831_182754_625\deployment_manifest.json`, `Status=Success`다. 후속 no-INI smoke는 x64 ready **5.75초**, x32 ready **7.09초**, 각각 4개 창 준비·정상 종료다.
+7. 마지막 독립 `VerifyOnly`: **PASS**. 설치 운영본/run_x64/run_x32의 아키텍처, 실행 파일 해시, 설정 10개, 언어와 루트 `fxfile.ini`/`.fxfile` 부재가 일치하며 최종 FxFile 프로세스는 0이다.
+
+### 91.5 사용자 재현·통과 기준
+
+1. 원하는 단일/분할 배열에서 한 pane의 첫 파일 또는 폴더를 일반 클릭한다.
+2. Shift를 누른 채 같은 pane의 아래쪽 마지막 대상을 클릭한다.
+3. 첫 대상, 마지막 대상과 그 사이의 모든 행이 연속 선택되면 통과다. 다른 pane의 선택 상태는 변하지 않아야 한다.
+4. Ctrl-click은 떨어진 항목을 개별 추가/해제하고, Ctrl+Shift-click은 Windows ListView의 기본 범위 추가 규칙을 따라야 한다.
+5. 전체 행 포커스 옵션 ON/OFF는 선택 범위가 아니라 표시 범위만 바꿔야 하며, 선택 행 색은 각 창 #1~#6의 저장값을 계속 사용해야 한다.
+
+---
+
+**— 행 포커스 안정화 과정에서 ListView의 Shift 기준점을 두 번 덮어쓰던 직접 원인을 제거하고 네이티브 Ctrl/Shift 선택 모델을 복원했으며, 기존 행 포커스 색상·전체 행/이름 셀 표시를 보존한 채 77/77 계약, x64/x32 빌드, 단일/2/4/6-pane 실제 실행, 3패키지 재동기화와 VerifyOnly까지 완료 (2026-08-31) —**
+
+## Task 092 — 콘텐츠/타일 report 보기의 창 #1~#6 선택 행 포커스 사용자 색 적용 완결 (2026-09-01)
+
+_작업 유형: Task 088~091 후속 정정 + 환경설정 색상 전달·분할 pane 재사용·실제 ListView 렌더링 계약 통합_  
+_요청 확정: Shift 연속 선택, Ctrl 다중 선택, 전체 행/이름 셀 방식과 창 #1~#6 독립 설정은 유지한다. `환경 설정 → 표시 → 색 → 창 #N → 선택 행 포커스 색(R)`에서 고른 색은 단일·분할 배열과 폴더별 상세/콘텐츠/타일 보기에 관계없이 해당 창의 선택 대상에 표시되어야 한다. 시험용 사용자 색은 운영 설정에 남기지 않고 창 #1~#6 기본 상태를 흰색으로 복원한다._
+
+### 92.1 장시간 오판을 만든 재현 오류와 실제 제품 원인
+
+1. 초기 격리 시각 시험 도구의 정규식 `(?m)^key\s*=.*$`가 CRLF의 `\r`까지 소비한 뒤 LF만 기록했다. 레거시 설정 리더는 연속 변경 줄을 하나의 논리 줄처럼 읽어 창 #1만 로드했고, 이 잘못된 프로필이 제품 설정 전달 오류처럼 보였다. `Prepare-Task092RowFocusVisualProfile.ps1`의 값 범위를 `[^\r\n]*`로 제한하고 생성 파일의 LF-only 줄과 6개 키의 정확한 1회 존재를 검사하도록 고쳤다.
+2. CRLF를 바로잡은 2×3 재현에서 각 ListView의 선택 수·focus·selection mark는 6개 모두 동일했고, 내부 창 번호 0~5와 여섯 사용자 색도 정확히 로드됐다. 그런데 위쪽 #1~#3만 Windows 기본 선택색, 아래쪽 #4~#6만 사용자 색으로 표시됐다.
+3. 단계별 진단으로 #1~#3의 논리 보기 스타일은 `VIEW_STYLE_CONTENT(3)`, #4~#6은 `VIEW_STYLE_DETAILS(0)`임을 확인했다. FxFile은 상세뿐 아니라 콘텐츠·타일도 실제 Win32 컨트롤에서는 `LVS_REPORT`로 렌더링하지만, `OnCustomdraw()`가 `getViewStyle() == VIEW_STYLE_DETAILS`일 때만 명시 행 배경을 그려 콘텐츠/타일 pane을 네이티브 테마 경로로 잘못 제외한 것이 직접 원인이었다.
+4. 원인 확인용 창 속성 계측은 진단 빌드에만 사용했고 최종 소스와 배포 실행 파일에서는 전부 제거했다.
+
+### 92.2 무결성 수정
+
+1. `ExplorerCtrl::OnCustomdraw()`의 item/subitem 두 report 분기를 기존 `isReportView()`로 통일했다. 이 함수는 논리 enum이 아니라 실제 `GetStyle() & LVS_TYPEMASK == LVS_REPORT`를 검사하므로 상세·콘텐츠·타일의 공통 Win32 렌더링 현실과 일치한다.
+2. 선택 행 배경은 기존 allocation-free `DC_BRUSH + FillRect`를 유지한다. 전체 행 모드는 `LVIR_BOUNDS`, 이전 방식은 `LVIR_SELECTBOUNDS`를 사용하고, subitem paint에서는 실제 선택 모델을 바꾸지 않은 채 일시적 `CDIS_SELECTED`만 제거한다. 흰 배경 재덮기를 일으켰던 `iStateId=LISS_NORMAL`과 `clrFace` 강제는 계속 금지한다.
+3. `ExplorerCtrl::setOption()`은 행 포커스 모드·색·대비 글자색을 즉시 캐시하고 `LVS_EX_FULLROWSELECT`와 invalidate를 적용한다. 환경설정의 적용/확인 후 폴더를 다시 열어야만 색이 바뀌는 지연을 없앴으며, 대비 계산은 설정 변경 때만 수행해 paint hot path 비용을 늘리지 않는다.
+4. 재사용된 분할 pane은 `ExplorerPane::setViewIndex()`에서 기존 `ExplorerCtrl`까지 새 창 번호와 해당 창 옵션을 다시 결합한다. `MainFrame::splitView()`도 split 직후 현재 행·열 기준 canonical index를 모든 `ExplorerView`에 확정해 배열 전환 뒤 과거 창 색을 물고 있는 상태를 차단한다. 이 재결합은 폴더 재열기·파일 재열거를 하지 않는다.
+5. Task 091의 네이티브 Shift anchor 계약은 손대지 않았다. paint는 선택 상태의 read-only 소비자이며 `SetSelectionMark`, `SetItemState`, 타이머, post message, heap 할당 또는 재그리기 반복을 추가하지 않았다.
+
+### 92.3 회귀 계약과 실제 화면 검증
+
+1. 신규 `tools\test_task092_row_focus_color_after_shift_contracts.ps1`: 설정 저장·창별 전달·즉시 적용·pane 재결합·split index·CRLF 프로필·선택 snapshot·report paint·테마 억제·Shift anchor를 포함해 **14/14 PASS**.
+2. Task 075~089의 구형 테스트 중 후속 정정과 충돌하던 `LISS_NORMAL/clrFace` 및 상세 enum 전용 기대를 현재 계약으로 갱신했다. Task 075, 076, 077, 078, 079, 080, 081, 082, 083, 086, 088, 089, 091, 092 총 **91/91 PASS**다.
+3. 최종 배포 x64 해시를 복제한 격리 2×3 프로필에서 #1 빨강 `224,64,64`, #2 초록 `64,160,64`, #3 파랑 `48,96,224`, #4 주황 `224,160,48`, #5 보라 `160,64,192`, #6 청록 `32,176,176`을 지정했다. 여섯 pane 모두 동일한 첫 행 하나를 선택한 상태에서 위쪽 콘텐츠 보기와 아래쪽 상세 보기 모두 지정색을 정확히 표시했다.
+4. 최종 화면 증거: `__BUILD_TEMP_BACKUP__\task092_final_clean_visual_20260901_1117\task092_row_focus_visual_20260901_111637_926\final-six-pane-colors.bmp`. 프로필의 실행 파일 SHA-256은 최종 설치 운영본과 같은 `8707E3C77E954333679DC07B3D3EF46FF40006ACDEE857242BF2517DEE6C4F8F`이며 설치/run 설정은 수정하지 않았다.
+5. 같은 최종 실행 파일을 2×2와 1×1로 다시 시작해 visible ListView가 각각 4개와 1개임을 확인했다. 2×2는 #1~#4 빨강·초록·파랑·주황, 1×1은 #1 빨강을 정확히 표시했고 모두 응답 상태에서 정상 종료했다. 증거는 같은 폴더의 `final-2x2-colors.bmp`, `final-1x1-color.bmp`다.
+
+### 92.4 x64/x32 빌드·배포와 기본값 복원
+
+1. 새 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260901_111433_472\preflight_report.json`, 필수 항목 PASS. 복사 작업공간이 Git 저장소가 아니라는 비차단 경고 1건만 유지됐다.
+2. 통합 빌드·3패키지 배포 manifest: `__BUILD_TEMP_BACKUP__\unified_deploy_20260901_111506_775\deployment_manifest.json`, `Status=Success`, TEMP 제거·환경 복원·롤백 상태 정상.
+   - 설치 운영본/run_x64 x64 SHA-256: `8707E3C77E954333679DC07B3D3EF46FF40006ACDEE857242BF2517DEE6C4F8F`
+   - run_x32 x32 SHA-256: `C28837026DE367F1CB1FB852DE2AB3097E922EBCF8C917404D77B566E53CDB14`
+   - no-INI 4-pane smoke: x64 skeleton **2.05초**, ready **3.05초**; x32 skeleton **1.92초**, ready **3.28초**. 둘 다 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+3. 독립 `VerifyOnly` PASS: 세 패키지의 아키텍처·실행 파일 해시·설정 10개·루트 포인터 부재가 일치했다. 최종 FxFile 관련 프로세스는 0개다.
+4. 설치 운영본, run_x64, run_x32의 `fxfile\fxfile.conf`를 다시 읽어 `config.view1~6.file_list.row_focus_color`가 모두 `255,255,255`임을 확인했다. 격리 시험의 여섯 색은 운영 설정에 유입되지 않았다.
+
+### 92.5 사용자 재현·통과 기준
+
+1. `환경 설정 → 표시 → 색`에서 창 #1을 선택하고 `선택 행 포커스 색(R)`을 눈에 띄는 색으로 바꾼 뒤 적용 또는 확인을 누른다. 같은 방법으로 현재 배열에서 보이는 각 창 번호를 서로 다른 색으로 정할 수 있다.
+2. 1×1, 1×2, 2×2, 1×3, 2×3 중 원하는 배열로 바꾸고 각 pane에서 파일/폴더 한 행을 선택한다. 상세뿐 아니라 폴더별 콘텐츠/타일 보기에서도 해당 창 번호의 지정색이 즉시 표시되어야 한다.
+3. 전체 행 포커스 ON이면 모든 표시 열, OFF이면 이름 셀 범위만 색칠되어야 한다. 비선택 행 전체가 칠해지거나 글자색만 변하면 실패다.
+4. 첫 대상을 클릭하고 Shift+마지막 대상을 클릭하면 사이의 모든 대상이 연속 선택되어야 하며, Ctrl-click 비연속 선택도 유지되어야 한다. 이 선택 범위와 행 포커스 표시 대상은 서로의 상태를 덮어쓰지 않아야 한다.
+5. 기본 상태로 되돌리려면 각 창의 색을 자동/기본값으로 적용한다. 현재 배포 상태는 창 #1~#6 모두 흰색이다.
+
+### 92.6 작업 후 임시·불필요 산출물 전수 정리 (2026-09-01)
+
+1. 최종 가이드에서 참조하지 않고 최신 성공본으로 대체된 Task 092 중간 프리플라이트·중간 배포 롤백·실패/진단 시각 프로필·빈 수동 빌드 TEMP를 절대경로 allowlist로 검증했다. 작업공간 경계, 가이드 비참조, reparse point 부재를 모두 통과한 **19개 폴더, 2,321개 파일, 890,158,593바이트**를 제거했다.
+2. 화면 캡처 도구가 공용 임시 폴더에 남긴 `fxfile_deployed_capture.bmp`와 중간 설정 캡처 `fxfile_settings_capture.png` 2개, 5,231,461바이트도 최종 증거 복사본 존재와 비참조를 확인한 뒤 제거했다. 총 정리량은 **2,323개 파일, 895,390,054바이트(853.910MiB)**다.
+3. 사후 감사 결과 `__BUILD_TEMP_BACKUP__`의 `build_temp_*`는 0개, 최종본 이외 `task092_*`는 0개, 일회성 `Cleanup-Task092*.ps1`은 0개, `%LOCALAPPDATA%\Temp`의 Task 092/FxFile 진단 잔재는 0개다. 세 배포 루트의 `.obj/.pdb/.ilk/.exp/.lib/.log/.tmp/.bak`도 각각 0개다.
+4. 보존 대상은 최신 `preflight_20260901_111433_472`, 최종 `unified_deploy_20260901_111506_775`, `task092_final_clean_visual_20260901_1117` 및 Task 090~091에서 가이드가 지목한 과거 증거다. 최종 manifest는 계속 `Status=Success`이고 1×1/2×2/2×3 화면 3개도 모두 존재한다.
+5. `fxfile_working\build_cmake*`, `obj`, `bin`은 다음 증분 빌드와 `VerifyOnly`의 산출물 기준에 필요한 정상 빌드 캐시라 삭제하지 않았다. 제3자 `lib` 입력과 사용자 첨부 이미지, 다른 프로그램이 만든 오래된 공용 Temp 자료도 이번 작업 생성물이 아니므로 건드리지 않았다. C: 여유 공간은 감사 시작 약 36.07GiB에서 종료 약 **36.89GiB**로 증가했다.
+
+---
+
+**— 잘못된 LF-only 시각 프로필과 실제 제품 결함을 분리하고, 콘텐츠/타일도 실제 `LVS_REPORT`라는 직접 원인을 수정했으며, Shift·Ctrl·전체 행/이름 셀·창별 설정을 보존한 채 91/91 계약, 최종 6색 실화면, x64/x32 빌드·3패키지 배포·흰색 기본값·VerifyOnly까지 완료 (2026-09-01) —**
+
+## Task 093 — ExplorerCtrl 종료 소유권 확정과 `OnDestroy` use-after-free 근본 정정 (2026-09-01)
+
+_작업 유형: `fxfile_error_report_260901-113053` 심층 덤프 진단 + 기존 동작 고정 후 종료 수명주기 무결성 리팩터링_  
+_보호 범위: Task 091의 네이티브 Shift/Ctrl 선택, Task 092의 전체 행/이름 셀 방식, 창 #1~#6 독립 행 포커스 색과 흰색 기본값, 시작 레이아웃과 파일 작업 동작은 변경하지 않는다._
+
+### 93.1 요청과 최종 판정
+
+1. 보고서의 `ACCESS_VIOLATION`은 메모리 부족이나 행 포커스 paint 자체가 아니라, 종료 중 동일 `ExplorerCtrl`의 소유권이 `ExplorerPane`, `TabData`, MFC native window 파괴 콜백 사이에 겹친 **stale object/use-after-free** 결함이었다.
+2. 제품 코드를 유지하면서 소유권 공개 해제 순서를 먼저 고정하고, native window 파괴와 C++ 객체 삭제를 멱등화했다. 시작·선택·렌더링 hot path에는 잠금, timer, message posting, heap allocation 또는 반복 invalidate를 추가하지 않았다.
+3. 최종 제품 x64/x32 빌드·3패키지 배포, no-INI smoke, 읽기 전용 `VerifyOnly`, 1/4/6-pane x64/x32 반복 종료를 모두 통과했다. 본 Task의 종료 결함은 정정 완료로 판정한다.
+
+### 93.2 관측 증거와 직접 원인
+
+1. 원본 보고서의 fault는 UI thread에서 `ExplorerCtrl::OnDestroy+0x43`의 `mov rdx,qword ptr [rdi+40h]`가 이미 유효하지 않은 `this`를 읽으며 발생했다. dump의 실제 접근 주소는 `0x0000013F8F804410`, 객체 기준 주소는 `0x0000013F8F8043D0`이었다.
+2. 기호화 호출 순서는 `MainFrame::OnClose → ExplorerView::OnDestroy → TabCtrl::OnDestroy → ExplorerView::onTabRemove → TabData deleting destructor → ExplorerPane::destroySubPane → ExplorerCtrl::OnDestroy`였다. 즉 `TabCtrl` 파괴 콜백이 공유 `ExplorerCtrl` 제거를 다시 유발하는 동안 pane map과 native HWND/CWnd 수명이 동시에 남아 있었다.
+3. 당시 실행 파일 SHA-256은 `8707E3C77E954333679DC07B3D3EF46FF40006ACDEE857242BF2517DEE6C4F8F`로 Task 092 최종 x64/PDB와 정확히 일치했다. 시스템 오류 `0x578`(잘못된 window handle)은 원인이 아니라 stale HWND 사용 뒤의 2차 증상이었다.
+4. 보고서 메모리 load는 73%, 사용 가능 physical 약 2.26GB였으므로 OOM으로 판정하지 않았다. minidump에 전체 page heap free history는 없어 최초 free를 발생시킨 단 하나의 callback까지 100% 특정했다고 과장하지 않지만, invalid `this` read와 중복 소유권 구조는 dump와 소스 순서가 함께 확정한다.
+
+### 93.3 구현과 해결
+
+1. `ExplorerCtrlData::destroyExplorerCtrl()`은 raw member를 먼저 `NULL`로 철회한 뒤 local snapshot만 사용한다. HWND가 실제로 존재하고 `CWnd::FromHandlePermanent()`가 같은 wrapper를 가리킬 때만 `DestroyWindow()`를 호출하고, 마지막에 C++ 객체를 한 번 삭제한다. destructor도 이 멱등 helper 하나만 사용한다.
+2. `ExplorerPane::destroySubPane(id)`는 map entry와 현재 id를 **삭제 전에** 철회한다. 전체 제거는 live map을 local map과 `swap`해 외부에서 즉시 빈 소유권 상태를 관측하게 한 뒤 local 객체를 순차 삭제한다. `ExplorerPane::OnDestroy()`에도 동일한 fallback drain을 두었다.
+3. `ExplorerView::OnDestroy()`는 `TabCtrl`을 파괴하기 전에 `ExplorerPane::destroySubPane()`를 호출한다. 뒤이어 발생하는 `TabData` 제거 callback은 이미 빈 map을 보므로 no-op이 되고, native parent가 먼저 사라지는 역순 teardown을 차단한다.
+4. `ExplorerCtrl::OnDestroy()`에는 `mDestroying` guard를 추가해 timer·thumbnail·ShellColumn 취소와 message drain을 한 번만 실행한다. HWND는 함수 시작 시 snapshot하고, `OnDeleteallitems()`는 native teardown 중 thumbnail 취소를 반복하지 않는다.
+5. `tools\test_task093_explorer_shutdown_ownership_contracts.ps1`는 공개 철회-before-delete, bulk swap, View-before-TabCtrl, pane fallback, shutdown guard, 중복 취소 금지와 반복 시험 도구의 ZIP 감시·정상 directory 입력을 **9/9 계약**으로 고정한다.
+
+### 93.4 실패·복구와 추가 오류보고서 판별
+
+1. 최초 신규 계약은 수정 전 의도대로 **0/7 PASS, 7/7 FAIL**이었다. 시험 파일 작성 중 괄호 3개가 더 들어간 parser 오류는 시험 파일만 바로잡았고 제품 소스에는 영향을 주지 않았다.
+2. 첫 통합 빌드 시도는 시스템 시계가 약 3시간 28분 앞으로 바뀌어 직전 프리플라이트가 stale로 판정되며 안전하게 차단됐다. compile/deploy는 시작되지 않았고, 현재 시각으로 프리플라이트를 다시 실행한 뒤 정상 진행했다.
+3. 첫 반복 시험 도구는 `WM_CLOSE`를 정상 종료로 오인했다. 사용자 설정상 창은 tray로 숨고 종료되지 않았으며, `--dirN`에 directory가 아니라 `fxfile.exe`를 전달했고, 오류보고서 감시도 directory만 보아 ZIP을 누락했다. 시험을 중단하고 해당 격리 복사본을 정확한 경계 안에서 제거했다.
+4. 이 잘못된 시험 중 생성된 오류 ZIP 4개는 `__BUILD_TEMP_BACKUP__\task093_shutdown_stress_20260901_162513_763\flawed_probe_crashes`에 통합 보존했다. 대표 `fxfile_error_report_260901-160614.zip`의 SHA-256은 `46EBC2A3F5DFF33CC1F538AADBD685E69AD6F06ABA1DA0074FF25D29FEE727A6`이다. 기호·명령어 대조 결과 fault는 종료 `OnDestroy`가 아니라 숨겨진 창의 deferred startup 중 `ExplorerCtrl::insertNameHash()`의 `unordered_multimap` bucket pointer가 null인 별도 시작 경로였다.
+5. 도구를 directory 입력, FxFile 실제 Exit command(`WM_COMMAND 30120`), directory+ZIP 동시 감시로 정정한 뒤 같은 정상 계약에서는 재현되지 않았다. 따라서 이 ZIP을 Task 093 종료 수정의 재실패로 섞지 않는다. 반대로 한 번 발생한 제품 AV 자체를 없었다고 하지 않으며, 정상 사용자 흐름에서 동일 `insertNameHash` stack이 다시 나오면 별도 startup/reentrancy Task로 page-heap 증거를 수집한다.
+
+### 93.5 검증·해시·manifest
+
+1. Task 075, 076, 077, 078, 079, 080, 081, 082, 083, 086, 088, 089, 091, 092, 093 총 15개 계약: **100/100 PASS**. Shift/Ctrl, 전체 행/이름 셀, 여섯 창 색, report/content/tile paint와 기존 종료 계약이 함께 유지됐다.
+2. 최종 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260901_155955_622\preflight_report.json`, SHA-256 `096AF1215F717FB71C99C34AF6D4A02A0115B6B933868BFDDA852ED70F79B6B8`, 필수 항목 PASS. 복사 작업공간이 Git 저장소가 아니라는 비차단 경고만 있다.
+3. 통합 x64/x32 빌드·3패키지 배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260901_160040_062\deployment_manifest.json`, `Status=Success`, `TempCleanupStatus=Removed`, 환경 복원·rollback 상태·최종 저장공간 검증 PASS.
+   - 설치 운영본/run_x64 x64 SHA-256: `9DE67E4C851190236C158C4E41C2E20F0029A82388A17BEDF95566C911AC3F22`
+   - run_x32 x32 SHA-256: `DB9D9E8EA186B08F2CB6A98977700E6F9C7E58BE7C9A0380AC5AB81F784677FA`
+   - no-INI 4-pane smoke: x64 skeleton **2.472초**, ready **4.212초**; x32 skeleton **1.918초**, ready **3.247초**. 모두 `ReadyViewCount=4`, `ExitCode=0`, 강제 종료 없음.
+4. 보강된 반복 종료 증거: `__BUILD_TEMP_BACKUP__\task093_shutdown_stress_20260901_162513_763\runtime_report.json`, SHA-256 `B4E6F1F7F7C83C14EE80B10584208443D452CABA3A65FA7E1D17BC78B343BD7D`. x64/x32 × 1×1/2×2/2×3 × 각 3회 = **18/18 PASS**, 신규 directory/ZIP 오류보고서 0, 강제 종료 0, 잔류 프로세스 0이다.
+5. 마지막 독립 `VerifyOnly`는 PASS했다. 설치 운영본, run_x64, run_x32의 실행 파일 hash·아키텍처·설정 10개·언어·루트 `fxfile.ini`/`.fxfile` 부재가 일치한다. 세 패키지의 `config.view1~6.file_list.row_focus_color` 18개는 모두 요청한 흰색 기본값 `255,255,255`다.
+
+### 93.6 교훈과 재발 방지
+
+1. MFC window wrapper와 C++ owner가 함께 있는 객체는 `DestroyWindow()`와 `delete` 순서만 맞추는 것으로 부족하다. map/registry/raw member에서 먼저 철회하여 callback이 재진입해도 객체를 다시 발견하지 못하게 해야 한다.
+2. parent/child teardown은 가장 구체적인 child owner부터 drain한다. generic `TabCtrl::OnDestroy` callback에 실제 ExplorerCtrl 수명 종료를 맡기지 않는다.
+3. 종료 함수는 반드시 멱등이어야 한다. 시작 시 destroying 상태를 세우고 handle을 snapshot하며 async cancel과 queue drain을 한 번만 수행한다.
+4. crash 회귀 시험은 창이 사라졌는지가 아니라 제품의 실제 Exit command, `ExitCode=0`, 강제 종료 없음, 오류보고서 directory와 ZIP 모두 없음, 잔류 프로세스 0을 함께 요구한다.
+5. 시험 도구 자체도 제품과 같은 검증 대상이다. 잘못된 argument type, tray-hide와 exit 혼동, 증거 확장자 누락은 제품 결함을 숨기거나 가짜 결론을 만들 수 있으므로 정적 계약으로 고정한다.
+6. 확실하지 않은 별도 startup crash에 speculative container 교체나 광범위 잠금을 넣지 않는다. 재현 가능한 정상 입력과 heap lifetime 증거가 확보될 때 최소 수정한다.
+
+### 93.7 정리 현황과 보장 범위
+
+1. 최신 성공본으로 대체되고 가이드에서 참조하지 않는 중간 프리플라이트 2개와 구 반복 시험 1개를 경계·reparse point·가이드 비참조 검사 후 제거했다. 합계 **3폴더, 559파일, 6,999,606바이트**다. ZIP 화면 확인용으로 공용 Temp에 추출했던 BMP 1개 **4,147,254바이트**도 제거했다.
+2. 사후 감사에서 `build_temp_*` 0개, Task 093 임시 x64/x32 패키지 복사본 0개, FxFile 관련 프로세스 0개다. 최신 프리플라이트·배포 manifest·반복 종료 JSON과 별도 16:06 오류 ZIP은 보존했다. 정상 증분 빌드 cache와 Task 090~092의 가이드 참조 증거는 삭제하지 않았다.
+3. 보장 범위는 이번에 빌드한 x64/x32 제품의 정상 Exit 경로, 1/4/6-pane 반복 종료와 기존 선택·행 포커스 회귀다. dump 하나만으로 모든 shell extension, 외부 COM callback, 장시간 운용의 오류 가능성을 0이라고 보장하지 않는다. 동일 stack 재발 시 보존된 hash/PDB와 새 page-heap dump를 비교한다.
+
+### 93.8 후속 임시·중복 데이터 전수 정리 (2026-09-02)
+
+1. §0.7의 최신 성공 1세대 정책에 따라 구 `unified_deploy_*` 3세대, 구 `preflight_*` 3세대, 배포 완료 뒤 재생성 가능한 `build_cmake`/`build_cmake_x32`/`obj`, Task 092 최종 BMP와 manifest에 불필요한 x64 격리 패키지 복제본, Python `__pycache__` 3개를 정리했다.
+2. Codex bundled marketplace의 2026-05-29 실패 staging 4세대 중 오래된 3세대도 참조 프로세스·reparse point가 없음을 확인하고 제거했다. 가장 최신 staging 1세대와 실제 plugin 정본은 현재 Codex 앱 보호를 위해 유지했다.
+3. 삭제 대상은 모두 작업공간 또는 명시한 Codex staging 경계 안의 절대경로로 해석했고 reparse point 0, FxFile/빌드/staging 참조 프로세스 0을 확인했다. 합계 **16폴더, 3,717파일, 1,355,270,460바이트(1.262GiB)**를 제거했다.
+4. 공용 Temp의 잘못된 Task 093 시험 오류 ZIP 4개는 삭제하지 않고 위 `flawed_probe_crashes`로 이동했다. `%LOCALAPPDATA%\Temp`의 해당 ZIP 잔류는 0이며, Task 092의 최종 1×1/2×2/2×3 BMP 3개와 `profile_manifest.json`, 최신 Task 093 runtime JSON은 유지했다.
+5. 정리 직전 읽기 전용 `VerifyOnly`는 현재 `run_x64`의 `fxfile-coolbar.dat`, `fxfile-main.conf`이 운영 정본과 다르다고 차단했다. 이는 삭제 전에 존재한 사용자 사용 설정 drift이므로 이번 용량 정리에서 덮어쓰거나 동기화하지 않았다. 실행 파일은 설치 x64/run_x64 `9DE67E4C851190236C158C4E41C2E20F0029A82388A17BEDF95566C911AC3F22`, run_x32 `DB9D9E8EA186B08F2CB6A98977700E6F9C7E58BE7C9A0380AC5AB81F784677FA`로 그대로다.
+6. 사후 상태는 `unified_deploy_*` 1세대, `preflight_*` 1세대, `build_temp_*` 0, `build_cmake*` 0, `obj` 0, FxFile/빌드 프로세스 0이다. C: 여유 공간은 약 **33.290GiB → 34.558GiB**, 약 **+1.268GiB** 증가했다. `bin`은 `VerifyOnly` 기준 산출물, `lib`는 링크 입력, `__BACKUP_보존용__`은 사용자 보존본이므로 삭제하지 않았다.
+
+---
+
+**— `ExplorerCtrl`을 map과 raw member에서 먼저 철회하고 View→Pane→native window 순으로 수명을 단일화해 종료 use-after-free를 정정했으며, 기존 Shift·행 포커스 동작을 보존한 채 100/100 계약, x64/x32 빌드·3패키지 배포, 18/18 반복 정상 종료, VerifyOnly·흰색 기본값·임시 산출물 정리까지 완료 (2026-09-01) —**
+
+---
+
+## Task 094 — 현재 호스트 D: 정본 경로 재감사와 이전 PC 경로의 역사 증거 분리 (2026-09-02)
+
+_작업 유형: 다른 컴퓨터에서 복사된 가이드의 현재 경로·사용자 프로필 재정렬 + 문서만 갱신_  
+_작업 기준: 소스·빌드 스크립트·실행 파일·사용자 설정·배포 패키지는 변경하지 않고, 실제 현재 파일 시스템의 존재 여부와 문서의 경로 문맥만 읽기 전용으로 대조한다._
+
+### 94.1 요청과 최종 판정
+
+1. 현재 호스트의 작업공간 루트는 `D:\03 금일작업\00 임시\0000 FxFile`이고, 수정 소스는 그 아래 `fxfile_working`이다.
+2. 설치 운영본 x64는 `D:\00 소프트웨어\04 Fxfile`이며, `fxfile.exe`가 실제 존재한다. 포터블 x64/x32는 각각 작업공간 아래 `fxfile_run_x64`, `fxfile_run_x32`에 존재한다.
+3. 문서 초입 `0.2`가 이전 호스트의 `C:\Users\PC\Downloads\01 코딩\0000 FxFile` 및 `C:\00 소프트웨어\04 Fxfile`를 **현재 정본**으로 잘못 표시하고 있었다. 이는 복사된 문서의 이관 누락이며, 제품 코드·Windows 11 호환성·사용자 환경 파일의 결함이 아니다.
+4. 현재 사용자 프로필은 `C:\Users\ADMIN`, LocalAppData는 `C:\Users\ADMIN\AppData\Local`이다. 현재 Codex 세션의 `TEMP/TMP`는 D:의 별도 Relocated-C-Data 작업 경로다. 통합 빌드에서는 이 세션 TEMP를 정본으로 복사하지 않고, `0.7.1`의 사전 게이트가 통과한 뒤 프로젝트 경계 안의 프로세스 범위 D: TEMP/TMP를 사용한다.
+
+### 94.2 관측 증거와 문서 문맥 분류
+
+1. 읽기 전용 `Test-Path`로 작업공간 루트, `fxfile_working`, `fxfile_run_x64`, `fxfile_run_x32`, 설치 운영본 및 설치본 `fxfile.exe`의 존재를 모두 확인했다.
+2. 문서의 `C:\Users\PC` 18건과 `C:\00 소프트웨어\04 Fxfile` 6건을 전수 검색했다. 이 중 초입 `0.2`, 현재 실행 지침, 현재 프로필·Temp 표기는 실행 기준을 오도하므로 현재 호스트 값으로 정정했다.
+3. Task 074~075의 C: 경로, Task 090의 C: 정리 기록 등은 당시 호스트·manifest·검증 사실을 설명하는 시간순 증거다. 과거 성공/실패의 경로를 현재 D: 경로로 치환하면 존재하지 않는 과거 증거를 위조하게 되므로 원문은 보존하고, Task 074 바로 아래와 이 Task에서 **현재 실행 금지·역사 증거**임을 명시했다.
+
+### 94.3 문서 갱신 내용
+
+1. 초입 운영 기준을 Task 094로 올리고, 기능/배포 기준은 코드·패키지를 바꾸지 않은 채 가장 최신 제품 검증 Task 093을 계속 우선하도록 정정했다.
+2. `0.2 현재 정본과 작업 경로`의 작업공간·소스·설치 운영본·run_x64·run_x32를 모두 현재 D: 절대경로로 교체했다.
+3. 초입의 "C: 단일 작업공간" 설명을 제거하고, 작업공간·포터블본·프로젝트 TEMP/TMP는 D: 작업 경계, 설치 운영본도 D: 경계라는 현재 계약으로 바꿨다. 통합 배포 명령은 항상 위 표의 세 대상 경로를 명시해야 한다.
+4. `0.4`에 다른 PC 문서/경로 이관 라우터(Task 094, 074)를 추가했다. `%USERPROFILE%`·`%LOCALAPPDATA%` 설명의 현재 해석값도 `C:\Users\ADMIN`으로 고치고, 명령 자체는 다음 호스트에도 안전한 환경 변수 표현을 유지했다.
+
+### 94.4 실패 사례와 복구 원칙
+
+1. 이전 Task 074가 한때 "현재 PC"였더라도, 컴퓨터를 다시 옮긴 뒤 그 표를 현재 정본으로 계속 두면 `Build-Deploy-Verify.ps1`이 존재하지 않는 C: 대상에 배포하려 하거나 사용자가 잘못된 폴더에서 빌드를 시작할 수 있다.
+2. 반대로 Task 001~093의 모든 절대경로를 일괄 바꾸는 것도 금지한다. 오래된 manifest, 오류 보고서, 해시 검증 경로와 실제 파일 이력이 달라져 원인 추적·감사가 불가능해진다.
+3. 따라서 앞으로의 이관은 **초입 `0.2` + 새 이관 Task + 관련 실행 카드만 현재 경로로 수정**하고, 과거 Task에는 후속 정정 주석만 추가한다. 새 코드 변경 전에는 이 문서의 `0.7.1` 프리플라이트로 실제 드라이브·TEMP/TMP·프로세스를 재측정한다.
+
+### 94.5 검증과 보장 범위
+
+1. 현재 호스트 경로의 존재 검증: 작업공간, 소스, run_x64, run_x32, 설치 운영본, 설치본 `fxfile.exe` 모두 PASS.
+2. 문서 전수 검색 후 초입의 활성 정본 경로에는 `C:\Users\PC` 또는 `C:\00 소프트웨어\04 Fxfile`가 남지 않으며, 현재 실행 기준은 요청한 두 D: 경로다.
+3. 이번 Task는 문서만 수정했다. configure, 빌드, 배포, 설정 동기화, FxFile 실행·종료, 해시 변경은 수행하지 않았으므로 새 실행 파일 배포나 기존 기능의 재검증을 주장하지 않는다.
+
+### 94.6 교훈과 재발 방지
+
+1. 다른 컴퓨터에서 복사한 문서는 처음에 `0.1~0.8`을 읽고, **첫 번째로 `0.2`의 현재 정본·사용자 프로필·D:/C: 경계를 실제 파일 시스템과 대조**한다.
+2. 경로를 명령에 하드코딩할 때는 초입 표의 현재 경로만 사용한다. 사용자 종속 경로는 `%USERPROFILE%`, `%LOCALAPPDATA%`, `%TEMP%`, `%TMP%`로 표현하고, 설명에만 현재 해석값을 병기한다.
+3. 새 호스트 이관 뒤 첫 코드 작업은 반드시 FxFile 종료 → 읽기 전용 경로/디스크 점검 → `preflight_build_environment.bat` → 세 대상 명시 통합 빌드·배포·VerifyOnly 순서로 진행한다. 문서 이관만 한 경우에는 빌드·배포 완료라고 주장하지 않는다.
+
+---
+
+**— 현재 호스트의 D: 작업공간·설치 운영본과 C:\Users\ADMIN 프로필을 문서 정본으로 재설정하고, 이전 PC의 C: 경로를 삭제·왜곡하지 않은 역사 증거로 분리했으며, 제품 파일은 일절 변경하지 않은 채 문서 경로 이관 감사를 완료 (2026-09-02) —**
+
+---
+
+## Task 095 — 체크된 시계가 보이지 않는 zero-size rebar 배치 결함 정정 (2026-09-02)
+
+_작업 유형: 도구 메뉴 `시계 보이기(K)` 상태와 실제 GUI 불일치 추적 + 창 폭 가변성을 보존한 툴바/시계 배치 무결성 리팩터링_  
+_보호 범위: `시계 위치·크기 잠금(S)`의 잠금/해제와 수동 위치 저장, 기존 메뉴 command·옵션 저장, 도구 모음 버튼, 2×2 패널·사용자 설정 10개·무 INI 포터블 계약은 유지한다._
+
+### 95.1 요청과 최종 판정
+
+1. 세 패키지의 `fxfile\fxfile-main.conf`는 모두 `main.clock.show=1`, 설치본은 `main.clock.locked=1`이었다. 메뉴 체크도 같은 옵션을 정상 반영했다. 따라서 사용자의 이해 부족이나 옵션 저장 실패가 아니라 **체크된 시계 자식 창이 0×0 크기로 남는 제품 배치 결함**이었다.
+2. 최종 수정은 시계 표시 요청을 부모 가시성에 종속된 `IsWindowVisible()`이 아니라 자식의 `WS_VISIBLE` style로 판정한다. 저장 rebar 상태가 높이 0을 복원하더라도 시계용 최소 툴바 행을 확보하고, 시작 순서가 안정된 뒤에도 0×0이면 기존 1초 시계 timer가 배치만 한 번 복구한다.
+3. 넓은 창에서는 버튼 뒤의 가용 폭을 사용하고, 부족하면 반응형 폭/별도 행 계산으로 넘어간다. 표시 폭에 따라 전체 날짜·중간 날짜·초 포함 시각·`HH:MM` 형식을 선택하므로 창 폭이 바뀌어도 부모 밖으로 잘리거나 0폭이 되지 않는다.
+4. x64/x32 동일 소스 빌드, 설치본 x64 + run_x64 + run_x32 배포, no-INI 4-pane smoke, 실제 x64 HWND 동적 측정, 43/43 정적 회귀와 최종 `VerifyOnly`를 모두 통과했다. 본 결함은 현재 세 배포본에 반영 완료다.
+
+### 95.2 직접 원인
+
+1. `ClockCtrl`은 일반 toolbar button이 아니라 `MainToolBar`의 별도 child HWND다. 기존 `UpdateToolbarSize()`와 rebar band 계산은 button rectangle만 합산하므로 저장된 `fxfile-coolbar.dat`가 0 또는 좁은 band 치수를 복원하면 시계가 band의 이상적 너비·최소 높이에 포함되지 않았다.
+2. `ShowWindow(SW_SHOW)`는 성공했고 child HWND도 존재하므로 메뉴 체크와 Windows visible bit는 참처럼 보였다. 그러나 최초 실측은 저장 레이아웃·1200·900 폭 모두 `Found=True`, `Visible=True`, `Width=0`, `Height=0`이었다. 두 번째 실측에서 parent toolbar도 `ParentWidth>0`, `ParentHeight=0`임을 확인해 문제를 시계 문자열/색/좌표가 아닌 rebar band 치수로 확정했다.
+3. 시작 단계에서는 main frame/rebar의 조상 창이 아직 화면에 표시되지 않는다. 이때 `IsWindowVisible()`은 child에 `WS_VISIBLE`이 있어도 거짓이다. 그 값을 너비 예약 조건으로 사용하면 시계 예약이 0이 되고, 0-height toolbar에서는 `updateClockLayout()`도 안전 return하여 이후 계속 0×0으로 남았다.
+4. 기존 timer는 시계 문자열만 갱신하고 배치는 복구하지 않았다. 따라서 사용자가 창을 다시 열거나 메뉴를 체크해도 특정 저장 레이아웃에서는 상태값만 맞고 화면에는 아무것도 그려지지 않았다.
+
+### 95.3 구현 내용
+
+1. `src\fxfile\main_toolbar.cpp/.h`
+   - 시계의 이상적/최소 예약 폭, 행 높이, 별도 행 상태를 명시하는 API를 추가했다.
+   - 실제 toolbar button의 최대 right/bottom, toolbar client 폭, DPI/toolbar scale을 사용해 시계 영역을 계산하고 부모 폭 안으로 clamp한다.
+   - 폭 구간별 날짜/시각 문자열을 사용하고 기존 `mClockPosX`, `mClockLocked`, drag 저장 경로는 유지했다.
+   - show/hide 뒤 toolbar size와 frame layout을 다시 계산한다. 시작 후 requested-visible 시계가 0×0일 때만 기존 timer가 `updateClockLayout()`을 재호출해 시작 순서 race를 복구한다. 정상 표시 뒤에는 timer가 문자열만 갱신한다.
+2. `src\fxfile\main_coolbar.cpp`
+   - main toolbar band에만 시계 예약 폭을 더한다. 표시 요청이 있으면 button rectangle이 아직 0이어도 최소 한 행의 `cyMinChild`와 최소 폭을 보장한다.
+   - 별도 행 상태이면 button 행에 시계 행 높이를 추가한다. drive/bookmark/menu band에는 이 계산을 적용하지 않는다.
+3. `tools\test_task095_clock_visibility_layout_contracts.ps1`
+   - 단일 옵션/command 유지, main band만 예약, 최소 행, 반응형 폭, 별도 행, 시작 timer 복구, 잠금/drag 보존, 중복 HWND/timer 금지를 12개 계약으로 고정했다.
+4. `tools\Test-Task095ClockRuntime.ps1`
+   - 운영 설정을 훼손하지 않도록 run_x64를 Task 전용 폴더에 격리 복제한다. 저장 레이아웃과 1200/900/600/420 폭에서 control id 1055의 실제 HWND를 찾아 visible·width·height·parent bounds를 측정하고 실제 Exit command 30120으로 정상 종료한다.
+   - 선택한 경로에 JSON 증거를 저장할 수 있으며, 성공 여부는 메뉴 체크가 아니라 모든 단계에서 양수 크기·부모 내부·정상 종료·강제 종료 없음으로 판정한다.
+
+### 95.4 실패 사례와 정정
+
+1. 최초 수정은 시계 폭을 rebar 이상 폭에 포함했고 정적 계약 9/9와 빌드/smoke를 통과했지만, 실제 HWND 측정은 세 폭 모두 0×0이었다. **정적 문자열 계약과 smoke의 4-pane ready만으로 특정 control의 가시성을 보증할 수 없다는 실패**다.
+2. 두 번째 수정은 폭 부족 시 별도 행을 계산했지만 여전히 0×0이었다. 동적 보고서에 parent height를 추가한 결과 toolbar 자체가 높이 0임을 확인했다. `IsWindowVisible()`가 숨은 조상 때문에 거짓인 시작 순서와 저장 rebar의 zero-height 복원이 결합한 것이었다.
+3. 최종 수정은 `WS_VISIBLE` 요청 상태, main band 최소 행, zero-size 사후 복구를 함께 적용했다. 이후 저장 레이아웃과 네 창 폭 모두 실제 크기 양수로 전환됐다.
+4. 계약 묶음 실행 중 존재하지 않는 Task 092/093 시험 파일명을 사용해 PowerShell usage exit 64가 나온 시도가 있었다. 실제 파일명을 다시 열어 `test_task092_row_focus_color_after_shift_contracts.ps1`, `test_task093_explorer_shutdown_ownership_contracts.ps1`로 고쳐 각각 독립 프로세스에서 재실행했고 제품 실패로 기록하지 않았다.
+5. 구 증거 정리 명령의 중첩 `Where-Object`에서 `$_`가 바뀌어 null-method 경고가 반복됐다. 삭제 대상은 사전에 경계·reparse를 통과했고 FxFile/빌드 프로세스 0을 별도 재확인했으며, 정확한 9개 폴더는 휴지통으로 이동되고 사후 잔류 0을 확인했다. 앞으로 process-path 대조에서는 외부 process를 명명 변수에 저장하고 중첩 `$_`를 사용하지 않는다.
+
+### 95.5 검증·해시·manifest
+
+1. 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260902_070652_601\preflight_report.json`, SHA-256 `00DCDB7C10480457D00620A4430D3502231E0A698D8F46B715E75386A7855E4C`, 필수 검사는 PASS이고 비 Git 복사 작업공간 경고만 비차단으로 남았다.
+2. 최종 통합 배포: `__BUILD_TEMP_BACKUP__\unified_deploy_20260902_073443_560\deployment_manifest.json`, SHA-256 `6A18EC69A2E1C21DAFC981343B0782FB022F336DB3292310ED536EBE39E1B2DD`, `Status=Success`, `TempCleanupStatus=Removed`, 환경 복원·rollback·최종 저장소 검사 PASS, 저장소 checkpoint 10개다.
+   - 설치 운영본/run_x64 x64: `7DF38C259FF3CF2E3627B41DBA5044DB75E8FD847241B9E7106B90B291CD381A`
+   - run_x32 x32: `1F4A39416C5ABF8918E90EF4C4FF83CACE334A8D468CE480EFCCAAF7E58155E5`
+   - 필수 설정 10개는 세 패키지가 canonical과 일치한다. 마지막 독립 `VerifyOnly`도 PASS했다.
+3. no-INI 4-pane smoke: x64 skeleton 5.67초/ready 8.91초, x32 skeleton 3.22초/ready 6.15초. 둘 다 `ExpectedViewCount=4`, `ReadyViewCount=4`, 정상 종료다.
+4. 동적 증거: `__BUILD_TEMP_BACKUP__\unified_deploy_20260902_073443_560\task095_clock_runtime_report.json`, SHA-256 `64D5CFB65CC80E2E6F8F3435887BA14A103D21B488F4E37E4AA007BEF29AC86C`.
+   - 저장 레이아웃/1200/900/600 폭: 시계 `416×33`, parent height 39, 모두 부모 내부.
+   - 420 요청 폭(실제 toolbar client 376): 시계 `364×33`, 부모 내부.
+   - 전체 5/5 단계 `Found=True`, `Visible=True`, 양수 크기, `ExitCode=0`, `ForcedTermination=False`, `RuntimePassed=True`.
+5. 정적 회귀: Task 091 8/8, Task 092 14/14, Task 093 9/9, Task 095 12/12로 합계 **43/43 PASS**. 종료 소유권, Shift/Ctrl 선택, 행 포커스 색과 시계 수정이 함께 유지됐다.
+
+### 95.6 정리·교훈·재발 방지와 보장 범위
+
+1. 최신 성공 1세대 정책에 따라 구 preflight 1세대, 구 통합 배포 4세대, 완료된 Task 095 격리 GUI 복제본 4세대, 합계 **9폴더·1,595파일·약 744MiB**를 경계와 reparse point를 확인한 뒤 휴지통으로 이동했다. 복구가 필요하면 Windows 휴지통에서 가능하다.
+2. 사후 상태는 `unified_deploy_*` 1세대, `preflight_*` 1세대, `build_temp_*` 0, `task095_clock_runtime_probe_*` 0, FxFile 프로세스 0, 빌드 프로세스 0이다. C: 여유 약 64.001GiB, D: 여유 약 2,119.045GiB를 읽기 전용으로 확인했다.
+3. `ShowWindow` 성공, 체크 표시, HWND 존재는 화면 표시의 충분조건이 아니다. child와 모든 조상의 실제 크기, clipping, z-order 경계를 동적으로 측정해야 한다.
+4. MFC/rebar 시작 단계에서는 `IsWindowVisible()`를 사용자의 보이기 요청 상태로 사용하지 않는다. 영속 옵션/child style과 현재 화면 가시성을 분리하고, saved state가 0 치수를 복원할 수 있다는 방어 조건을 둔다.
+5. 보장 범위는 최종 소스의 x64/x32 빌드, 세 패키지 무결성, x64 실제 HWND의 다섯 창 폭, x64/x32 no-INI 4-pane 시작·정상 종료다. 모든 DPI·다중 모니터·사용자 임의 toolbar button 조합을 실기기에서 전수 실행했다고 과장하지 않으며, 이후 조합은 같은 동적 도구로 회귀한다.
+
+---
+
+**— `시계 보이기`가 체크됐지만 child/rebar가 0×0인 직접 원인을 `WS_VISIBLE` 요청 상태·최소 툴바 행·사후 zero-size 복구로 정정하고, 위치 잠금과 레이아웃 가변성을 보존한 채 43/43 계약·x64/x32 통합 빌드·세 패키지 배포·실제 HWND 5/5·VerifyOnly·임시 증거 정리까지 완료 (2026-09-02) —**
+
+---
+
+## Task 096 — Task 095 빌드 캐시·세션 임시물 사후 정리 (2026-09-02)
+
+_작업 유형: 현재 작업에서 생성한 재생성 가능 중간 산출물만 정리. 설치본·포터블본·사용자 환경·최신 배포 증거·명시적 보존 백업은 보호한다._
+
+1. 읽기 전용 감사에서 `fxfile_working\build_cmake`는 Task 095 x64 CMake 중간 산출물 **651파일, 318.50MiB**이고 reparse point·read-only 파일·빌드 프로세스가 없음을 확인했다. `fxfile_working\obj`는 **12파일, 0.68MiB**였다. 두 경로 모두 최종 `VerifyOnly` 완료 뒤 재생성 가능한 캐시다.
+2. `obj`는 휴지통으로 이동했다. `build_cmake`는 Windows 휴지통 이동 API가 권한 오류를 반환해, 동일한 정확한 경계·프로세스 0·reparse 0을 재확인한 뒤 사용자 요청에 따라 Windows 파일 API의 영구 삭제로 정리했다. 합계 **663파일, 319.17MiB**이며 `build_cmake` 삭제분은 휴지통 복구 대상이 아니다. 다음 빌드에서 자동 재생성된다.
+3. 보존: 최신 `unified_deploy_20260902_073443_560` 1세대와 runtime JSON, 최신 preflight 1세대, Task 092/093의 작은 장기 증거, `bin`, `lib`, 세 실행 패키지, `__BACKUP_보존용__`은 삭제하지 않았다. 당시 설치본 FxFile은 사용자 실행 중이어서 프로세스를 종료하거나 설정을 변경하지 않았다.
+4. 최초 30초 재감사는 `build_cmake`/`obj`/`build_temp_*`/`task095_clock_runtime_probe_*`만 확인해 0으로 판정했다. 그러나 `build_cmake_x32`를 검사 목록에 넣지 않아 x32 캐시가 남은 사실을 놓쳤다. 아래 §96.1에서 이 불완전한 완료 판정을 후속 정정한다.
+
+### 96.1 후속 전수 재감사와 x32 캐시 누락 정정
+
+1. 사용자의 재점검 요청 후 `fxfile_working`의 모든 직계 하위 폴더를 이름 필터 없이 크기·파일 수·최종 수정 시각으로 다시 집계했다. 그 결과 `build_cmake_x32` **690파일, 392.34MiB**가 남아 있었다. 이는 Task 095 x32 빌드에서 생성된 OBJ/PCH/TLOG/CMake 중간 산출물이며 사용자 자료가 아니다.
+2. 직접 원인은 최초 정리 후보 필터가 `build_cmake`와 `obj` 두 이름만 명시하고 `build_cmake_x32`를 포함하지 않은 것이다. 권한 문제가 잔류 원인은 아니었다. x32 폴더 소유자는 현재 사용자 `DESKTOP-VAIE004\ADMIN`, read-only 파일 0, reparse point 0, 빌드 프로세스 0이었다.
+3. 정확한 x32 경계를 재검증한 뒤 전체 폴더를 Windows 휴지통으로 이동했다. 이 추가 정리는 복구 가능하다. Task 096의 최종 정리 합계는 x64/obj **663파일·319.17MiB** + x32 **690파일·392.34MiB** = **1,353파일·711.51MiB**다.
+4. C:/D: 루트, 현재 Codex 세션 TEMP, `%LOCALAPPDATA%\Temp`, 작업공간 전체의 `build_cmake*`, `build_temp_*`, `task095_clock_runtime_probe_*`, OBJ/PCH/TLOG/TMP/BAK 패턴을 재검색했다. 남은 OBJ/PCH/TLOG는 최신 preflight의 configure 증거와 `tools\gyp_old`의 원본 시험 fixture뿐이며 임의 삭제하지 않았다. `C:\System Volume Information`, `C:\WWNTUSER`는 Windows 관리 항목으로 이번 작업 산출물이 아니다.
+5. 최종 재감사 기준 `build_cmake*` 0, `obj` 0, `build_temp_*` 0, Task 095 runtime 복제본 0, 빌드 프로세스 0이다. 최신 성공 배포·preflight 각 1세대, 설치본/run_x64/run_x32, `bin`, `lib`, `__BACKUP_보존용__`, Task 092/093 장기 증거는 보존했다. 설치본 FxFile 1개는 사용자가 실행 중이므로 종료하지 않았다.
+
+### 재발 방지
+
+최종 `VerifyOnly`가 성공한 뒤에도 새 코드 작업을 시작하지 않는다면, `bin`을 제외한 `build_cmake`, `build_cmake_x32`, 기타 `build_cmake*`, `obj`를 **이름 필터가 아니라 작업 루트 직계 하위 전체 크기 집계와 함께** 확인한다. 이 Task와 같은 경계/프로세스/reparse 감사를 통과한 경우에만 정리하고, 휴지통 이동이 실패하면 대상이 실제 재생성 가능 캐시인지 다시 확인한 뒤 영구 삭제 사실과 복구 불가를 명시한다.
+
+---
+
+**— 최초 정리에서 누락한 x32 CMake 캐시를 후속 전수 감사로 발견·정정하여 Task 095의 x64/x32/OBJ 캐시 총 711.51MiB를 정리하고, 최신 배포 증거·사용자 실행 환경·명시 보존 백업은 유지한 채 재생성 감시까지 완료 (2026-09-02) —**

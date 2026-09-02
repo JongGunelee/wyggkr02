@@ -175,6 +175,7 @@ protected:
     xpr_bool_t OnShcnUpdateDrive(const xpr_tchar_t *aDrive);
     xpr_bool_t OnShcnMediaInsRem(Shcn *aShcn, xpr_bool_t aInserted);
 
+    xpr_bool_t canProcessShellChange(void) const;
     xpr_bool_t beginShcn(xpr_slong_t aEventId, xpr_tchar_t *aFullPath1, xpr_tchar_t *aFullPath2, ShNotifyInfo *aShNotifyInfo);
     xpr_bool_t endShcn(HTREEITEM aTreeItem);
 
@@ -215,6 +216,7 @@ protected:
     HTREEITEM   mOldSelTreeItem;
 
     xpr_uint_t  mShcnId;
+    xpr_bool_t  mDestroying;
 
 private:
     xpr_bool_t  mScrollUpTimer;

@@ -268,6 +268,12 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.view4.file_list.text_color"),                 OptionKey::TypeColor,   &Option::mConfig.mFileListTextColor[3],         (void *)(xpr_sintptr_t)GetSysColor(COLOR_WINDOWTEXT)  },
     { XPR_STRING_LITERAL("config.view5.file_list.text_color"),                 OptionKey::TypeColor,   &Option::mConfig.mFileListTextColor[4],         (void *)(xpr_sintptr_t)GetSysColor(COLOR_WINDOWTEXT)  },
     { XPR_STRING_LITERAL("config.view6.file_list.text_color"),                 OptionKey::TypeColor,   &Option::mConfig.mFileListTextColor[5],         (void *)(xpr_sintptr_t)GetSysColor(COLOR_WINDOWTEXT)  },
+    { XPR_STRING_LITERAL("config.view1.file_list.row_focus_color"),            OptionKey::TypeColor,   &Option::mConfig.mFileListRowFocusColor[0],     (void *)(xpr_sintptr_t)DEF_FILE_LIST_ROW_FOCUS_COLOR  },
+    { XPR_STRING_LITERAL("config.view2.file_list.row_focus_color"),            OptionKey::TypeColor,   &Option::mConfig.mFileListRowFocusColor[1],     (void *)(xpr_sintptr_t)DEF_FILE_LIST_ROW_FOCUS_COLOR  },
+    { XPR_STRING_LITERAL("config.view3.file_list.row_focus_color"),            OptionKey::TypeColor,   &Option::mConfig.mFileListRowFocusColor[2],     (void *)(xpr_sintptr_t)DEF_FILE_LIST_ROW_FOCUS_COLOR  },
+    { XPR_STRING_LITERAL("config.view4.file_list.row_focus_color"),            OptionKey::TypeColor,   &Option::mConfig.mFileListRowFocusColor[3],     (void *)(xpr_sintptr_t)DEF_FILE_LIST_ROW_FOCUS_COLOR  },
+    { XPR_STRING_LITERAL("config.view5.file_list.row_focus_color"),            OptionKey::TypeColor,   &Option::mConfig.mFileListRowFocusColor[4],     (void *)(xpr_sintptr_t)DEF_FILE_LIST_ROW_FOCUS_COLOR  },
+    { XPR_STRING_LITERAL("config.view6.file_list.row_focus_color"),            OptionKey::TypeColor,   &Option::mConfig.mFileListRowFocusColor[5],     (void *)(xpr_sintptr_t)DEF_FILE_LIST_ROW_FOCUS_COLOR  },
     { XPR_STRING_LITERAL("config.view1.file_list.init_folder"),                OptionKey::TypeInteger, &Option::mConfig.mFileListInitFolderType[0],    (void *)INIT_TYPE_NONE                 },
     { XPR_STRING_LITERAL("config.view2.file_list.init_folder"),                OptionKey::TypeInteger, &Option::mConfig.mFileListInitFolderType[1],    (void *)INIT_TYPE_NONE                 },
     { XPR_STRING_LITERAL("config.view3.file_list.init_folder"),                OptionKey::TypeInteger, &Option::mConfig.mFileListInitFolderType[2],    (void *)INIT_TYPE_NONE                 },
@@ -321,7 +327,9 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.file_list.size_unit_multiple_selected"),      OptionKey::TypeInteger, &Option::mConfig.mMultiSelFileSizeUnit,         (void *)SIZE_UNIT_BYTE                 },
     { XPR_STRING_LITERAL("config.file_list.theme_style"),                      OptionKey::TypeBoolean, &Option::mConfig.mFileListClassicThemeStyle,    (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.grid_lines"),                       OptionKey::TypeBoolean, &Option::mConfig.mFileListGridLines,            (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.file_list.full_row_select"),                  OptionKey::TypeBoolean, &Option::mConfig.mFileListFullRowSelect,        (void *)XPR_FALSE                      },
+    // New profiles use full-row focus by default. Existing explicit values
+    // remain selectable through the appearance settings dialog.
+    { XPR_STRING_LITERAL("config.file_list.full_row_select"),                  OptionKey::TypeBoolean, &Option::mConfig.mFileListFullRowSelect,        (void *)XPR_TRUE                       },
 
     { XPR_STRING_LITERAL("config.thumbnail.width"),                            OptionKey::TypeInteger, &Option::mConfig.mThumbnailWidth,               (void *)DEF_THUMB_SIZE                 },
     { XPR_STRING_LITERAL("config.thumbnail.height"),                           OptionKey::TypeInteger, &Option::mConfig.mThumbnailHeight,              (void *)DEF_THUMB_SIZE                 },

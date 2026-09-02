@@ -222,6 +222,7 @@ enum
 #define DEF_ACTIVED_VIEW_COLOR       (RGB(48,192,48))
 #define DEF_INFO_BAR_BOOKMARK_COLOR  (RGB(0,0,255))
 #define DEF_PATH_BAR_HIGHLIGHT_COLOR (::GetSysColor(COLOR_ACTIVECAPTION))
+#define DEF_FILE_LIST_ROW_FOCUS_COLOR (RGB(255,255,255))
 } // namespace fxfile
 
 #endif // __FXFILE_DEF_H__
