@@ -28,7 +28,8 @@ $explorerView = Read-Text 'src\fxfile\explorer_view.cpp'
 $folderHeader = Read-Text 'src\fxfile\folder_ctrl.h'
 $folder = Read-Text 'src\fxfile\folder_ctrl.cpp'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
-$resetDraw = Function-Body $explorer 'void ExplorerCtrl::resetCustomDrawColors' 'void ExplorerCtrl::OnCustomdraw'
+$resetDraw = Function-Body $explorer 'void ExplorerCtrl::resetCustomDrawColors' 'void ExplorerCtrl::applyCustomDrawFiltering'
+$reportSelectionDraw = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawParentFolderIcon'
 $onDestroy = Function-Body $folder 'void FolderCtrl::OnDestroy(void)' 'void FolderCtrl::setOption'
 $onFileChange = Function-Body $folder 'LRESULT FolderCtrl::OnFileChangeNotify' 'LRESULT FolderCtrl::OnShellChangeNotify'
 $onShellChange = Function-Body $folder 'LRESULT FolderCtrl::OnShellChangeNotify' 'xpr_bool_t FolderCtrl::canProcessShellChange'
@@ -40,18 +41,18 @@ $filtering = $customDraw.IndexOf('applyCustomDrawFiltering(sNmLvCustomDraw);', [
 Check 'Each item custom draw resets text and background before filtering or row-focus overrides' (
     $textBase -ge 0 -and $backgroundBase -ge 0 -and
     $customDraw.IndexOf('resetCustomDrawColors(sNmLvCustomDraw);', [StringComparison]::Ordinal) -lt $filtering -and
-    $customDraw.Contains('sNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;'))
+    $reportSelectionDraw.Contains('applyRowFocusDrawState(aNmLvCustomDraw);'))
 Check 'A list background image alone is the only path that requests transparent item backgrounds' (
     $resetDraw.Contains('GetBkImage(&sLvBkImage) == XPR_TRUE && sImage[0] != XPR_STRING_LITERAL(''\0'')') -and
     $resetDraw.Contains('aNmLvCustomDraw->clrTextBk = CLR_NONE;'))
 Check 'The configured color queries selected plus item-focused state and covers full-row plus first-cell modes after themed drawing' (
     $customDraw.Contains('XPR_IS_TRUE(mOption.mFullRowSelect)') -and
     $explorer.Contains('mFocusedItemIndex') -and
-    $customDraw.Contains('XPR_IS_TRUE(sFocusedSelected)') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrText   = mRowFocusTextColor;') -and
+    $reportSelectionDraw.Contains('if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))') -and
+    -not $reportSelectionDraw.Contains('isFocusedSelectedItem(sItemIndex)') -and
+    $reportSelectionDraw.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
     $customDraw.Contains('CDRF_NEWFONT') -and
-    $customDraw.Contains('CDRF_NEWFONT'))
+    $customDraw.Contains('CDRF_NOTIFYSUBITEMDRAW'))
 Check 'An unavailable saved drive lock falls back without rewriting the user preference' (
     $explorerView.Contains('isAvailableStartupPath') -and
     $explorerView.Contains('::GetDriveType(sRoot) == DRIVE_NO_ROOT_DIR') -and

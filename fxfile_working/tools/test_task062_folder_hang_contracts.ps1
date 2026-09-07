@@ -95,9 +95,9 @@ $tests = @(
         Pattern = "sLvItemData->mOverlayResolved\s*=\s*XPR_TRUE;"
     },
     @{
-        Name = "getFileIconIndex uses GetFileExtIconIndex for fast extension icon resolution"
+        Name = "getFileIconIndex avoids unrealized sparse extension icons and uses a realized generic fallback"
         File = "explorer_ctrl.cpp"
-        Pattern = "GetFileExtIconIndex\s*\(\s*sExt\s*\)"
+        Pattern = "Do NOT call GetFileExtIconIndex here[\s\S]*sCachedDefaultFileIconIndex[\s\S]*SHGFI_SYSICONINDEX\s*\|\s*SHGFI_USEFILEATTRIBUTES"
     }
 )
 

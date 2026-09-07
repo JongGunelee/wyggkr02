@@ -25,6 +25,7 @@ function Check([string]$name, [bool]$passed) {
 
 $explorer = Read-Text 'src\fxfile\explorer_ctrl.cpp'
 $selectedFocus = Function-Body $explorer 'xpr_bool_t ExplorerCtrl::isFocusedSelectedItem' 'void ExplorerCtrl::resetCustomDrawColors'
+$reportSelectionDraw = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawParentFolderIcon'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
 $thumbnailDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdrawThumbnail' 'LRESULT ExplorerCtrl::OnThumbnailProc'
 
@@ -33,10 +34,10 @@ Check 'Focused row target comes from each ListView prepaint snapshot, not the tr
     $selectedFocus.Contains('mRowFocusPaintItemIndex == aItem') -and
     -not $selectedFocus.Contains('::GetFocus()'))
 Check 'Report view keeps the focused selected target through native row painting after a dialog or path-bar focus transition' (
-    $customDraw.Contains('isFocusedSelectedItem(sItemIndex)') -and
+    $reportSelectionDraw.Contains('if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))') -and
+    -not $reportSelectionDraw.Contains('isFocusedSelectedItem(sItemIndex)') -and
     $customDraw.Contains('CDDS_ITEMPREPAINT') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrText   = mRowFocusTextColor;') -and
+    $reportSelectionDraw.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
     $customDraw.Contains('CDRF_NEWFONT'))
 Check 'Thumbnail view uses the same item target instead of falling back to system colors when its list loses immediate focus' (
     $thumbnailDraw.Contains('sSelectedFocus = isFocusedSelectedItem(sItemIndex);') -and

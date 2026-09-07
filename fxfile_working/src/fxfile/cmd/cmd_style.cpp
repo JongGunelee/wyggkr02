@@ -103,6 +103,9 @@ xpr_sint_t UIScaleCommand::canExecute(CommandContext &aContext)
     xpr_bool_t sChecked = XPR_FALSE;
     switch (aContext.getCommandId())
     {
+    case ID_VIEW_UI_SCALE_25:  sChecked = (sCurrentPercent == 25);  break;
+    case ID_VIEW_UI_SCALE_50:  sChecked = (sCurrentPercent == 50);  break;
+    case ID_VIEW_UI_SCALE_75:  sChecked = (sCurrentPercent == 75);  break;
     case ID_VIEW_UI_SCALE_100: sChecked = (sCurrentPercent == 100); break;
     case ID_VIEW_UI_SCALE_125: sChecked = (sCurrentPercent == 125); break;
     case ID_VIEW_UI_SCALE_150: sChecked = (sCurrentPercent == 150); break;
@@ -123,6 +126,9 @@ void UIScaleCommand::execute(CommandContext &aContext)
     xpr_sint_t sPercent = 100;
     switch (aContext.getCommandId())
     {
+    case ID_VIEW_UI_SCALE_25:  sPercent = 25;  break;
+    case ID_VIEW_UI_SCALE_50:  sPercent = 50;  break;
+    case ID_VIEW_UI_SCALE_75:  sPercent = 75;  break;
     case ID_VIEW_UI_SCALE_100: sPercent = 100; break;
     case ID_VIEW_UI_SCALE_125: sPercent = 125; break;
     case ID_VIEW_UI_SCALE_150: sPercent = 150; break;

@@ -476,6 +476,7 @@ void CfgAppearanceColorDlg::OnFileListBkgndImageBrowse(void)
 
 LRESULT CfgAppearanceColorDlg::OnSelEndOK(WPARAM aWParam, LPARAM aLParam)
 {
+    saveViewColor();
     setModified();
 
     return 0;

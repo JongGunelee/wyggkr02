@@ -3,9 +3,15 @@
 
 [CmdletBinding()]
 param(
-    [string]$FxFileExe = "C:\00 소프트웨어\04 Fxfile\fxfile.exe",
+    [string]$FxFileExe = "",
     [int]$TimeoutSeconds = 30
 )
+
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$workspaceRoot = Split-Path -Parent $projectRoot
+if ([string]::IsNullOrWhiteSpace($FxFileExe)) {
+    $FxFileExe = Join-Path $workspaceRoot "fxfile_run_x64\fxfile.exe"
+}
 
 Add-Type @"
 using System;
@@ -87,9 +93,23 @@ if (-not (Test-Path $FxFileExe)) {
     exit 1
 }
 
-# 1. Clean existing instances
-Get-Process -Name fxfile, fxfile-launcher, fxfile-upchecker -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Milliseconds 500
+# 1. Never stop a user's running FxFile. Exercise an isolated package copy so that
+# E2E shutdown cannot rewrite the canonical deployment configuration.
+$existingFxFile = @(Get-Process -Name fxfile, fxfile-e2e -ErrorAction SilentlyContinue)
+if ($existingFxFile.Count -gt 0) {
+    Write-Error "FxFile is already running. Close it before this isolated E2E test; no process was terminated."
+    exit 1
+}
+
+$sourcePackage = Split-Path -Parent (Resolve-Path -LiteralPath $FxFileExe)
+$testTempRoot = Join-Path $workspaceRoot "__BUILD_TEMP_BACKUP__\test_runtime"
+$isolatedPackage = Join-Path $testTempRoot ("fxfile_e2e_{0}" -f $PID)
+New-Item -ItemType Directory -Path $isolatedPackage -Force | Out-Null
+Copy-Item -Path (Join-Path $sourcePackage '*') -Destination $isolatedPackage -Recurse -Force
+$isolatedOriginalExe = Join-Path $isolatedPackage (Split-Path -Leaf $FxFileExe)
+$isolatedExe = Join-Path $isolatedPackage "fxfile-e2e.exe"
+Move-Item -LiteralPath $isolatedOriginalExe -Destination $isolatedExe -Force
+$FxFileExe = $isolatedExe
 
 # 2. Launch FxFile
 Write-Host "[E2E Step 1] Launching FxFile process..."
@@ -171,6 +191,8 @@ if (-not $closed) {
 } else {
     Write-Host "  -> Process gracefully exited with code: $($proc.ExitCode)"
 }
+
+Remove-Item -LiteralPath $isolatedPackage -Recurse -Force
 
 Write-Host "=========================================================="
 Write-Host "  E2E Test Result: 100% SUCCESS / NO LEAKS DETECTED"

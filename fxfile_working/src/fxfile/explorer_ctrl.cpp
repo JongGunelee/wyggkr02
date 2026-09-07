@@ -33,6 +33,7 @@
 #include "shell_enumerator.h"
 #include "fnmatch.h"
 #include "folder_layout.h"
+#include "option.h"
 
 #include "gui/gdi.h"
 #include "gui/FlatHeaderCtrl.h"
@@ -357,6 +358,14 @@ xpr_sint_t ExplorerCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
     // enable vist enhanced control
     enableVistaEnhanced(XPR_TRUE);
 
+    // Present each ListView paint as one buffered frame.  Without the native
+    // double buffer, WM_ERASEBKGND/default-theme painting can reach the screen
+    // before the row-focus custom draw has supplied its final background and
+    // text colours, which exposes a short white/blank frame during selection,
+    // asynchronous icon updates, and pane focus changes.
+    DWORD sExtendedStyle = GetExtendedStyle();
+    SetExtendedStyle(sExtendedStyle | LVS_EX_DOUBLEBUFFER);
+
     // Register Drag & Drop
     mDropTarget.registerObserver(this);
     mDropTarget.Register(this);
@@ -407,17 +416,17 @@ xpr_sint_t ExplorerCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
 void ExplorerCtrl::cacheRowFocusOption(const Option &aOption)
 {
     mOption.mFullRowSelect = aOption.mFullRowSelect;
-    mOption.mRowFocusColor = aOption.mRowFocusColor;
+    mOption.mRowFocusColor = (aOption.mRowFocusColor == CLR_DEFAULT) ? DEF_FILE_LIST_ROW_FOCUS_COLOR : aOption.mRowFocusColor;
 
     // Resolve contrast only when an option changes.  Custom draw is a hot
     // path and must not repeat this calculation for every visible subitem.
-    if (aOption.mRowFocusColor == ::GetSysColor(COLOR_HIGHLIGHT))
+    if (mOption.mRowFocusColor == ::GetSysColor(COLOR_HIGHLIGHT))
     {
         mRowFocusTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
     }
     else
     {
-        COLORREF sRowFocusColor = aOption.mRowFocusColor;
+        COLORREF sRowFocusColor = mOption.mRowFocusColor;
         xpr_uint_t sLuminance = (GetRValue(sRowFocusColor) * 299 +
                                  GetGValue(sRowFocusColor) * 587 +
                                  GetBValue(sRowFocusColor) * 114) / 1000;
@@ -1365,6 +1374,7 @@ LRESULT ExplorerCtrl::OnShellAsyncIcon(WPARAM wParam, LPARAM lParam)
             {
             case ShellIcon::TypeIconIndex:
                 {
+                    const xpr_sint_t sOldIconIndex = sLvItemData->mCachedIconIndex;
                     sLvItemData->mIconRequestIssued = XPR_TRUE;
                     if (sAsyncIcon->mResult.mIconIndex >= 0)
                     {
@@ -1372,11 +1382,17 @@ LRESULT ExplorerCtrl::OnShellAsyncIcon(WPARAM wParam, LPARAM lParam)
                         sLvItemData->mIconResolved = XPR_TRUE;
                     }
 
-                    LVITEM sLvItem = {0};
-                    sLvItem.mask   = LVIF_IMAGE;
-                    sLvItem.iItem  = sIndex;
-                    sLvItem.iImage = sLvItemData->mCachedIconIndex;
-                    SetItem(&sLvItem);
+                    // Do not invalidate a row for a failed lookup or for an
+                    // icon equal to the already displayed placeholder.  Six
+                    // panes otherwise accumulate a long tail of no-op paints.
+                    if (sLvItemData->mCachedIconIndex != sOldIconIndex)
+                    {
+                        LVITEM sLvItem = {0};
+                        sLvItem.mask   = LVIF_IMAGE;
+                        sLvItem.iItem  = sIndex;
+                        sLvItem.iImage = sLvItemData->mCachedIconIndex;
+                        SetItem(&sLvItem);
+                    }
                     break;
                 }
 
@@ -1392,10 +1408,12 @@ LRESULT ExplorerCtrl::OnShellAsyncIcon(WPARAM wParam, LPARAM lParam)
                         if (XPR_TEST_BITS(sLvItemData->mShellAttributes, SFGAO_LINK))  sState = INDEXTOOVERLAYMASK(2);
                     }
 
+                    const xpr_uint_t sOldOverlayState = sLvItemData->mCachedOverlayState;
                     sLvItemData->mCachedOverlayState = sState;
                     sLvItemData->mOverlayResolved = XPR_TRUE;
                     sLvItemData->mOverlayRequestIssued = XPR_TRUE;
-                    SetItemState(sIndex, sState, LVIS_OVERLAYMASK);
+                    if (sState != sOldOverlayState)
+                        SetItemState(sIndex, sState, LVIS_OVERLAYMASK);
                     break;
                 }
             }
@@ -2661,6 +2679,9 @@ void ExplorerCtrl::saveToFolderLayout(FolderLayout &aFolderLayout) const
 void ExplorerCtrl::syncFolderLayout(void)
 {
     if (XPR_IS_TRUE(mFirstExplore))
+        return;
+
+    if (mOption.mSaveFolderLayout == SAVE_FOLDER_LAYOUT_NONE)
         return;
 
     mFolderLayout = getFolderLayout();
@@ -7151,8 +7172,9 @@ void ExplorerCtrl::OnKeyUp(xpr_uint_t aChar, xpr_uint_t aRepCnt, xpr_uint_t aFla
 
         if (sItemIndex >= 0)
         {
+            xpr_sint_t sOldFocused = mFocusedItemIndex;
             mFocusedItemIndex = sItemIndex;
-            Invalidate(XPR_FALSE);
+            redrawFocusItemChange(sOldFocused, sItemIndex);
         }
     }
 }
@@ -7552,9 +7574,26 @@ void ExplorerCtrl::snapshotRowFocusItem(void)
 
 xpr_bool_t ExplorerCtrl::isFocusedSelectedItem(xpr_sint_t aItem)
 {
-    // Item/subitem callbacks consume only the prepaint snapshot.  They never
-    // query or mutate native selection state while a paint batch is running.
-    return (aItem >= 0 && mRowFocusPaintItemIndex == aItem) ? XPR_TRUE : XPR_FALSE;
+    if (aItem < 0)
+        return XPR_FALSE;
+
+    // Selection truth always comes from the live ListView.  The PREPAINT
+    // snapshot identifies the single keyboard-focus cue, but it must never
+    // promote a row that is no longer selected.  Report-view selection colour
+    // is intentionally applied to every live-selected row; this helper remains
+    // the identity check for the one dotted focus rectangle and non-report views.
+    // Conversely, a newly focused+selected row must be recognised immediately
+    // even when the snapshot was taken just before the native click transition.
+    // Requiring LVIS_FOCUSED keeps the keyboard-focus identity singular without
+    // restricting the configured background of Ctrl/Shift range selections.
+    const UINT sNativeState = GetItemState(aItem, LVIS_SELECTED | LVIS_FOCUSED);
+    if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))
+        return XPR_FALSE;
+
+    if (XPR_TEST_BITS(sNativeState, LVIS_FOCUSED))
+        return XPR_TRUE;
+
+    return (mRowFocusPaintItemIndex == aItem) ? XPR_TRUE : XPR_FALSE;
 }
 
 void ExplorerCtrl::resetCustomDrawColors(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
@@ -7585,8 +7624,11 @@ void ExplorerCtrl::applyCustomDrawFiltering(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
 
     FileFilterMgr &sFileFilterMgr = FileFilterMgr::instance();
 
-    static xpr_tchar_t sParsing[XPR_MAX_PATH + 1];
-    sParsing[0] = XPR_STRING_LITERAL('\0');
+    // Every ExplorerCtrl owns an independent draw transaction.  A static
+    // parsing buffer made the six panes share mutable callback state even
+    // though callbacks normally run on the UI thread.  Keep it local so a
+    // nested shell/message callback cannot leak one pane's path into another.
+    xpr_tchar_t sParsing[XPR_MAX_PATH + 1] = {0};
 
     if (XPR_TEST_BITS(sLvItemData->mShellAttributes, SFGAO_FILESYSTEM))
         GetName(sLvItemData->mShellFolder, sLvItemData->mPidl, SHGDN_FORPARSING, sParsing);
@@ -7598,30 +7640,6 @@ void ExplorerCtrl::applyCustomDrawFiltering(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
         aNmLvCustomDraw->clrTextBk = sFileFilterMgr.getColor(sParsing, sLvItemData->mShellAttributes & SFGAO_FOLDER);
 }
 
-void ExplorerCtrl::fillRowFocusBackground(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
-{
-    xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(aNmLvCustomDraw->nmcd.dwItemSpec);
-    xpr_sint_t sBoundsType = XPR_IS_TRUE(mOption.mFullRowSelect) ? LVIR_BOUNDS : LVIR_SELECTBOUNDS;
-
-    CRect sFocusRect;
-    if (GetItemRect(sItemIndex, &sFocusRect, sBoundsType) == XPR_FALSE)
-        return;
-
-    CRect sClientRect;
-    GetClientRect(&sClientRect);
-    sFocusRect.IntersectRect(&sFocusRect, &sClientRect);
-    if (sFocusRect.IsRectEmpty() != FALSE)
-        return;
-
-    // Explorer-themed v6 ListView controls can repaint the selected state
-    // after clrTextBk is supplied.  Fill only the selected row/cell bounds
-    // here, then retain native ListView icon and text painting below.
-    HBRUSH sBrush = static_cast<HBRUSH>(::GetStockObject(DC_BRUSH));
-    COLORREF sOldBrushColor = ::SetDCBrushColor(aNmLvCustomDraw->nmcd.hdc, mOption.mRowFocusColor);
-    ::FillRect(aNmLvCustomDraw->nmcd.hdc, &sFocusRect, sBrush);
-    ::SetDCBrushColor(aNmLvCustomDraw->nmcd.hdc, sOldBrushColor);
-}
-
 void ExplorerCtrl::applyRowFocusDrawState(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
 {
     // Change only the transient paint state.  The real ListView selection
@@ -7629,9 +7647,262 @@ void ExplorerCtrl::applyRowFocusDrawState(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     // Do not assign iStateId/clrFace here.  Explorer-themed ListViews treat
     // LISS_NORMAL as a request to repaint the cell with the theme's normal
     // (usually white) background after our configured row colour was filled.
+    // Strip only the transient state presented to this custom-draw callback;
+    // the real ListView selection remains untouched.  Keep the explicit
+    // CDIS_SELECTED operation visible because it is the core theme-suppression
+    // contract shared by the earlier row-focus regressions.
     aNmLvCustomDraw->nmcd.uItemState &= ~CDIS_SELECTED;
+    aNmLvCustomDraw->nmcd.uItemState &= ~(CDIS_HOT | CDIS_FOCUS | CDIS_DEFAULT);
     aNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;
     aNmLvCustomDraw->clrText   = mRowFocusTextColor;
+}
+
+void ExplorerCtrl::applyReportSelectionDrawState(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
+{
+    const xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(aNmLvCustomDraw->nmcd.dwItemSpec);
+    const UINT sNativeState = GetItemState(sItemIndex, LVIS_SELECTED | LVIS_FOCUSED);
+
+    if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))
+    {
+        // The custom-draw state is a paint snapshot and can lag a click,
+        // delayed icon completion, or pane activation.  Never allow a stale
+        // selected state to make uxtheme draw white selection text for a row
+        // that is no longer selected in the live ListView model.
+        aNmLvCustomDraw->nmcd.uItemState &= ~(CDIS_SELECTED | CDIS_FOCUS | CDIS_DEFAULT);
+        return;
+    }
+
+    // A configured "selected-row focus colour" is a property of the selected
+    // set, not only of its keyboard anchor.  Apply it to every live-selected
+    // row so a Shift range has identical start, middle and end pixels.  The
+    // native model still owns selection and the single LVIS_FOCUSED item.
+    applyRowFocusDrawState(aNmLvCustomDraw);
+}
+
+void ExplorerCtrl::drawFinalReportSelection(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
+{
+    const xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(aNmLvCustomDraw->nmcd.dwItemSpec);
+    const UINT sNativeState = GetItemState(sItemIndex,
+        LVIS_SELECTED | LVIS_FOCUSED | LVIS_DROPHILITED | LVIS_OVERLAYMASK | LVIS_CUT);
+
+    // ITEMPOSTPAINT is delivered after Explorer/uxtheme has completed the
+    // native row.  Recheck the live model here: a callback snapshot, mouse-hot state or
+    // delayed InfoTip paint must never promote an item that is no longer
+    // selected.
+    if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))
+        return;
+
+    COLORREF sBackgroundColor = mOption.mRowFocusColor;
+    COLORREF sTextColor = mRowFocusTextColor;
+    if (XPR_TEST_BITS(sNativeState, LVIS_DROPHILITED))
+    {
+        sBackgroundColor = ::GetSysColor(COLOR_HIGHLIGHT);
+        sTextColor = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+    }
+
+    const xpr_sint_t sBoundsType = XPR_IS_TRUE(mOption.mFullRowSelect) ? LVIR_BOUNDS : LVIR_SELECTBOUNDS;
+
+    CRect sSelectionRect;
+    if (GetItemRect(sItemIndex, &sSelectionRect, sBoundsType) == XPR_FALSE)
+        return;
+
+    CRect sClientRect;
+    GetClientRect(&sClientRect);
+    sSelectionRect.IntersectRect(&sSelectionRect, &sClientRect);
+    if (sSelectionRect.IsRectEmpty() != FALSE)
+        return;
+
+    const xpr_sint_t sSavedDc = ::SaveDC(aNmLvCustomDraw->nmcd.hdc);
+    if (sSavedDc == 0)
+        return;
+
+    // The previous ITEMPREPAINT fill was visible for one frame and then
+    // overwritten when an Explorer-themed ListView entered its hot state or showed
+    // an InfoTip.  Complete the selected row after native painting in the same
+    // LVS_EX_DOUBLEBUFFER transaction instead.  Stock objects plus SaveDC keep
+    // the long-running six-pane path allocation-free and restore every HDC
+    // attribute before the next item is painted.
+    HBRUSH sBrush = static_cast<HBRUSH>(::GetStockObject(DC_BRUSH));
+    if (XPR_IS_NOT_NULL(sBrush))
+    {
+        ::SetDCBrushColor(aNmLvCustomDraw->nmcd.hdc, sBackgroundColor);
+        ::FillRect(aNmLvCustomDraw->nmcd.hdc, &sSelectionRect, sBrush);
+    }
+
+    // Everything outside the selected full-row/name-cell geometry has already
+    // been painted by the native control and must remain untouched.
+    ::IntersectClipRect(aNmLvCustomDraw->nmcd.hdc,
+        sSelectionRect.left, sSelectionRect.top, sSelectionRect.right, sSelectionRect.bottom);
+    ::SetBkMode(aNmLvCustomDraw->nmcd.hdc, TRANSPARENT);
+    ::SetTextColor(aNmLvCustomDraw->nmcd.hdc, sTextColor);
+
+    LVITEM sLvItem = {0};
+    sLvItem.mask = LVIF_IMAGE | LVIF_STATE;
+    sLvItem.iItem = sItemIndex;
+    sLvItem.iSubItem = 0;
+    sLvItem.stateMask = LVIS_SELECTED | LVIS_FOCUSED | LVIS_DROPHILITED | LVIS_OVERLAYMASK | LVIS_CUT;
+    GetItem(&sLvItem);
+
+    CRect sIconRect;
+    if (GetItemRect(sItemIndex, &sIconRect, LVIR_ICON) == XPR_TRUE)
+    {
+        CRect sVisibleIconRect;
+        sVisibleIconRect.IntersectRect(&sIconRect, &sSelectionRect);
+        if (sVisibleIconRect.IsRectEmpty() == FALSE)
+        {
+            LPLVITEMDATA sLvItemData = reinterpret_cast<LPLVITEMDATA>(aNmLvCustomDraw->nmcd.lItemlParam);
+            verifyItemData(&sLvItemData);
+
+            xpr_sint_t sIconWidth = 16;
+            xpr_sint_t sIconHeight = 16;
+            if (XPR_IS_NOT_NULL(mSmallImgList))
+                ::ImageList_GetIconSize(mSmallImgList->GetSafeHandle(), &sIconWidth, &sIconHeight);
+
+            CPoint sIconPoint(sIconRect.left + ((sIconRect.Width() - sIconWidth) / 2),
+                              sIconRect.top + ((sIconRect.Height() - sIconHeight) / 2));
+
+            if (XPR_IS_NOT_NULL(sLvItemData) && sLvItemData->mItemType == IDT_PARENT)
+            {
+                // CWinApp::LoadIcon returns a shared resource.  It must not be
+                // passed to DestroyIcon from this per-paint path.
+                HICON sIcon = AfxGetApp()->LoadIcon(IDI_GO_UP);
+                if (XPR_IS_NOT_NULL(sIcon))
+                    ::DrawIconEx(aNmLvCustomDraw->nmcd.hdc, sIconPoint.x, sIconPoint.y,
+                        sIcon, sIconWidth, sIconHeight, 0, XPR_NULL, DI_NORMAL);
+            }
+            else if (XPR_IS_NOT_NULL(mSmallImgList) && sLvItem.iImage >= 0)
+            {
+                xpr_uint_t sImageStyle = ILD_TRANSPARENT | (sLvItem.state & LVIS_OVERLAYMASK);
+                if (XPR_TEST_BITS(sLvItem.state, LVIS_CUT))
+                    sImageStyle |= ILD_BLEND50;
+
+                CDC *sDc = CDC::FromHandle(aNmLvCustomDraw->nmcd.hdc);
+                mSmallImgList->Draw(sDc, sLvItem.iImage, sIconPoint, sImageStyle);
+            }
+        }
+    }
+
+    const xpr_sint_t sColumnCount = XPR_IS_NOT_NULL(mHeaderCtrl) ? mHeaderCtrl->GetItemCount() : 0;
+    for (xpr_sint_t sColumn = 0; sColumn < sColumnCount; ++sColumn)
+    {
+        CRect sHeaderRect;
+        if (mHeaderCtrl->GetItemRect(sColumn, &sHeaderRect) == FALSE)
+            continue;
+
+        CRect sCellRect(sHeaderRect.left, sSelectionRect.top, sHeaderRect.right, sSelectionRect.bottom);
+        CRect sVisibleCellRect;
+        sVisibleCellRect.IntersectRect(&sCellRect, &sSelectionRect);
+        if (sVisibleCellRect.IsRectEmpty() != FALSE)
+            continue;
+
+        CRect sTextRect(sCellRect);
+        if (sColumn == 0)
+        {
+            CRect sLabelRect;
+            if (GetItemRect(sItemIndex, &sLabelRect, LVIR_LABEL) == XPR_TRUE)
+            {
+                sTextRect.left = sLabelRect.left;
+                sTextRect.right = sCellRect.right;
+            }
+        }
+        sTextRect.DeflateRect(4, 0, 4, 0);
+        if (sTextRect.IsRectEmpty() != FALSE)
+            continue;
+
+        LVCOLUMN sColumnInfo = {0};
+        sColumnInfo.mask = LVCF_FMT;
+        GetColumn(sColumn, &sColumnInfo);
+
+        xpr_uint_t sTextFormat = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX;
+        if (XPR_TEST_BITS(sColumnInfo.fmt, LVCFMT_RIGHT))
+            sTextFormat |= DT_RIGHT;
+        else if (XPR_TEST_BITS(sColumnInfo.fmt, LVCFMT_CENTER))
+            sTextFormat |= DT_CENTER;
+        else
+            sTextFormat |= DT_LEFT;
+
+        xpr::string sText = GetItemText(sItemIndex, sColumn);
+        ::DrawText(aNmLvCustomDraw->nmcd.hdc, sText.c_str(), static_cast<xpr_sint_t>(sText.length()),
+            &sTextRect, sTextFormat);
+    }
+
+    if (XPR_TEST_BITS(GetExtendedStyle(), LVS_EX_GRIDLINES))
+    {
+        HPEN sPen = static_cast<HPEN>(::GetStockObject(DC_PEN));
+        if (XPR_IS_NOT_NULL(sPen))
+        {
+            ::SelectObject(aNmLvCustomDraw->nmcd.hdc, sPen);
+            ::SetDCPenColor(aNmLvCustomDraw->nmcd.hdc, ::GetSysColor(COLOR_3DFACE));
+
+            for (xpr_sint_t sColumn = 0; sColumn < sColumnCount; ++sColumn)
+            {
+                CRect sHeaderRect;
+                if (mHeaderCtrl->GetItemRect(sColumn, &sHeaderRect) != FALSE)
+                {
+                    ::MoveToEx(aNmLvCustomDraw->nmcd.hdc, sHeaderRect.right - 1, sSelectionRect.top, XPR_NULL);
+                    ::LineTo(aNmLvCustomDraw->nmcd.hdc, sHeaderRect.right - 1, sSelectionRect.bottom);
+                }
+            }
+
+            ::MoveToEx(aNmLvCustomDraw->nmcd.hdc, sSelectionRect.left, sSelectionRect.bottom - 1, XPR_NULL);
+            ::LineTo(aNmLvCustomDraw->nmcd.hdc, sSelectionRect.right, sSelectionRect.bottom - 1);
+        }
+    }
+
+    if (XPR_TEST_BITS(sNativeState, LVIS_FOCUSED) && ::GetFocus() == m_hWnd)
+    {
+        CRect sFocusRect(sSelectionRect);
+        sFocusRect.DeflateRect(1, 1);
+        if (sFocusRect.IsRectEmpty() == FALSE)
+            ::DrawFocusRect(aNmLvCustomDraw->nmcd.hdc, &sFocusRect);
+    }
+
+    ::RestoreDC(aNmLvCustomDraw->nmcd.hdc, sSavedDc);
+}
+
+void ExplorerCtrl::drawParentFolderIcon(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
+{
+    CRect sIconRect;
+    if (GetItemRect(static_cast<xpr_sint_t>(aNmLvCustomDraw->nmcd.dwItemSpec),
+                    &sIconRect, LVIR_ICON) == XPR_FALSE)
+        return;
+
+    const xpr_sint_t sViewStyle = getViewStyle();
+    const xpr_bool_t sLargeIcon = (sViewStyle == VIEW_STYLE_EXTRA_LARGE_ICONS ||
+                                   sViewStyle == VIEW_STYLE_LARGE_ICONS       ||
+                                   sViewStyle == VIEW_STYLE_MEDIUM_ICONS      ||
+                                   sViewStyle == VIEW_STYLE_THUMBNAIL);
+    const xpr_sint_t sIconSize = XPR_IS_TRUE(sLargeIcon) ? 32 : 16;
+    const CPoint sIconPoint(sIconRect.left + ((sIconRect.Width()  - sIconSize) / 2),
+                            sIconRect.top  + ((sIconRect.Height() - sIconSize) / 2));
+
+    // CWinApp::LoadIcon returns a shared resource icon.  It must not be passed
+    // to DestroyIcon on every repaint.
+    HICON sIcon = AfxGetApp()->LoadIcon(IDI_GO_UP);
+    if (XPR_IS_NOT_NULL(sIcon))
+        ::DrawIconEx(aNmLvCustomDraw->nmcd.hdc, sIconPoint.x, sIconPoint.y,
+                     sIcon, sIconSize, sIconSize, 0, XPR_NULL, DI_NORMAL);
+}
+
+void ExplorerCtrl::redrawFocusItemChange(xpr_sint_t aOldItem, xpr_sint_t aNewItem)
+{
+    if (GetSafeHwnd() == XPR_NULL)
+        return;
+
+    if (aOldItem == aNewItem)
+        return;
+
+    CRect sOldRect, sNewRect;
+    xpr_bool_t sHasOld = (aOldItem >= 0 && GetItemRect(aOldItem, &sOldRect, LVIR_BOUNDS) == XPR_TRUE);
+    xpr_bool_t sHasNew = (aNewItem >= 0 && GetItemRect(aNewItem, &sNewRect, LVIR_BOUNDS) == XPR_TRUE);
+
+    if (sHasOld)
+        InvalidateRect(&sOldRect, XPR_FALSE);
+    if (sHasNew)
+        InvalidateRect(&sNewRect, XPR_FALSE);
+
+    if (!sHasOld && !sHasNew)
+        Invalidate(XPR_FALSE);
 }
 
 void ExplorerCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
@@ -7653,31 +7924,14 @@ void ExplorerCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
         // repaint loop.
         *aResult = CDRF_NOTIFYITEMDRAW;
     }
-    else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREERASE)
-    {
-        *aResult = CDRF_NOTIFYITEMDRAW;
-    }
     else if (sNmLvCustomDraw->nmcd.dwDrawStage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM))
     {
-        xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(sNmLvCustomDraw->nmcd.dwItemSpec);
-        // VIEW_STYLE_DETAILS, VIEW_STYLE_TILES and VIEW_STYLE_CONTENT all use
-        // the native LVS_REPORT control in this legacy implementation.  Base
-        // row-focus painting on the actual control style so panes retaining a
-        // content/tile folder layout receive the same configured colour as a
-        // details-layout pane.
-        if (XPR_IS_TRUE(isReportView()) &&
-            XPR_IS_TRUE(isFocusedSelectedItem(sItemIndex)))
+        if (XPR_IS_TRUE(isReportView()))
         {
-            // A subitem notification can reuse colours written for the
-            // preceding cell.  Restore each cell first, then apply the row
-            // focus contract to every column in full-row mode or only the
-            // legacy name cell when full-row mode is disabled.
             resetCustomDrawColors(sNmLvCustomDraw);
             applyCustomDrawFiltering(sNmLvCustomDraw);
-
             if (XPR_IS_TRUE(mOption.mFullRowSelect) || sNmLvCustomDraw->iSubItem == 0)
-                applyRowFocusDrawState(sNmLvCustomDraw);
-
+                applyReportSelectionDrawState(sNmLvCustomDraw);
             *aResult = CDRF_NEWFONT;
         }
         else
@@ -7690,34 +7944,27 @@ void ExplorerCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
         xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(sNmLvCustomDraw->nmcd.dwItemSpec);
         xpr_bool_t sFocusedSelected = isFocusedSelectedItem(sItemIndex);
 
-        // Common controls can reuse the custom-draw structure for the next
-        // item.  Start every item from the list's base colours so a selected
-        // row's custom colours cannot bleed into a later unselected row.
         resetCustomDrawColors(sNmLvCustomDraw);
         applyCustomDrawFiltering(sNmLvCustomDraw);
 
-        if (XPR_IS_TRUE(isReportView()) &&
-            XPR_IS_TRUE(sFocusedSelected))
+        if (XPR_IS_TRUE(isReportView()))
         {
-            // Paint the exact geometry once before native rendering.  The
-            // subitem stage then neutralizes only the themed selection state
-            // and lets the ListView retain icon, overlay, alignment and text
-            // rendering.  LVIR_BOUNDS covers the report row; disabling full
-            // row focus switches this helper to LVIR_SELECTBOUNDS.
-            fillRowFocusBackground(sNmLvCustomDraw);
+            applyReportSelectionDrawState(sNmLvCustomDraw);
             *aResult = CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW;
-            if (XPR_IS_TRUE(mOption.mParentFolder))
+            // Request the last paint stage for every live selected row.  The
+            // Explorer theme may repaint on hover/InfoTip after PREPAINT, so a
+            // pre-theme FillRect cannot be the final pixel owner.
+            if (GetItemState(sItemIndex, LVIS_SELECTED) == LVIS_SELECTED ||
+                (XPR_IS_TRUE(mOption.mParentFolder) && sItemIndex == 0))
                 *aResult |= CDRF_NOTIFYPOSTPAINT;
         }
-
         else if (getViewStyle() != VIEW_STYLE_THUMBNAIL)
         {
-            *aResult = XPR_IS_TRUE(mOption.mParentFolder) ? CDRF_NOTIFYPOSTPAINT : CDRF_DODEFAULT;
+            *aResult = (XPR_IS_TRUE(mOption.mParentFolder) && sItemIndex == 0) ? CDRF_NOTIFYPOSTPAINT : CDRF_DODEFAULT;
 
             if (XPR_IS_TRUE(mOption.mFullRowSelect) && XPR_IS_TRUE(sFocusedSelected))
             {
-                sNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;
-                sNmLvCustomDraw->clrText   = mRowFocusTextColor;
+                applyRowFocusDrawState(sNmLvCustomDraw);
                 *aResult |= CDRF_NEWFONT;
             }
         }
@@ -7729,42 +7976,20 @@ void ExplorerCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
     }
     else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPOSTPAINT)
     {
-        xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(sNmLvCustomDraw->nmcd.dwItemSpec);
+        const xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(sNmLvCustomDraw->nmcd.dwItemSpec);
+        if (XPR_IS_TRUE(isReportView()) &&
+            GetItemState(sItemIndex, LVIS_SELECTED) == LVIS_SELECTED)
+        {
+            drawFinalReportSelection(sNmLvCustomDraw);
+            *aResult = CDRF_DODEFAULT;
+            return;
+        }
+
         if (mOption.mParentFolder)
         {
             LPLVITEMDATA sLvItemData = (LPLVITEMDATA)sNmLvCustomDraw->nmcd.lItemlParam;
             if (XPR_IS_NOT_NULL(sLvItemData) && sLvItemData->mItemType == IDT_PARENT)
-            {
-                CRect sIconRect;
-                CDC *sDC = CDC::FromHandle(sNmLvCustomDraw->nmcd.hdc);
-                xpr_sint_t sItemIndex = static_cast<xpr_sint_t>(sNmLvCustomDraw->nmcd.dwItemSpec);
-                GetItemRect(sItemIndex, &sIconRect, LVIR_ICON);
-
-                CPoint sIconPoint;
-                xpr_sint_t sViewStyle = getViewStyle();
-                xpr_bool_t sLargeIcon = (sViewStyle == VIEW_STYLE_EXTRA_LARGE_ICONS ||
-                                         sViewStyle == VIEW_STYLE_LARGE_ICONS       ||
-                                         sViewStyle == VIEW_STYLE_MEDIUM_ICONS      ||
-                                         sViewStyle == VIEW_STYLE_THUMBNAIL);
-
-                if (XPR_IS_TRUE(sLargeIcon))
-                {
-                    sIconPoint.x = sIconRect.left + ((sIconRect.Width()  - 32) / 2);
-                    sIconPoint.y = sIconRect.top  + ((sIconRect.Height() - 32) / 2);
-                }
-                else
-                {
-                    sIconPoint.x = sIconRect.left + ((sIconRect.Width()  - 16) / 2);
-                    sIconPoint.y = sIconRect.top  + ((sIconRect.Height() - 16) / 2);
-                }
-
-                HICON sIcon = AfxGetApp()->LoadIcon(IDI_GO_UP);
-                if (XPR_IS_TRUE(sLargeIcon))
-                    DrawIconEx(sDC->m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 32, 32, 0, XPR_NULL, DI_NORMAL);
-                else
-                    DrawIconEx(sDC->m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 16, 16, 0, XPR_NULL, DI_NORMAL);
-                DESTROY_ICON(sIcon);
-            }
+                drawParentFolderIcon(sNmLvCustomDraw);
         }
 
         *aResult = CDRF_DODEFAULT;
@@ -10021,8 +10246,9 @@ void ExplorerCtrl::OnClick(NMHDR *aNmHdr, LRESULT *aResult)
     // click even though the row is visibly focused.
     if (sNmItemActivate->iItem >= 0)
     {
+        xpr_sint_t sOldFocused = (mRowFocusPaintItemIndex >= 0) ? mRowFocusPaintItemIndex : mFocusedItemIndex;
         mFocusedItemIndex = sNmItemActivate->iItem;
-        Invalidate(XPR_FALSE);
+        redrawFocusItemChange(sOldFocused, sNmItemActivate->iItem);
     }
 }
 
@@ -10033,15 +10259,9 @@ void ExplorerCtrl::OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint)
 
 void ExplorerCtrl::OnLButtonDown(xpr_uint_t aFlags, CPoint aPoint) 
 {
-    // Cache only the visual row identity before the native owner-data
-    // selection transition.  Repaint is deferred to NM_CLICK, after the
-    // ListView has finalized its focused item and Shift-range anchor.
-    xpr_sint_t sItemIndex = HitTest(aPoint);
-    if (sItemIndex >= 0)
-    {
-        mFocusedItemIndex = sItemIndex;
-    }
-
+    // Let the native owner-data ListView complete click/Ctrl/Shift selection.
+    // NM_CLICK caches the final visual row and invalidates only the old/new
+    // row rectangles; changing the cache here loses the previous row identity.
     super::OnLButtonDown(aFlags, aPoint);
 }
 
@@ -10130,50 +10350,48 @@ void ExplorerCtrl::OnRButtonUp(xpr_uint_t aFlags, CPoint aPoint)
 
 void ExplorerCtrl::setCustomFont(xpr_bool_t aCustomFont, xpr_tchar_t *aFontText)
 {
-    if (XPR_IS_FALSE(aCustomFont))
-    {
-        SetFont(XPR_NULL);
-        return;
-    }
-
-    if (XPR_IS_NULL(aFontText))
-        return;
-
     if (XPR_IS_NOT_NULL(mCustomFont))
         mCustomFont->DeleteObject();
     else
         mCustomFont = new CFont;
 
     LOGFONT sLogFont = {0};
-    StringToLogFont(aFontText, sLogFont);
+    if (XPR_IS_TRUE(aCustomFont) && XPR_IS_NOT_NULL(aFontText))
+    {
+        StringToLogFont(aFontText, sLogFont);
+        ::fxfile::Option::scaleLogFont(sLogFont);
+    }
+    else
+    {
+        ::fxfile::Option::getScaledFont(sLogFont);
+    }
 
     mCustomFont->CreateFontIndirect(&sLogFont);
     if (XPR_IS_NOT_NULL(mCustomFont->m_hObject))
-        SetFont(mCustomFont);
+        SetFont(mCustomFont, XPR_TRUE);
 }
 
 void ExplorerCtrl::setCustomFont(xpr_bool_t aCustomFont, CFont *aFont)
 {
-    if (XPR_IS_FALSE(aCustomFont))
-    {
-        SetFont(XPR_NULL);
-        return;
-    }
-
-    if (XPR_IS_NULL(aFont) || XPR_IS_NULL(aFont->m_hObject))
-        return;
-
     if (XPR_IS_NOT_NULL(mCustomFont))
         mCustomFont->DeleteObject();
     else
         mCustomFont = new CFont;
 
     LOGFONT sLogFont = {0};
-    aFont->GetLogFont(&sLogFont);
+    if (XPR_IS_TRUE(aCustomFont) && XPR_IS_NOT_NULL(aFont) && XPR_IS_NOT_NULL(aFont->m_hObject))
+    {
+        aFont->GetLogFont(&sLogFont);
+        ::fxfile::Option::scaleLogFont(sLogFont);
+    }
+    else
+    {
+        ::fxfile::Option::getScaledFont(sLogFont);
+    }
 
     mCustomFont->CreateFontIndirect(&sLogFont);
     if (XPR_IS_NOT_NULL(mCustomFont->m_hObject))
-        SetFont(mCustomFont);
+        SetFont(mCustomFont, XPR_TRUE);
 }
 
 void ExplorerCtrl::setDragContents(xpr_bool_t aDragContents)

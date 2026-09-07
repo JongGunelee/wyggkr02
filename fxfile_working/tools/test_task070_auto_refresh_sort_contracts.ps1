@@ -45,6 +45,13 @@ $finishNotify = Function-Body $explorer 'void ExplorerCtrl::endShcn' 'LRESULT Ex
 $reconcile = Function-Body $explorer 'void ExplorerCtrl::reconcileFileOperationItems' 'LRESULT ExplorerCtrl::OnShellChangeNotify'
 $runtimeTest = Read-Text 'tools\Test-Task070AutoRefreshSortRuntime.ps1'
 
+# Windows PowerShell 5.1 treats a UTF-8 script without a BOM as the active ANSI
+# code page.  Keep the Korean assertions encoding-independent so this contract
+# means the same thing in the stock Windows host and in PowerShell 7.
+$labelImmediateRefresh = -join [char[]]@(0xD30C,0xC77C,0x0020,0xBCC0,0xACBD,0x0020,0xC989,0xC2DC,0x0020,0xD654,0xBA74,0x0020,0xAC31,0xC2E0)
+$labelRefreshThenSort = -join [char[]]@(0xD654,0xBA74,0x0020,0xAC31,0xC2E0,0x0020,0xD6C4,0x0020,0xC790,0xB3D9,0x0020,0xC815,0xB82C)
+$obsoleteDoubleNegative = -join [char[]]@(0xC790,0xB3D9,0x0020,0xAC31,0xC2E0,0x0020,0xC0AC,0xC6A9,0x0020,0xC548,0xD568)
+
 Check 'Refresh-sort option has one persisted configuration key' (
     $option.Contains('config.refresh.sort') -and
     ([regex]::Matches($option, 'config\.refresh\.sort').Count -eq 1))
@@ -59,9 +66,9 @@ Check 'Settings dialog loads and applies both refresh values' (
     $dialog.Contains('GetCheck()'))
 Check 'Refresh UI uses independent positive labels instead of double negative wording' (
     $language.Contains('popup.cfg.body.function.bookmark.check.auto_refresh') -and
-    $language.Contains('파일 변경 즉시 화면 갱신') -and
-    $language.Contains('화면 갱신 후 자동 정렬') -and
-    -not $language.Contains('자동 갱신 사용 안함') -and
+    $language.Contains($labelImmediateRefresh) -and
+    $language.Contains($labelRefreshThenSort) -and
+    -not $language.Contains($obsoleteDoubleNegative) -and
     $resource.Contains('Refresh file changes immediately'))
 Check 'Auto-sort control is visibly dependent on immediate refresh' (
     $dialogHeader.Contains('OnAutoRefresh') -and

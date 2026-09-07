@@ -329,8 +329,11 @@ public:
     xpr_bool_t  isFocusedSelectedItem(xpr_sint_t aItem);
     void        resetCustomDrawColors(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
     void        applyCustomDrawFiltering(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
-    void        fillRowFocusBackground(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
     void        applyRowFocusDrawState(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        applyReportSelectionDrawState(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        drawFinalReportSelection(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        drawParentFolderIcon(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
+    void        redrawFocusItemChange(xpr_sint_t aOldItem, xpr_sint_t aNewItem);
     xpr_sint_t  getLastInsertIndex(void) const;
 
     void setDragContents(xpr_bool_t aDragContents = XPR_TRUE);

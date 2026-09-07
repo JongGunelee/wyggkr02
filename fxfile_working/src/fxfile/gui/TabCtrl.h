@@ -37,6 +37,7 @@ public:
     void enableDragMove(xpr_bool_t aDragMove);
     void showNewButton(xpr_bool_t aShowNewButton, const xpr_tchar_t *aToolTipText);
     void setTabIcon(HICON aNewButtonId);
+    void updateUIScale(void);
 
 public:
     xpr_size_t addTab(const xpr_tchar_t *aText, xpr_sint_t aImageIndex = -1, void *aData = XPR_NULL);

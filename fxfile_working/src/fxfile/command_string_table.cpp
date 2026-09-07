@@ -258,6 +258,9 @@ void CommandStringTable::loadCommands(void)
     mCommandString[ID_TOOL_VIEW_SPLIT_LOCK]           = XPR_STRING_LITERAL("cmd.view_split_lock");
     mCommandString[ID_TOOL_CLOCK_LOCK]                = XPR_STRING_LITERAL("cmd.clock_lock");
     mCommandString[ID_TOOL_SHOW_CLOCK]                = XPR_STRING_LITERAL("cmd.show_clock");
+    mCommandString[ID_VIEW_UI_SCALE_25]               = XPR_STRING_LITERAL("cmd.view.ui_scale_25");
+    mCommandString[ID_VIEW_UI_SCALE_50]               = XPR_STRING_LITERAL("cmd.view.ui_scale_50");
+    mCommandString[ID_VIEW_UI_SCALE_75]               = XPR_STRING_LITERAL("cmd.view.ui_scale_75");
     mCommandString[ID_VIEW_UI_SCALE_100]              = XPR_STRING_LITERAL("cmd.view.ui_scale_100");
     mCommandString[ID_VIEW_UI_SCALE_125]              = XPR_STRING_LITERAL("cmd.view.ui_scale_125");
     mCommandString[ID_VIEW_UI_SCALE_150]              = XPR_STRING_LITERAL("cmd.view.ui_scale_150");

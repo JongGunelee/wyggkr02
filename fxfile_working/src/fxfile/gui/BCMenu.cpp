@@ -541,13 +541,7 @@ void BCMenu::DrawItemOffice2007Style(LPDRAWITEMSTRUCT lpDIS)
 			ncm.cbSize = sizeof(NONCLIENTMETRICS);
 			SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0); 
 
-			double sScale = ::fxfile::Option::getScaleFactor();
-			if (sScale > 1.01 || sScale < 0.99)
-			{
-				ncm.lfMenuFont.lfHeight = (LONG)(ncm.lfMenuFont.lfHeight * sScale);
-				if (ncm.lfMenuFont.lfWidth != 0)
-					ncm.lfMenuFont.lfWidth = (LONG)(ncm.lfMenuFont.lfWidth * sScale);
-			}
+			::fxfile::Option::scaleLogFont(ncm.lfMenuFont);
 
 			CFont ftMenu;
 			ftMenu.CreateFontIndirect(&ncm.lfMenuFont);
@@ -729,13 +723,7 @@ void BCMenu::DrawItemOffice2003Style(LPDRAWITEMSTRUCT lpDIS)
 			ncm.cbSize = sizeof(NONCLIENTMETRICS);
 			SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0); 
 
-			double sScale = ::fxfile::Option::getScaleFactor();
-			if (sScale > 1.01 || sScale < 0.99)
-			{
-				ncm.lfMenuFont.lfHeight = (LONG)(ncm.lfMenuFont.lfHeight * sScale);
-				if (ncm.lfMenuFont.lfWidth != 0)
-					ncm.lfMenuFont.lfWidth = (LONG)(ncm.lfMenuFont.lfWidth * sScale);
-			}
+			::fxfile::Option::scaleLogFont(ncm.lfMenuFont);
 
 			CFont ftMenu;
 			ftMenu.CreateFontIndirect(&ncm.lfMenuFont);
@@ -911,13 +899,7 @@ void BCMenu::DrawItemStandardStyle(LPDRAWITEMSTRUCT lpDIS)
 			ncm.cbSize = sizeof(NONCLIENTMETRICS);
 			SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0); 
 
-			double sScale = ::fxfile::Option::getScaleFactor();
-			if (sScale > 1.01 || sScale < 0.99)
-			{
-				ncm.lfMenuFont.lfHeight = (LONG)(ncm.lfMenuFont.lfHeight * sScale);
-				if (ncm.lfMenuFont.lfWidth != 0)
-					ncm.lfMenuFont.lfWidth = (LONG)(ncm.lfMenuFont.lfWidth * sScale);
-			}
+			::fxfile::Option::scaleLogFont(ncm.lfMenuFont);
 
 			CFont ftMenu;
 			ftMenu.CreateFontIndirect(&ncm.lfMenuFont);
@@ -1141,13 +1123,7 @@ void BCMenu::drawText(CDC *aDC, const CRect &aItemRect, UINT aItemState, const C
     sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
     SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sNonClientMetrics.cbSize, &sNonClientMetrics, 0); 
 
-    double sScale = ::fxfile::Option::getScaleFactor();
-    if (sScale > 1.01 || sScale < 0.99)
-    {
-        sNonClientMetrics.lfMenuFont.lfHeight = (LONG)(sNonClientMetrics.lfMenuFont.lfHeight * sScale);
-        if (sNonClientMetrics.lfMenuFont.lfWidth != 0)
-            sNonClientMetrics.lfMenuFont.lfWidth = (LONG)(sNonClientMetrics.lfMenuFont.lfWidth * sScale);
-    }
+    ::fxfile::Option::scaleLogFont(sNonClientMetrics.lfMenuFont);
 
     CFont sFont;
     sFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
@@ -1199,12 +1175,7 @@ void BCMenu::MeasureItem(LPMEASUREITEMSTRUCT lpMIS)
 		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0); 
 
 		double sScale = ::fxfile::Option::getScaleFactor();
-		if (sScale > 1.01 || sScale < 0.99)
-		{
-			ncm.lfMenuFont.lfHeight = (LONG)(ncm.lfMenuFont.lfHeight * sScale);
-			if (ncm.lfMenuFont.lfWidth != 0)
-				ncm.lfMenuFont.lfWidth = (LONG)(ncm.lfMenuFont.lfWidth * sScale);
-		}
+		::fxfile::Option::scaleLogFont(ncm.lfMenuFont);
 
 		CFont ftMenu;
 		ftMenu.CreateFontIndirect(&ncm.lfMenuFont);
@@ -1226,12 +1197,15 @@ void BCMenu::MeasureItem(LPMEASUREITEMSTRUCT lpMIS)
 		pWnd->ReleaseDC(pDC);
 		ftMenu.DeleteObject();
 
-		int sIconW = (int)(m_nIconX * sScale);
-		int sIconH = (int)(m_nIconY * sScale);
-		lpMIS->itemWidth = sIconW + (int)((ICON_OFFSET_X2 * 2 + GAP + TEXT_OFFSET_X) * sScale) + sz.cx;
-		lpMIS->itemWidth = min(lpMIS->itemWidth, (int)(MAX_MENU_WIDTH * sScale));
+		// BCMenu still draws its bitmap/checkmark at the native image-list
+		// size.  Keep measurement on that same 16-pixel legibility floor;
+		// scaling this box below the real bitmap clipped icons at 25%.
+		int sIconW = m_nIconX;
+		int sIconH = m_nIconY;
+		lpMIS->itemWidth = sIconW + ICON_OFFSET_X2 * 2 + GAP + TEXT_OFFSET_X + sz.cx;
+		lpMIS->itemWidth = min(lpMIS->itemWidth, max(200, (int)(MAX_MENU_WIDTH * sScale)));
 
-		lpMIS->itemHeight = max((UINT)(GetSystemMetrics(SM_CYMENU) * sScale), (UINT)(sIconH + (ICON_OFFSET_Y2 * sScale)));
+		lpMIS->itemHeight = max((UINT)(GetSystemMetrics(SM_CYMENU) * sScale), (UINT)(sIconH + ICON_OFFSET_Y2));
 	}
 }
 

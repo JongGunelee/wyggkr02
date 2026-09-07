@@ -582,13 +582,8 @@ void CMenuBar::UpdateMenuBar()
     }
 
     LOGFONT sLf = WinAppEx::GetInstance()->GetNonClientMetrics().lfMenuFont;
-    double sScale = ::fxfile::Option::getToolbarScaleFactor();
-    if (sScale > 1.01 || sScale < 0.99)
-    {
-        sLf.lfHeight = (LONG)(sLf.lfHeight * sScale);
-        if (sLf.lfWidth != 0)
-            sLf.lfWidth = (LONG)(sLf.lfWidth * sScale);
-    }
+    double sScale = ::fxfile::Option::getScaleFactor();
+    ::fxfile::Option::scaleLogFont(sLf);
 
     VERIFY( m_fontMenu.CreateFontIndirect( &sLf ) );
     SetFont( &m_fontMenu, TRUE );

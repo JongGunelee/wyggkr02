@@ -24,8 +24,9 @@ function Check([string]$name, [bool]$passed) {
 }
 
 $explorer = Read-Text 'src\fxfile\explorer_ctrl.cpp'
-$fillFocus = Function-Body $explorer 'void ExplorerCtrl::fillRowFocusBackground' 'void ExplorerCtrl::applyRowFocusDrawState'
-$focusState = Function-Body $explorer 'void ExplorerCtrl::applyRowFocusDrawState' 'void ExplorerCtrl::OnCustomdraw('
+$focusState = Function-Body $explorer 'void ExplorerCtrl::applyRowFocusDrawState' 'void ExplorerCtrl::applyReportSelectionDrawState'
+$reportSelection = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawFinalReportSelection'
+$finalPaint = Function-Body $explorer 'void ExplorerCtrl::drawFinalReportSelection' 'void ExplorerCtrl::drawParentFolderIcon'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
 $subItemDraw = Function-Body $customDraw 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM))' 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)'
 $itemDraw = Function-Body $customDraw 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)' 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPOSTPAINT)'
@@ -33,27 +34,30 @@ $reportItemDraw = Function-Body $itemDraw 'if (XPR_IS_TRUE(isReportView()) &&' '
 
 Check 'Focused report items receive an explicit background before native icon and text paint' (
     $itemDraw.Contains('XPR_IS_TRUE(isReportView())') -and
-    $itemDraw.Contains('XPR_IS_TRUE(sFocusedSelected)') -and
-    $itemDraw.Contains('fillRowFocusBackground(sNmLvCustomDraw);') -and
+    $itemDraw.Contains('applyReportSelectionDrawState(sNmLvCustomDraw);') -and
     $itemDraw.Contains('CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW'))
 Check 'Final paint colors every selected column in full-row mode and only column zero in legacy mode' (
-    $fillFocus.Contains('LVIR_BOUNDS : LVIR_SELECTBOUNDS') -and
     $subItemDraw.Contains('XPR_IS_TRUE(mOption.mFullRowSelect) || sNmLvCustomDraw->iSubItem == 0') -and
-    $subItemDraw.Contains('applyRowFocusDrawState(sNmLvCustomDraw);') -and
+    $subItemDraw.Contains('applyReportSelectionDrawState(sNmLvCustomDraw);') -and
+    $reportSelection.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
     $focusState.Contains('clrTextBk = mOption.mRowFocusColor;') -and
     $focusState.Contains('clrText   = mRowFocusTextColor;'))
-Check 'Selected report cells suppress theme compositing while retaining native icon and text rendering' (
-    $fillFocus.Contains('::FillRect(') -and
+Check 'Selected report cells suppress theme compositing and complete icon and text after native paint' (
     $focusState.Contains('uItemState &= ~CDIS_SELECTED') -and
+    -not $reportSelection.Contains('::FillRect(') -and
     -not [regex]::IsMatch($focusState, '(?m)^\s*aNmLvCustomDraw->iStateId\s*=') -and
     -not [regex]::IsMatch($focusState, '(?m)^\s*aNmLvCustomDraw->clrFace\s*=') -and
     -not $subItemDraw.Contains('CDRF_SKIPDEFAULT') -and
     -not $reportItemDraw.Contains('CDRF_SKIPDEFAULT') -and
+    $finalPaint.Contains('::FillRect(') -and
+    $finalPaint.Contains('mSmallImgList->Draw(') -and
+    $finalPaint.Contains('::DrawText(') -and
     -not $customDraw.Contains('mRowFocusPaintPending'))
 Check 'Selection remains read-only paint state throughout the corrected path' (
     -not $customDraw.Contains('SetItemState(') -and
     -not $customDraw.Contains('SetItem(') -and
-    -not $fillFocus.Contains('SetItemState(') -and
+    -not $finalPaint.Contains('SetItemState(') -and
+    -not $finalPaint.Contains('SetSelectionMark(') -and
     $explorer.Contains('mFocusedItemIndex') -and
     $explorer.Contains('CDDS_ITEMPREPAINT') -and
     $explorer.Contains('CDDS_SUBITEM'))

@@ -510,7 +510,7 @@ void CommandMap::map(CommandExecutor &aExecutor)
 
     aExecutor.bindCommand(ID_VIEW_REFRESH,                     new cmd::RefreshCommand);
     aExecutor.bindCommand(
-        ID_VIEW_UI_SCALE_100, ID_VIEW_UI_SCALE_200,            new cmd::UIScaleCommand);
+        ID_VIEW_UI_SCALE_25, ID_VIEW_UI_SCALE_200,             new cmd::UIScaleCommand);
 
     //
     // Tool Menu

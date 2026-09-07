@@ -58,6 +58,7 @@ public:
 
     static double getScaleFactor(void);
     static double getToolbarScaleFactor(void);
+    static void scaleLogFont(LOGFONT &aLogFont);
     static void getScaledFont(LOGFONT &aOutLogFont, const xpr_tchar_t *aCustomFontText = XPR_NULL);
 
 public:

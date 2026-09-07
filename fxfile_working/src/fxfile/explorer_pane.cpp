@@ -262,6 +262,11 @@ void ExplorerPane::setChangedOption(Option &aOption)
         mDrivePathBar->setShortText(gOpt->mConfig.mDriveBarShortText);
     }
 
+    if (XPR_IS_NOT_NULL(mStatusBar))
+    {
+        mStatusBar->updateUIScale();
+    }
+
     // set explorer control options
     ExplorerCtrlData *sExplorerCtrlData;
     ExplorerCtrlMap::iterator sIterator;

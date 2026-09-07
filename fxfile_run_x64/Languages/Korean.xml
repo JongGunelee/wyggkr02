@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <fxfile>
     <LanguagePack>
         <Description>
@@ -256,11 +256,14 @@
             <String ID="cmd.view_style.popup">보기(&amp;V)</String>
             <String ID="cmd.view_style">보기 스타일</String>
             <String ID="cmd.view.ui_scale.popup">화면 UI 배율(&amp;Z)</String>
-            <String ID="cmd.view.ui_scale_100">100% (기본값)(&amp;1)</String>
-            <String ID="cmd.view.ui_scale_125">125%(&amp;2)</String>
-            <String ID="cmd.view.ui_scale_150">150%(&amp;3)</String>
-            <String ID="cmd.view.ui_scale_175">175%(&amp;4)</String>
-            <String ID="cmd.view.ui_scale_200">200%(&amp;5)</String>
+            <String ID="cmd.view.ui_scale_25">25%(&amp;1)</String>
+            <String ID="cmd.view.ui_scale_50">50%(&amp;2)</String>
+            <String ID="cmd.view.ui_scale_75">75%(&amp;3)</String>
+            <String ID="cmd.view.ui_scale_100">100% (기본값)(&amp;4)</String>
+            <String ID="cmd.view.ui_scale_125">125%(&amp;5)</String>
+            <String ID="cmd.view.ui_scale_150">150%(&amp;6)</String>
+            <String ID="cmd.view.ui_scale_175">175%(&amp;7)</String>
+            <String ID="cmd.view.ui_scale_200">200%(&amp;8)</String>
             <String ID="cmd.view_style.extra_large_icons">아주 큰 아이콘(&amp;X)</String>
             <String ID="cmd.view_style.large_icons">큰 아이콘(&amp;A)</String>
             <String ID="cmd.view_style.medium_icons">중간 아이콘(&amp;M)</String>

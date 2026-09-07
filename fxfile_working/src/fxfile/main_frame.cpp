@@ -64,6 +64,8 @@
 #include "cmd/router/cmd_parameters.h"
 #include "cmd/router/cmd_parameter_define.h"
 #include "cmd/cmd_clipboard.h"
+#include "cmd/folder_compare_setup_dlg.h"
+#include "cmd/folder_compare_report_dlg.h"
 #include "cmd/trash.h"
 
 #include "command_string_table.h"
@@ -625,7 +627,9 @@ void MainFrame::OnDestroy(void)
 // when exited windows by called ExitWindow or ExitWindowEx function
 void MainFrame::OnEndSession(xpr_bool_t aEnding)
 {
-    gApp.saveAllOptions();
+    saveOption();
+    m_wndReBar.saveStateFile();
+    OptionManager::instance().save();
 
     destroy();
 }
@@ -724,8 +728,11 @@ void MainFrame::saveOption(void)
     xpr_sint_t sRowCount = 0, sColumnCount = 0;
     mSplitter.getPaneCount(&sRowCount, &sColumnCount);
 
-    gOpt->mMain.mViewSplitRowCount    = sRowCount;
-    gOpt->mMain.mViewSplitColumnCount = sColumnCount;
+    if (XPR_IS_FALSE(gOpt->mMain.mViewSplitLocked))
+    {
+        gOpt->mMain.mViewSplitRowCount    = sRowCount;
+        gOpt->mMain.mViewSplitColumnCount = sColumnCount;
+    }
 
     if (XPR_IS_FALSE(gOpt->mMain.mWindowPlacementLocked))
     {
@@ -982,6 +989,41 @@ void MainFrame::setChangedOption(Option &aOption)
 
 void MainFrame::saveAllOptions(void)
 {
+    if (XPR_IS_TRUE(gOpt->mMain.mWindowPlacementLocked))
+    {
+        // Capture current window placement as new baseline when user explicitly saves all options
+        saveWindowPlacement();
+    }
+
+    if (XPR_IS_TRUE(gOpt->mMain.mViewSplitLocked))
+    {
+        // Explicitly capture current view split and active paths as the locked snapshot
+        xpr_sint_t sRowCount = 0, sColumnCount = 0;
+        mSplitter.getPaneCount(&sRowCount, &sColumnCount);
+        gOpt->mMain.mLockedViewSplitRowCount    = sRowCount;
+        gOpt->mMain.mLockedViewSplitColumnCount = sColumnCount;
+
+        for (xpr_sint_t i = 0; i < XPR_COUNT_OF(gOpt->mMain.mViewSplitRatio); ++i)
+        {
+            gOpt->mMain.mLockedViewSplitRatio[i] = gOpt->mMain.mViewSplitRatio[i];
+            gOpt->mMain.mLockedViewSplitSize[i]  = gOpt->mMain.mViewSplitSize[i];
+        }
+    }
+
+    if (XPR_IS_TRUE(gOpt->mMain.mViewPathLocked))
+    {
+        for (xpr_sint_t i = 0; i < MAX_VIEW_SPLIT; ++i)
+        {
+            ExplorerCtrl *sExplorerCtrl = getExplorerCtrl(i);
+            if (XPR_IS_NOT_NULL(sExplorerCtrl))
+            {
+                xpr::string sPath;
+                sExplorerCtrl->getCurPath(sPath);
+                _tcsncpy_s(gOpt->mMain.mLockedViewPath[i], XPR_COUNT_OF(gOpt->mMain.mLockedViewPath[i]), sPath.c_str(), _TRUNCATE);
+            }
+        }
+    }
+
     // get main frame options for save
     saveOption();
 
@@ -1357,7 +1399,9 @@ void MainFrame::OnClose(void)
         // Persist the complete UI state while the frame, rebar and toolbars are
         // still alive. Saving the rebar from WM_DESTROY loses live band sizes
         // on current Windows versions and overwrites a valid state with zeros.
-        saveAllOptions();
+        saveOption();
+        m_wndReBar.saveStateFile();
+        OptionManager::instance().save();
 
         super::OnClose();
     }
@@ -4606,44 +4650,148 @@ void MainFrame::goInitFolder(xpr_sint_t aIndex)
 
 void MainFrame::compareWindow(void)
 {
-    ExplorerCtrl *sExplorerCtrl1 = getExplorerCtrl();
-    ExplorerCtrl *sExplorerCtrl2 = getExplorerCtrl(-2);
-
-    if (XPR_IS_NULL(sExplorerCtrl1) || XPR_IS_NULL(sExplorerCtrl2))
+    ExplorerCtrl *sActiveCtrl = getExplorerCtrl();
+    if (XPR_IS_NULL(sActiveCtrl))
+        sActiveCtrl = getExplorerCtrl(0);
+    if (XPR_IS_NULL(sActiveCtrl))
         return;
 
-    if (sExplorerCtrl1->isFileSystemFolder() == XPR_FALSE ||
-        sExplorerCtrl2->isFileSystemFolder() == XPR_FALSE)
+    cmd::FolderCompareSetupDlg sSetupDlg(this);
+
+    // 1. 모든 열려 있는 Pane(최대 6개)의 경로 및 정보 등록
+    xpr_sint_t sViewCount = getViewCount();
+    for (xpr_sint_t i = 0; i < sViewCount; ++i)
     {
-        const xpr_tchar_t *sMsg = gApp.loadString(XPR_STRING_LITERAL("popup.folder_compare.msg.stop_not_file_system_folder"));
-        MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONSTOP);
-        return;
+        ExplorerCtrl *ctrl = getExplorerCtrl(i);
+        if (XPR_IS_NOT_NULL(ctrl) && ctrl->isFileSystemFolder() == XPR_TRUE)
+        {
+            xpr_tchar_t p[XPR_MAX_PATH + 1] = {0};
+            ctrl->getCurPath(p);
+            sSetupDlg.addPaneOption(i + 1, p);
+        }
     }
 
-    xpr_tchar_t sPath[2][XPR_MAX_PATH + 1];
-    sExplorerCtrl1->getCurPath(sPath[0]);
-    sExplorerCtrl2->getCurPath(sPath[1]);
+    // 2. 초기 비교 경로 1, 2 스마트 추론
+    xpr::string sInitPath1;
+    xpr::string sInitPath2;
+
+    if (isSingleView() == XPR_TRUE)
+    {
+        // 단일 창 모드: 선택된 폴더들 확인
+        xpr_tchar_t *sSelPaths = XPR_NULL;
+        xpr_sint_t sSelCount = 0;
+        if (sActiveCtrl->getSelItemPath(&sSelPaths, sSelCount, SFGAO_FOLDER) == XPR_TRUE && sSelCount >= 2 && sSelPaths != XPR_NULL)
+        {
+            // 2개 이상의 폴더가 선택된 경우: 선택된 1번째 폴더 vs 2번째 폴더
+            const xpr_tchar_t *p1 = sSelPaths;
+            const xpr_tchar_t *p2 = p1 + _tcslen(p1) + 1;
+            sInitPath1 = p1;
+            sInitPath2 = p2;
+            XPR_SAFE_DELETE_ARRAY(sSelPaths);
+        }
+        else if (sSelCount == 1 && XPR_IS_NOT_NULL(sSelPaths))
+        {
+            // 1개의 폴더만 선택된 경우: 현재 창 폴더 vs 선택된 폴더
+            xpr_tchar_t cur[XPR_MAX_PATH + 1] = {0};
+            sActiveCtrl->getCurPath(cur);
+            sInitPath1 = cur;
+            sInitPath2 = sSelPaths;
+            XPR_SAFE_DELETE_ARRAY(sSelPaths);
+        }
+        else
+        {
+            // 선택된 폴더가 없으면 현재 창 폴더
+            xpr_tchar_t cur[XPR_MAX_PATH + 1] = {0};
+            sActiveCtrl->getCurPath(cur);
+            sInitPath1 = cur;
+            sInitPath2.clear();
+            if (sSelPaths) XPR_SAFE_DELETE_ARRAY(sSelPaths);
+        }
+    }
+    else
+    {
+        // 다중 창 모드: 활성 창 vs 반대편/대상 창
+        ExplorerCtrl *sTargetCtrl = getExplorerCtrl(-2);
+        if (XPR_IS_NULL(sTargetCtrl))
+        {
+            for (xpr_sint_t k = 0; k < sViewCount; ++k)
+            {
+                ExplorerCtrl *c = getExplorerCtrl(k);
+                if (c != XPR_NULL && c != sActiveCtrl)
+                {
+                    sTargetCtrl = c;
+                    break;
+                }
+            }
+        }
+        if (XPR_IS_NULL(sTargetCtrl))
+            sTargetCtrl = (sActiveCtrl == getExplorerCtrl(0)) ? getExplorerCtrl(1) : getExplorerCtrl(0);
+
+        // 각 창에서 선택된 폴더가 있는지 우선 검사
+        xpr_tchar_t *sSel1 = XPR_NULL;
+        xpr_sint_t sCnt1 = 0;
+        if (sActiveCtrl->getSelItemPath(&sSel1, sCnt1, SFGAO_FOLDER) == XPR_TRUE && sCnt1 > 0 && sSel1 != XPR_NULL)
+        {
+            sInitPath1 = sSel1;
+            XPR_SAFE_DELETE_ARRAY(sSel1);
+        }
+        else
+        {
+            xpr_tchar_t cur[XPR_MAX_PATH + 1] = {0};
+            sActiveCtrl->getCurPath(cur);
+            sInitPath1 = cur;
+        }
+
+        if (XPR_IS_NOT_NULL(sTargetCtrl))
+        {
+            xpr_tchar_t *sSel2 = XPR_NULL;
+            xpr_sint_t sCnt2 = 0;
+            if (sTargetCtrl->getSelItemPath(&sSel2, sCnt2, SFGAO_FOLDER) == XPR_TRUE && sCnt2 > 0 && sSel2 != XPR_NULL)
+            {
+                sInitPath2 = sSel2;
+                XPR_SAFE_DELETE_ARRAY(sSel2);
+            }
+            else
+            {
+                xpr_tchar_t cur[XPR_MAX_PATH + 1] = {0};
+                sTargetCtrl->getCurPath(cur);
+                sInitPath2 = cur;
+            }
+        }
+    }
+
+    sSetupDlg.setInitialPaths(sInitPath1.c_str(), sInitPath2.c_str());
+
+    // 3. 비교 안내 및 설정 팝업 호출
+    if (sSetupDlg.DoModal() != IDOK)
+        return;
+
+    // 4. 사용자가 확정한 설정으로 SyncDirs 엔진 초기화
+    if (XPR_IS_NOT_NULL(mCompareDirs))
+    {
+        mCompareDirs->stop();
+        XPR_SAFE_DELETE(mCompareDirs);
+    }
 
     mCompareDirs = new SyncDirs;
     mCompareDirs->setOwner(*this, WM_COMPARE_DIRS_STATUS);
 
-    // scan option
-    mCompareDirs->setDir(sPath[0], sPath[1]);
-    mCompareDirs->setSubLevel(0);
+    mCompareDirs->setDir(sSetupDlg.getPath1().c_str(), sSetupDlg.getPath2().c_str());
+    mCompareDirs->setSubLevel(sSetupDlg.isIncludeSubfolders() ? ksintmax : 0);
     mCompareDirs->setExcludeExist(CompareExistNone);
     mCompareDirs->setIncludeFilter(XPR_NULL);
-    mCompareDirs->setExcludeFilter(XPR_NULL);
-    mCompareDirs->setExcludeAttributes(FILE_ATTRIBUTE_DIRECTORY);
+    if (!sSetupDlg.getExcludeFilter().empty())
+        mCompareDirs->setExcludeFilter(sSetupDlg.getExcludeFilter().c_str());
+    mCompareDirs->setExcludeAttributes(0);
 
-    // compare option
-    mCompareDirs->setDateTime(XPR_TRUE);
-    mCompareDirs->setSize(XPR_TRUE);
-    mCompareDirs->setAttributes(XPR_TRUE);
-    mCompareDirs->setContents(CompareContentsBytes);
+    mCompareDirs->setSize(sSetupDlg.isBySize());
+    mCompareDirs->setDateTime(sSetupDlg.isByTime());
+    mCompareDirs->setAttributes(sSetupDlg.isByAttributes());
+    mCompareDirs->setContents(sSetupDlg.isByContent() ? CompareContentsBytes : CompareContentsNone);
 
     mCompareDirs->scanCompare();
 
-    WaitDlg::instance().setTitle(gApp.loadString(XPR_STRING_LITERAL("popup.folder_compare.title")));
+    WaitDlg::instance().setTitle(_T("폴더 비교 진행 중..."));
     if (WaitDlg::instance().DoModal() == IDCANCEL)
     {
         if (XPR_IS_NOT_NULL(mCompareDirs))
@@ -4669,74 +4817,13 @@ LRESULT MainFrame::OnCompareDirsStatus(WPARAM wParam, LPARAM lParam)
     if (XPR_IS_NULL(mCompareDirs))
         return 0;
 
-    if (mCompareDirs->getDiffCount() == 0)
-    {
-        const xpr_tchar_t *sMsg = gApp.loadString(XPR_STRING_LITERAL("popup.folder_compare.msg.equaled_folder"));
-        MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONINFORMATION);
-    }
-    else
-    {
-        ExplorerCtrl *sExplorerCtrl[2];
-        sExplorerCtrl[0] = getExplorerCtrl();
-        sExplorerCtrl[1] = getExplorerCtrl(-2);
+    // Task 100: 폴더 비교 총괄 보고서 팝업 다이얼로그 호출!
+    xpr::string sDir[2];
+    mCompareDirs->getDir(sDir[0], sDir[1]);
 
-        xpr_sint_t i, j;
-        xpr_sint_t sCount, sFind;
-        xpr_bool_t sFirst[2];
-        SyncItem *sSyncItem;
-        xpr::string sDir[2];
-        xpr::string sPath;
-        xpr_uint_t sMask, sState;
-
-        mCompareDirs->getDir(sDir[0], sDir[1]);
-
-        for (i = 0; i < 2; ++i)
-            sExplorerCtrl[i]->unselectAll();
-
-        sFirst[0] = XPR_TRUE;
-        sFirst[1] = XPR_TRUE;
-
-        sCount = (xpr_sint_t)mCompareDirs->getCount();
-        for (i = 0; i < sCount; ++i)
-        {
-            sSyncItem = mCompareDirs->getSyncItem(i);
-            if (XPR_IS_NULL(sSyncItem))
-                continue;
-
-            for (j = 0; j < 2; ++j)
-            {
-                if (!XPR_TEST_BITS(sSyncItem->mExist, (j == 0) ? CompareExistLeft : CompareExistRight))
-                    continue;
-
-                if (XPR_TEST_BITS(sSyncItem->mExist, CompareExistEqual))
-                {
-                    if (!XPR_TEST_BITS(sSyncItem->mDiff, CompareDiffNotEqualed))
-                        continue;
-                }
-
-                sPath  = sDir[j];
-                sPath += XPR_STRING_LITERAL('\\');
-                sPath += sSyncItem->mSubPath;
-
-                sFind = sExplorerCtrl[j]->findItemPath(sPath.c_str());
-                if (sFind >= 0)
-                {
-                    sMask  = LVIS_SELECTED;
-                    sState = LVIS_SELECTED;
-
-                    if (XPR_IS_TRUE(sFirst[j]))
-                    {
-                        sMask  |= LVIS_FOCUSED;
-                        sState |= LVIS_FOCUSED;
-
-                        sFirst[j] = XPR_FALSE;
-                    }
-
-                    sExplorerCtrl[j]->SetItemState(sFind, sState, sMask);
-                }
-            }
-        }
-    }
+    cmd::FolderCompareReportDlg sReportDlg(this);
+    sReportDlg.setResult(mCompareDirs, sDir[0].c_str(), sDir[1].c_str());
+    sReportDlg.DoModal();
 
     mCompareDirs->stop();
     XPR_SAFE_DELETE(mCompareDirs);

@@ -30,6 +30,7 @@ $probe = Read-Text 'tools\fxfile_listview_state_probe.cpp'
 
 $leftDown = Function-Body $explorer 'void ExplorerCtrl::OnLButtonDown' 'void ExplorerCtrl::OnMouseMove'
 $leftUp = Function-Body $explorer 'void ExplorerCtrl::OnLButtonUp' 'void ExplorerCtrl::OnRButtonDown'
+$click = Function-Body $explorer 'void ExplorerCtrl::OnClick' 'void ExplorerCtrl::OnLButtonDblClk'
 $preCreate = Function-Body $explorer 'xpr_bool_t ExplorerCtrl::PreCreateWindow' 'void ExplorerCtrl::OnDestroy'
 $snapshot = Function-Body $explorer 'void ExplorerCtrl::snapshotRowFocusItem' 'xpr_bool_t ExplorerCtrl::isFocusedSelectedItem'
 
@@ -42,7 +43,8 @@ Check 'Mouse up does not overwrite the native Shift range anchor after selection
     -not $leftUp.Contains('SetSelectionMark(') -and
     -not $leftUp.Contains('SetItemState('))
 Check 'Visual row identity remains cached without mutating native Ctrl or Shift selection state' (
-    $leftDown.Contains('mFocusedItemIndex = sItemIndex;') -and
+    -not $leftDown.Contains('mFocusedItemIndex =') -and
+    $click.Contains('mFocusedItemIndex = sNmItemActivate->iItem;') -and
     $leftUp.Contains('mFocusedItemIndex = sItemIndex;'))
 Check 'Explorer lists remain native multi-select controls' (
     $preCreate.Contains('LVS_REPORT') -and

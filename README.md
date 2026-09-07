@@ -1,1 +1,0 @@
-# 📁 Windows 11 최적화 fxfile 소스 코드 및 기술 이력

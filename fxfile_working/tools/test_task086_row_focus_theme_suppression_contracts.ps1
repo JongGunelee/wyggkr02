@@ -25,8 +25,9 @@ function Check([string]$name, [bool]$passed) {
 
 $explorer = Read-Text 'src\fxfile\explorer_ctrl.cpp'
 $pane = Read-Text 'src\fxfile\explorer_pane.cpp'
-$fillFocus = Function-Body $explorer 'void ExplorerCtrl::fillRowFocusBackground' 'void ExplorerCtrl::applyRowFocusDrawState'
-$focusState = Function-Body $explorer 'void ExplorerCtrl::applyRowFocusDrawState' 'void ExplorerCtrl::OnCustomdraw('
+$focusState = Function-Body $explorer 'void ExplorerCtrl::applyRowFocusDrawState' 'void ExplorerCtrl::applyReportSelectionDrawState'
+$reportSelection = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawFinalReportSelection'
+$finalPaint = Function-Body $explorer 'void ExplorerCtrl::drawFinalReportSelection' 'void ExplorerCtrl::drawParentFolderIcon'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
 $subItemDraw = Function-Body $customDraw 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM))' 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)'
 $itemDraw = Function-Body $customDraw 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)' 'else if (sNmLvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPOSTPAINT)'
@@ -34,13 +35,16 @@ $reportItemDraw = Function-Body $itemDraw 'if (XPR_IS_TRUE(isReportView()) &&' '
 
 Check 'The saved full-row option still owns native report-row geometry' (
     $explorer.Contains('XPR_SET_OR_CLR_BITS(sExStyle, LVS_EX_FULLROWSELECT, aNewOption.mFullRowSelect);'))
-Check 'The focused item fills its exact scope and requests native subitem rendering' (
-    $itemDraw.Contains('fillRowFocusBackground(sNmLvCustomDraw);') -and
-    $fillFocus.Contains('LVIR_BOUNDS : LVIR_SELECTBOUNDS') -and
-    $fillFocus.Contains('::FillRect(') -and
-    $itemDraw.Contains('CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW'))
+Check 'The focused item requests subitem and final rendering before filling its exact scope' (
+    $itemDraw.Contains('applyReportSelectionDrawState(sNmLvCustomDraw);') -and
+    -not $reportSelection.Contains('::FillRect(') -and
+    $itemDraw.Contains('CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW') -and
+    $itemDraw.Contains('CDRF_NOTIFYPOSTPAINT') -and
+    $finalPaint.Contains('LVIR_BOUNDS : LVIR_SELECTBOUNDS') -and
+    $finalPaint.Contains('::FillRect('))
 Check 'Every focused report subitem suppresses themed selection before applying both colours' (
-    $subItemDraw.Contains('applyRowFocusDrawState(sNmLvCustomDraw);') -and
+    $subItemDraw.Contains('applyReportSelectionDrawState(sNmLvCustomDraw);') -and
+    $reportSelection.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
     $focusState.IndexOf('uItemState &= ~CDIS_SELECTED', [StringComparison]::Ordinal) -lt
         $focusState.IndexOf('clrTextBk = mOption.mRowFocusColor', [StringComparison]::Ordinal) -and
     -not [regex]::IsMatch($focusState, '(?m)^\s*aNmLvCustomDraw->iStateId\s*=') -and
@@ -53,11 +57,16 @@ Check 'Theme suppression never changes the ListView selection model or schedules
     -not $customDraw.Contains('Invalidate(') -and
     -not $customDraw.Contains('RedrawItems(') -and
     -not $customDraw.Contains('PostMessage(') -and
-    -not $fillFocus.Contains('SetItemState(') -and
-    -not $focusState.Contains('SetItemState('))
-Check 'Native icon text and alignment rendering remains in control of the ListView' (
+    -not $reportSelection.Contains('SetItemState(') -and
+    -not $focusState.Contains('SetItemState(') -and
+    -not $finalPaint.Contains('SetItemState(') -and
+    -not $finalPaint.Contains('Invalidate('))
+Check 'Final icon text and alignment rendering preserves the ListView report contract' (
     -not $subItemDraw.Contains('CDRF_SKIPDEFAULT') -and
-    -not $reportItemDraw.Contains('CDRF_SKIPDEFAULT'))
+    -not $reportItemDraw.Contains('CDRF_SKIPDEFAULT') -and
+    $finalPaint.Contains('mSmallImgList->Draw(') -and
+    $finalPaint.Contains('LVCF_FMT') -and
+    $finalPaint.Contains('DT_END_ELLIPSIS'))
 Check 'All six panes retain independent saved row-focus colours' (
     $pane.Contains('aOption.mConfig.mFileListRowFocusColor[mViewIndex]') -and
     ([regex]::Matches((Read-Text 'src\fxfile\option.cpp'), 'config\.view[1-6]\.file_list\.row_focus_color').Count -eq 6))

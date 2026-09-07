@@ -2,9 +2,13 @@
 [CmdletBinding()]
 param()
 
-$tempDir = "C:\Users\PC\AppData\Local\Temp\fxfile_archive_e2e_test"
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$workspaceRoot = Split-Path -Parent $projectRoot
+$testTempRoot = Join-Path $workspaceRoot "__BUILD_TEMP_BACKUP__\test_runtime"
+$tempDir = Join-Path $testTempRoot ("fxfile_archive_e2e_{0}" -f $PID)
+New-Item -ItemType Directory -Path $testTempRoot -Force | Out-Null
 if (Test-Path $tempDir) {
-    Remove-Item -Path $tempDir -Recurse -Force
+    Remove-Item -LiteralPath $tempDir -Recurse -Force
 }
 New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
@@ -50,7 +54,7 @@ if ($contentA -notmatch "File A Content") {
 Write-Host "  -> ZIP Extraction & Content integrity 100% verified!"
 
 # 3. Clean up
-Remove-Item -Path $tempDir -Recurse -Force
+Remove-Item -LiteralPath $tempDir -Recurse -Force
 Write-Host "=========================================================="
 Write-Host "  Real Compression E2E Audit: 100% SUCCESS / PASS"
 Write-Host "=========================================================="

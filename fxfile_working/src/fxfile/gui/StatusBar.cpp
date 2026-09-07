@@ -12,6 +12,7 @@
 #include "StatusBarObserver.h"
 
 #include "gdi.h"
+#include "../option.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -600,6 +601,7 @@ void StatusBar::createFont(void)
     ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
 
     LOGFONT sLogFont = sNonClientMetrics.lfMenuFont;
+    fxfile::Option::scaleLogFont(sLogFont);
 
     mFont.CreateFontIndirect(&sLogFont);
     SetFont(&mFont, XPR_TRUE);
@@ -614,6 +616,12 @@ void StatusBar::recreateFont(void)
     createFont();
 }
 
+void StatusBar::updateUIScale(void)
+{
+    recreateFont();
+    Invalidate();
+}
+
 void StatusBar::destroyFont(void)
 {
     if (XPR_IS_NOT_NULL(mFont.m_hObject)) mFont.DeleteObject();
@@ -622,9 +630,7 @@ void StatusBar::destroyFont(void)
 
 void StatusBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
-    recreateFont();
-
-    Invalidate();
+    updateUIScale();
 
     super::OnSettingChange(aFlags, aSection);
 }

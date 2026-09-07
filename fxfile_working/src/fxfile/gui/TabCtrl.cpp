@@ -12,6 +12,7 @@
 
 #include "TabCtrlObserver.h"
 #include "gdi.h"
+#include "../option.h"
 #include <math.h>
 
 #ifdef _DEBUG
@@ -1007,6 +1008,7 @@ void TabCtrl::createFont(void)
     ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
 
     LOGFONT sLogFont = sNonClientMetrics.lfMenuFont;
+    fxfile::Option::scaleLogFont(sLogFont);
 
     mFont.CreateFontIndirect(&sLogFont);
     SetFont(&mFont, XPR_TRUE);
@@ -1021,6 +1023,12 @@ void TabCtrl::recreateFont(void)
     createFont();
 }
 
+void TabCtrl::updateUIScale(void)
+{
+    recreateFont();
+    Invalidate();
+}
+
 void TabCtrl::destroyFont(void)
 {
     if (XPR_IS_NOT_NULL(mFont.m_hObject)) mFont.DeleteObject();
@@ -1029,9 +1037,7 @@ void TabCtrl::destroyFont(void)
 
 void TabCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
-    recreateFont();
-
-    Invalidate();
+    updateUIScale();
 
     super::OnSettingChange(aFlags, aSection);
 }

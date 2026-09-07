@@ -38,7 +38,6 @@
 #include "search_result_ctrl.h"
 #include "file_scrap_pane.h"
 #include "tab_pane.h"
-#include "picture_viewer.h"
 
 #include "cmd/router/cmd_parameters.h"
 #include "cmd/router/cmd_parameter_define.h"
@@ -66,27 +65,6 @@ enum
     CTRL_ID_ACTIVATE_BAR,
     CTRL_ID_TAB_PANE = 200,
 };
-
-// Keep a saved lock path for removable/offline drives, but do not hand an
-// absent drive root to the Shell while opening every startup pane.  The next
-// startup will use that same saved lock again as soon as the volume returns.
-xpr_bool_t isAvailableStartupPath(const xpr_tchar_t *aPath)
-{
-    if (XPR_IS_NULL(aPath) || aPath[0] == XPR_STRING_LITERAL('\0'))
-        return XPR_FALSE;
-
-    if (aPath[1] == XPR_STRING_LITERAL(':') &&
-        (aPath[2] == XPR_STRING_LITERAL('\\') || aPath[2] == XPR_STRING_LITERAL('/')))
-    {
-        xpr_tchar_t sRoot[] =
-        {
-            aPath[0], XPR_STRING_LITERAL(':'), XPR_STRING_LITERAL('\\'), XPR_STRING_LITERAL('\0')
-        };
-        return (::GetDriveType(sRoot) == DRIVE_NO_ROOT_DIR) ? XPR_FALSE : XPR_TRUE;
-    }
-
-    return XPR_TRUE;
-}
 } // namespace anonymous
 
 class ExplorerView::TabData
@@ -221,6 +199,61 @@ void ExplorerView::setObserver(ExplorerViewObserver *aObserver)
     mObserver = aObserver;
 }
 
+xpr_sint_t ExplorerView::completeDeferredStartupInit(void)
+{
+    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_handler.begin"));
+
+    if (XPR_IS_FALSE(mStartupInitPending))
+        return 0;
+
+    xpr_sint_t sResult = initializeStartupView();
+    mStartupInitPending = XPR_FALSE;
+
+    if (sResult >= 0)
+    {
+        recalcLayout();
+    }
+
+    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_handler.end"));
+    return sResult;
+}
+
+XPR_INLINE void loadTabOption(Option::Main::Tab &aTabOption, ExplorerCtrl &aExplorerCtrl);
+
+void ExplorerView::completeDeferredStartupHistory(void)
+{
+    if (XPR_IS_FALSE(mStartupHistoryPending))
+        return;
+
+    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_history.begin"));
+    mStartupHistoryPending = XPR_FALSE;
+
+    if (XPR_IS_NULL(mTabCtrl))
+        return;
+
+    if (!XPR_IS_RANGE(0, mViewIndex, MAX_VIEW_SPLIT - 1))
+        return;
+
+    Option::Main::View &sViewOption = gOpt->mMain.mView[mViewIndex];
+    xpr_sint_t sTabIndex = 0;
+    Option::Main::TabDeque::iterator sIterator;
+
+    FXFILE_STL_FOR_EACH(sIterator, sViewOption.mTabDeque)
+    {
+        ExplorerCtrl *sExplorerCtrl = getExplorerCtrl(sTabIndex++);
+        if (XPR_IS_NULL(sExplorerCtrl))
+            break;
+
+        Option::Main::Tab *sTabOption = *sIterator;
+        if (XPR_IS_NULL(sTabOption))
+            continue;
+
+        loadTabOption(*sTabOption, *sExplorerCtrl);
+    }
+
+    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_history.end"));
+}
+
 xpr_sint_t ExplorerView::getViewIndex(void) const
 {
     return mViewIndex;
@@ -228,26 +261,21 @@ xpr_sint_t ExplorerView::getViewIndex(void) const
 
 void ExplorerView::setViewIndex(xpr_sint_t aViewIndex)
 {
+    if (aViewIndex == mViewIndex)
+        return;
+
     mViewIndex = aViewIndex;
 
     FolderPane *sFolderPane = getFolderPane();
     if (XPR_IS_NOT_NULL(sFolderPane))
         sFolderPane->setViewIndex(mViewIndex);
 
-    if (XPR_IS_NOT_NULL(mExplorerPane))
-        mExplorerPane->setViewIndex(mViewIndex);
-
     xpr_sint_t i, sTabCount;
     ExplorerCtrl *sExplorerCtrl;
-    TabPane *sTabPane;
 
     sTabCount = getTabCount();
     for (i = 0; i < sTabCount; ++i)
     {
-        sTabPane = getTabPane(i);
-        if (XPR_IS_NOT_NULL(sTabPane))
-            sTabPane->setViewIndex(aViewIndex);
-
         sExplorerCtrl = getExplorerCtrl(i);
         if (XPR_IS_NOT_NULL(sExplorerCtrl))
             sExplorerCtrl->setViewIndex(aViewIndex);
@@ -313,6 +341,26 @@ XPR_INLINE void loadTabOption(Option::Main::Tab &aTabOption, ExplorerCtrl &aExpl
     XPR_SAFE_DELETE(sHistoryDeque);
 }
 
+namespace
+{
+xpr_bool_t isAvailableStartupPath(const xpr_tchar_t *aPath)
+{
+    if (aPath == XPR_NULL || aPath[0] == 0)
+        return XPR_FALSE;
+
+    if (aPath[1] == _T(':') && (aPath[2] == _T('\\') || aPath[2] == _T('/')))
+    {
+        xpr_tchar_t sRoot[4] = { aPath[0], _T(':'), _T('\\'), 0 };
+        if (::GetDriveType(sRoot) == DRIVE_NO_ROOT_DIR)
+            return XPR_FALSE;
+
+        return XPR_TRUE;
+    }
+
+    return XPR_TRUE;
+}
+}
+
 xpr_sint_t ExplorerView::OnCreate(LPCREATESTRUCT aCreateStruct)
 {
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.OnCreate.begin"));
@@ -330,13 +378,9 @@ xpr_sint_t ExplorerView::OnCreate(LPCREATESTRUCT aCreateStruct)
         return -1;
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.splitter_created"));
 
-    if (XPR_IS_NOT_NULL(gFrame) && XPR_IS_TRUE(gFrame->isStartupViewDeferred()))
+    if (XPR_IS_NOT_NULL(gFrame) && gFrame->isStartupViewDeferred())
     {
         mStartupInitPending = XPR_TRUE;
-
-        // MainFrame owns one deferred batch for every startup pane.  Posting
-        // one message per ExplorerView allowed Windows to compose partially
-        // initialized panes between messages, producing a 1->2->3->4 trail.
         TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_registered"));
         return 0;
     }
@@ -348,15 +392,16 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
 {
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.initialize.begin"));
 
-    xpr_bool_t sLastNewTab = XPR_FALSE;
     const xpr_tchar_t *sLockedPath = XPR_NULL;
     if (XPR_IS_TRUE(gOpt->mMain.mViewPathLocked) &&
-        XPR_IS_RANGE(0, mViewIndex, MAX_VIEW_SPLIT - 1) &&
-        gOpt->mMain.mLockedViewPath[mViewIndex][0] != XPR_STRING_LITERAL('\0') &&
-        XPR_IS_TRUE(isAvailableStartupPath(gOpt->mMain.mLockedViewPath[mViewIndex])))
+        XPR_IS_RANGE(0, mViewIndex, MAX_VIEW_SPLIT - 1))
     {
-        sLockedPath = gOpt->mMain.mLockedViewPath[mViewIndex];
+        if (XPR_IS_TRUE(isAvailableStartupPath(gOpt->mMain.mLockedViewPath[mViewIndex])))
+            sLockedPath = gOpt->mMain.mLockedViewPath[mViewIndex];
     }
+
+    xpr_bool_t sLastNewTab = XPR_FALSE;
+    xpr_sint_t sTabIndex = 0;
 
     // load last tabs
     switch (gOpt->mConfig.mFileListInitFolderType[mViewIndex])
@@ -369,27 +414,30 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
             ExplorerCtrl      *sExplorerCtrl;
             Option::Main::TabDeque::iterator sIterator;
 
-            xpr_size_t sTabIndex = 0;
             FXFILE_STL_FOR_EACH(sIterator, gOpt->mMain.mView[mViewIndex].mTabDeque)
             {
                 sTabOption = *sIterator;
                 XPR_ASSERT(sTabOption != XPR_NULL);
 
-                // new tab
                 const xpr_tchar_t *sPath = sTabOption->mPath.c_str();
-                if (XPR_IS_NOT_NULL(sLockedPath) && sTabIndex == gOpt->mMain.mView[mViewIndex].mCurTab)
+                if (sLockedPath != XPR_NULL && sTabIndex == gOpt->mMain.mView[mViewIndex].mCurTab)
                     sPath = sLockedPath;
 
-                sTab = newTab(sPath);
+                xpr::string sFinalPath(sPath);
+                TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.begin"));
+                LPITEMIDLIST sFullPidl = Path2Pidl(sFinalPath);
+                TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.pidl"));
+                sTab = newTab(sFullPidl);
+                TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.end"));
+                if (sFullPidl != XPR_NULL)
+                    ::CoTaskMemFree(sFullPidl);
+
                 ++sTabIndex;
 
                 sExplorerCtrl = getExplorerCtrl(sTab);
                 if (XPR_IS_NOT_NULL(sExplorerCtrl))
                 {
-                    // Navigation-history PIDLs are not required to paint the
-                    // first complete 2x2 frame. Keep their source strings in
-                    // gOpt and convert them just after atomic publication.
-                    if (XPR_IS_TRUE(mStartupInitPending))
+                    if (mStartupInitPending)
                     {
                         mStartupHistoryPending = XPR_TRUE;
                     }
@@ -403,18 +451,29 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
             }
 
             sLastNewTab = XPR_TRUE;
-
             break;
         }
     }
+
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.tabs_loaded"));
 
     if (mTabCtrl->getTabCount() == 0)
     {
-        if (XPR_IS_NOT_NULL(sLockedPath))
-            newTab(sLockedPath);
+        if (sLockedPath != XPR_NULL)
+        {
+            xpr::string sFinalPath(sLockedPath);
+            TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.begin"));
+            LPITEMIDLIST sFullPidl = Path2Pidl(sFinalPath);
+            TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.pidl"));
+            newTab(sFullPidl);
+            TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.end"));
+            if (sFullPidl != XPR_NULL)
+                ::CoTaskMemFree(sFullPidl);
+        }
         else
+        {
             newTab();
+        }
 
         sLastNewTab = XPR_FALSE;
     }
@@ -423,6 +482,7 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
     {
         mTabCtrl->setCurTab(0);
     }
+
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.current_tab_set"));
 
     if (XPR_IS_FALSE(sLastNewTab))
@@ -430,19 +490,24 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
         ExplorerCtrl *sExplorerCtrl = getExplorerCtrl();
         if (XPR_IS_NOT_NULL(sExplorerCtrl))
         {
-            Option::Main::TabDeque::iterator sIterator = gOpt->mMain.mView[mViewIndex].mTabDeque.begin();
-            if (sIterator != gOpt->mMain.mView[mViewIndex].mTabDeque.end())
+            if (mStartupInitPending)
             {
-                Option::Main::Tab *sTabOption = *sIterator;
-                XPR_ASSERT(sTabOption != XPR_NULL);
+                mStartupHistoryPending = XPR_TRUE;
+            }
+            else
+            {
+                Option::Main::TabDeque::iterator sIterator = gOpt->mMain.mView[mViewIndex].mTabDeque.begin();
+                if (sIterator != gOpt->mMain.mView[mViewIndex].mTabDeque.end())
+                {
+                    Option::Main::Tab *sTabOption = *sIterator;
+                    XPR_ASSERT(sTabOption != XPR_NULL);
 
-                if (XPR_IS_TRUE(mStartupInitPending))
-                    mStartupHistoryPending = XPR_TRUE;
-                else
                     loadTabOption(*sTabOption, *sExplorerCtrl);
+                }
             }
         }
     }
+
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.fallback_option_loaded"));
 
     // activate bar
@@ -453,9 +518,10 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
     xpr_bool_t sVisibleFolderPane = XPR_FALSE;
     if (XPR_IS_FALSE(gOpt->mMain.mSingleFolderPaneMode) && XPR_IS_TRUE(gOpt->mMain.mShowEachFolderPane[mViewIndex]))
         sVisibleFolderPane = visibleFolderPane(XPR_TRUE, XPR_TRUE);
+
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.folder_pane"));
 
-    FolderCtrl *sFolderCtrl = getFolderCtrl();
+    FolderCtrl   *sFolderCtrl = getFolderCtrl();
     ExplorerCtrl *sExplorerCtrl = getExplorerCtrl();
 
     if (XPR_IS_TRUE(gOpt->mMain.mSingleFolderPaneMode) && mViewIndex == 0)
@@ -469,6 +535,7 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
             sFolderCtrl->searchAndSelectItem(sTvItemData->mFullPidl, XPR_FALSE);
         }
     }
+
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.folder_selected"));
 
     if (XPR_IS_FALSE(sVisibleFolderPane))
@@ -477,11 +544,11 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
 
         CRect sRect;
         GetClientRect(sRect);
-
         mSplitter.setWindowRect(sRect);
         mSplitter.moveColumn(0, gOpt->mMain.mEachFolderPaneSize[mViewIndex]);
         mSplitter.resize();
     }
+
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.splitter_laid_out"));
 
     // register for drag and drop
@@ -491,56 +558,9 @@ xpr_sint_t ExplorerView::initializeStartupView(void)
     setDragContents(!gOpt->mConfig.mDragNoContents);
 
     mInit = XPR_FALSE;
-
     TraceStartup(XPR_STRING_LITERAL("ExplorerView.initialize.end"));
+
     return 0;
-}
-
-xpr_sint_t ExplorerView::completeDeferredStartupInit(void)
-{
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_handler.begin"));
-
-    if (XPR_IS_FALSE(mStartupInitPending))
-        return 0;
-
-    xpr_sint_t sResult = initializeStartupView();
-    mStartupInitPending = XPR_FALSE;
-
-    if (sResult >= 0)
-        recalcLayout();
-
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_handler.end"));
-    return sResult;
-}
-
-void ExplorerView::completeDeferredStartupHistory(void)
-{
-    if (XPR_IS_FALSE(mStartupHistoryPending))
-        return;
-
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_history.begin"));
-    mStartupHistoryPending = XPR_FALSE;
-
-    if (XPR_IS_NULL(mTabCtrl) ||
-        !XPR_IS_RANGE(0, mViewIndex, MAX_VIEW_SPLIT - 1))
-    {
-        return;
-    }
-
-    xpr_sint_t sTab = 0;
-    Option::Main::TabDeque::iterator sIterator;
-    FXFILE_STL_FOR_EACH(sIterator, gOpt->mMain.mView[mViewIndex].mTabDeque)
-    {
-        ExplorerCtrl *sExplorerCtrl = getExplorerCtrl(sTab++);
-        if (XPR_IS_NULL(sExplorerCtrl))
-            break;
-
-        Option::Main::Tab *sTabOption = *sIterator;
-        if (XPR_IS_NOT_NULL(sTabOption))
-            loadTabOption(*sTabOption, *sExplorerCtrl);
-    }
-
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.deferred_history.end"));
 }
 
 LPITEMIDLIST ExplorerView::getInitFolderByProgramOption(xpr_sint_t aIndex, xpr::string &aSelFile) const
@@ -668,8 +688,10 @@ void ExplorerView::OnDestroy(void)
     mStartupInitPending = XPR_FALSE;
     mStartupHistoryPending = XPR_FALSE;
 
-    // Shared ExplorerCtrl instances belong to ExplorerPane, not TabCtrl. Drain
-    // them while both owners are alive; TabData callbacks then become no-ops.
+    // Shared ExplorerCtrl instances are referenced by TabData entries owned by
+    // mTabCtrl.  Withdraw and destroy those controls first so TabData teardown
+    // cannot call back through a stale pane/control pointer.  The later pane
+    // destruction remains an idempotent fallback.
     if (XPR_IS_NOT_NULL(mExplorerPane))
         mExplorerPane->destroySubPane();
 
@@ -694,6 +716,7 @@ void ExplorerView::setChangedOption(Option &aOption)
     std::set<TabPane *>  mTabPaneSet;
 
     // tab options
+    mTabCtrl->updateUIScale();
     mTabCtrl->setTabSizeMode(!gOpt->mConfig.mTabAutoFit);
     mTabCtrl->enableDragMove(gOpt->mConfig.mTabDragMove);
 
@@ -761,7 +784,33 @@ XPR_INLINE void saveTabOption(Option::Main::Tab &aTab, const ExplorerCtrl &aExpl
 
         if (XPR_IS_TRUE(sSaveFolder))
         {
-            Pidl2Path(sTvItemData->mFullPidl, aTab.mPath);
+            if (XPR_IS_TRUE(gOpt->mMain.mViewPathLocked) &&
+                XPR_IS_RANGE(0, sViewIndex, MAX_VIEW_SPLIT - 1) &&
+                gOpt->mMain.mLockedViewPath[sViewIndex][0] != 0)
+            {
+                aTab.mPath = gOpt->mMain.mLockedViewPath[sViewIndex];
+            }
+            else if (gOpt->mConfig.mFileListSaveFolderLayout == SAVE_FOLDER_LAYOUT_NONE)
+            {
+                if (XPR_IS_RANGE(0, sViewIndex, MAX_VIEW_SPLIT - 1) &&
+                    gOpt->mMain.mLockedViewPath[sViewIndex][0] != 0)
+                {
+                    aTab.mPath = gOpt->mMain.mLockedViewPath[sViewIndex];
+                }
+                else if (XPR_IS_RANGE(0, sViewIndex, MAX_VIEW_SPLIT - 1) &&
+                         gOpt->mConfig.mFileListInitFolder[sViewIndex][0] != 0)
+                {
+                    aTab.mPath = gOpt->mConfig.mFileListInitFolder[sViewIndex];
+                }
+                else
+                {
+                    Pidl2Path(sTvItemData->mFullPidl, aTab.mPath);
+                }
+            }
+            else
+            {
+                Pidl2Path(sTvItemData->mFullPidl, aTab.mPath);
+            }
         }
     }
 
@@ -858,16 +907,6 @@ XPR_INLINE void saveTabOption(Option::Main::Tab &aTab, const ExplorerCtrl &aExpl
 
 void ExplorerView::saveOption(void)
 {
-    // The view can receive a re-entrant close while its child controls are
-    // already being destroyed. OnDestroy() deletes mTabCtrl and sets it to
-    // NULL, so keep the last valid view configuration in that state.
-    if (XPR_IS_NULL(mTabCtrl) || XPR_IS_TRUE(mStartupInitPending))
-        return;
-
-    // If Close arrives before the post-publication history message, load the
-    // preserved strings before rebuilding gOpt from the live controls.
-    completeDeferredStartupHistory();
-
     xpr_size_t         i;
     xpr_size_t         sTabCount;
     Option::Main::Tab *sTabOption;
@@ -1020,14 +1059,6 @@ void ExplorerView::recalcLayout(void)
     }
 
     ::EndDeferWindowPos(sHdwp);
-
-    if (gFrame != XPR_NULL && gFrame->mPictureViewer != XPR_NULL && gFrame->mPictureViewer->isDocking() == XPR_TRUE)
-    {
-        if (gFrame->mPictureViewer->GetParent() == this)
-        {
-            gFrame->mPictureViewer->updateDockedLayout();
-        }
-    }
 }
 
 void ExplorerView::OnPaint(void)
@@ -1347,12 +1378,9 @@ xpr_sint_t ExplorerView::newTab(TabType aTabType)
 
 xpr_sint_t ExplorerView::newTab(const xpr::string &aInitFolder)
 {
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.begin"));
     LPITEMIDLIST sFullPidl = Path2Pidl(aInitFolder);
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.pidl"));
 
     xpr_sint_t sTab = newTab(sFullPidl);
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.path.end"));
 
     COM_FREE(sFullPidl);
 
@@ -1361,7 +1389,6 @@ xpr_sint_t ExplorerView::newTab(const xpr::string &aInitFolder)
 
 xpr_sint_t ExplorerView::newTab(LPCITEMIDLIST aInitFolder)
 {
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.pidl.begin"));
     if (XPR_IS_NULL(mTabCtrl))
         return -1;
 
@@ -1387,8 +1414,6 @@ xpr_sint_t ExplorerView::newTab(LPCITEMIDLIST aInitFolder)
 
         if (XPR_IS_NULL(mExplorerPane))
             return -1;
-
-        TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.explorer_pane_created"));
     }
 
     TabData *sTabData = new TabData(TabTypeExplorer);
@@ -1399,7 +1424,6 @@ xpr_sint_t ExplorerView::newTab(LPCITEMIDLIST aInitFolder)
     xpr_uint_t sExplorerCtrlId = generateTabPaneId();
 
     ExplorerCtrl *sExplorerCtrl = dynamic_cast<ExplorerCtrl *>(mExplorerPane->newSubPane(sExplorerCtrlId));
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.explorer_ctrl_created"));
     if (XPR_IS_NOT_NULL(sExplorerCtrl))
     {
         sTabData->mTabPane   = mExplorerPane;
@@ -1461,8 +1485,6 @@ xpr_sint_t ExplorerView::newTab(LPCITEMIDLIST aInitFolder)
         }
     }
 
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.folder_explored"));
-
     if (XPR_IS_FALSE(sExplored))
     {
         LPITEMIDLIST sFullPidl;
@@ -1514,7 +1536,6 @@ xpr_sint_t ExplorerView::newTab(LPCITEMIDLIST aInitFolder)
         }
     }
 
-    TraceStartup(XPR_STRING_LITERAL("ExplorerView.newTab.pidl.end"));
     return (xpr_sint_t)sInsertedTab;
 }
 

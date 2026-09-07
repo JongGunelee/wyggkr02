@@ -62,6 +62,9 @@ CToolBarEx::CToolBarEx()
 
 CToolBarEx::~CToolBarEx()
 {
+    if (m_fontUIScale.m_hObject != 0)
+        m_fontUIScale.DeleteObject();
+
     m_dqButtons.clear();
     m_mpButtons.clear();
 }
@@ -467,6 +470,18 @@ void CToolBarEx::ReloadButtons()
 void CToolBarEx::UpdateToolbarSize()
 {
     CToolBarCtrl& tbCtrl = GetToolBarCtrl();
+
+    // Keep toolbar text on the same effective scale as the menu bar, popup
+    // menus and pane controls.  The image lists deliberately retain their
+    // native 16/22-pixel legibility floor at compact scales.
+    if (m_fontUIScale.m_hObject != 0)
+        m_fontUIScale.DeleteObject();
+
+    LOGFONT sLogFont = {0};
+    ::fxfile::Option::getScaledFont(sLogFont);
+    if (m_fontUIScale.CreateFontIndirect(&sLogFont) != FALSE)
+        SetFont(&m_fontUIScale, FALSE);
+
     tbCtrl.AutoSize();
 
     if (m_pObserver != NULL)

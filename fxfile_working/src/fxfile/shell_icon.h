@@ -42,6 +42,7 @@ public:
         xpr_uint_t    mCode;
         xpr_uintptr_t mItem;
         xpr_uint_t    mSignature;
+        xpr_uint_t    mGeneration;
         // Owned absolute PIDL.  Shell interfaces are apartment-affine and
         // must never be passed from the UI apartment to this worker.
         LPITEMIDLIST  mPidl;
@@ -63,6 +64,7 @@ public:
             mCode              = 0;
             mItem              = -1;
             mSignature         = 0;
+            mGeneration        = 0;
             mPidl              = XPR_NULL;
             mResult.mIconIndex = -1;
             mResult.mIcon      = XPR_NULL;
@@ -102,6 +104,7 @@ protected:
     Thread     mThread;
     HANDLE     mEvent;
     xpr::Mutex mMutex;
+    xpr_uint_t mGeneration;
 
     HWND mHwnd;
     xpr_uint_t mMsg;

@@ -70,3 +70,4 @@ Test-Contract 'blocked-close guidance is translated' (([IO.File]::ReadAllText($l
 
 Write-Host "RESULT: $passed PASS / $failed FAIL"
 if ($failed -ne 0) { exit 1 }
+exit 0

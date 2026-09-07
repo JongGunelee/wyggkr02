@@ -777,12 +777,8 @@ xpr_sint_t WindowCompareCommand::canExecute(CommandContext &aContext)
 {
     FXFILE_COMMAND_DECLARE_CTRL;
 
-    xpr_sint_t sState = 0;
-
-    if (sMainFrame->isSingleView() == XPR_FALSE)
-        sState |= StateEnable;
-
-    return sState;
+    // Task 100: 단일 창 및 다중 창(Pane 1~6) 모두에서 폴더 비교하기 항상 활성화
+    return StateEnable;
 }
 
 void WindowCompareCommand::execute(CommandContext &aContext)

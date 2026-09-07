@@ -72,26 +72,6 @@ static const OptionKey gMainOptionKeys[] =
 {
     { XPR_STRING_LITERAL("main.window.position"),                              OptionKey::TypeRect,    &Option::mMain.mWindowRect,                     (void *)new CRect(-1,-1,-1,-1)         },
     { XPR_STRING_LITERAL("main.window.status"),                                OptionKey::TypeInteger, &Option::mMain.mWindowStatus,                   (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("main.window.position_locked"),                       OptionKey::TypeBoolean, &Option::mMain.mWindowPlacementLocked,           (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("main.view.path_locked"),                             OptionKey::TypeBoolean, &Option::mMain.mViewPathLocked,                  (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("main.view1.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[0],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.view2.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[1],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.view3.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[2],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.view4.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[3],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.view5.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[4],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.view6.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[5],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.view.split_locked"),                            OptionKey::TypeBoolean, &Option::mMain.mViewSplitLocked,                 (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("main.clock.locked"),                                 OptionKey::TypeBoolean, &Option::mMain.mClockLocked,                    (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("main.clock.show"),                                   OptionKey::TypeBoolean, &Option::mMain.mShowClock,                      (void *)XPR_TRUE                       },
-    { XPR_STRING_LITERAL("main.clock.pos_x"),                                  OptionKey::TypeInteger, &Option::mMain.mClockPosX,                      (void *)-1                             },
-    { XPR_STRING_LITERAL("main.view.locked_row_count"),                        OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitRowCount,         (void *)DEF_VIEW_SPLIT_ROW             },
-    { XPR_STRING_LITERAL("main.view.locked_column_count"),                     OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitColumnCount,      (void *)DEF_VIEW_SPLIT_COLUMN          },
-    { XPR_STRING_LITERAL("main.view.locked_ratio1"),                           OptionKey::TypeDouble,  &Option::mMain.mLockedViewSplitRatio[0],         (void *)new double(0.0)                },
-    { XPR_STRING_LITERAL("main.view.locked_ratio2"),                           OptionKey::TypeDouble,  &Option::mMain.mLockedViewSplitRatio[1],         (void *)new double(0.0)                },
-    { XPR_STRING_LITERAL("main.view.locked_ratio3"),                           OptionKey::TypeDouble,  &Option::mMain.mLockedViewSplitRatio[2],         (void *)new double(0.0)                },
-    { XPR_STRING_LITERAL("main.view.locked_size1"),                            OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitSize[0],          (void *)0                              },
-    { XPR_STRING_LITERAL("main.view.locked_size2"),                            OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitSize[1],          (void *)0                              },
-    { XPR_STRING_LITERAL("main.view.locked_size3"),                            OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitSize[2],          (void *)0                              },
     { XPR_STRING_LITERAL("main.folder_tree.mode"),                             OptionKey::TypeBoolean, &Option::mMain.mSingleFolderPaneMode,           (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.single_folder_tree.show"),                      OptionKey::TypeBoolean, &Option::mMain.mShowSingleFolderPane,           (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("main.single_folder_tree.size"),                      OptionKey::TypeInteger, &Option::mMain.mSingleFolderPaneSize,           (void *)DEF_FOLDER_PANE_SIZE           },
@@ -127,14 +107,34 @@ static const OptionKey gMainOptionKeys[] =
     { XPR_STRING_LITERAL("main.view.size1"),                                   OptionKey::TypeInteger, &Option::mMain.mViewSplitSize[0],               (void *)0                              },
     { XPR_STRING_LITERAL("main.view.size2"),                                   OptionKey::TypeInteger, &Option::mMain.mViewSplitSize[1],               (void *)0                              },
     { XPR_STRING_LITERAL("main.view.size3"),                                   OptionKey::TypeInteger, &Option::mMain.mViewSplitSize[2],               (void *)0                              },
-    { XPR_STRING_LITERAL("main.working_folder.#1"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[0],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.working_folder.#2"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[1],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.working_folder.#3"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[2],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.working_folder.#4"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[3],               (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("main.working_folder.#5"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[4],               (void *)XPR_STRING_LITERAL("")         },
+    { XPR_STRING_LITERAL("main.working_folder.#1"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[0],               (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.working_folder.#2"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[1],               (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.working_folder.#3"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[2],               (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.working_folder.#4"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[3],               (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.working_folder.#5"),                            OptionKey::TypeString,   Option::mMain.mWorkingFolder[4],               (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
     { XPR_STRING_LITERAL("main.file_scrap.floating.show"),                     OptionKey::TypeBoolean, &Option::mMain.mFileScrapDrop,                  (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.picture_viewer.show"),                          OptionKey::TypeBoolean, &Option::mMain.mPictureViewer,                  (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.tip_of_today.show"),                            OptionKey::TypeBoolean, &Option::mMain.mTipOfTheToday,                  (void *)XPR_TRUE                       },
+    { XPR_STRING_LITERAL("main.window.position_locked"),                       OptionKey::TypeBoolean, &Option::mMain.mWindowPlacementLocked,          (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("main.view.path_locked"),                             OptionKey::TypeBoolean, &Option::mMain.mViewPathLocked,                 (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("main.view1.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[0],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.view2.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[1],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.view3.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[2],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.view4.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[3],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.view5.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[4],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.view6.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[5],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },
+    { XPR_STRING_LITERAL("main.view.split_locked"),                            OptionKey::TypeBoolean, &Option::mMain.mViewSplitLocked,                (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("main.view.locked_row_count"),                        OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitRowCount,         (void *)DEF_VIEW_SPLIT_ROW             },
+    { XPR_STRING_LITERAL("main.view.locked_column_count"),                     OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitColumnCount,      (void *)DEF_VIEW_SPLIT_COLUMN          },
+    { XPR_STRING_LITERAL("main.view.locked_ratio1"),                           OptionKey::TypeDouble,  &Option::mMain.mLockedViewSplitRatio[0],         (void *)new double(0.0)                },
+    { XPR_STRING_LITERAL("main.view.locked_ratio2"),                           OptionKey::TypeDouble,  &Option::mMain.mLockedViewSplitRatio[1],         (void *)new double(0.0)                },
+    { XPR_STRING_LITERAL("main.view.locked_ratio3"),                           OptionKey::TypeDouble,  &Option::mMain.mLockedViewSplitRatio[2],         (void *)new double(0.0)                },
+    { XPR_STRING_LITERAL("main.view.locked_size1"),                            OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitSize[0],          (void *)0                              },
+    { XPR_STRING_LITERAL("main.view.locked_size2"),                            OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitSize[1],          (void *)0                              },
+    { XPR_STRING_LITERAL("main.view.locked_size3"),                            OptionKey::TypeInteger, &Option::mMain.mLockedViewSplitSize[2],          (void *)0                              },
+    { XPR_STRING_LITERAL("main.clock.locked"),                                 OptionKey::TypeBoolean, &Option::mMain.mClockLocked,                    (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("main.clock.show"),                                   OptionKey::TypeBoolean, &Option::mMain.mShowClock,                      (void *)XPR_TRUE                       },
+    { XPR_STRING_LITERAL("main.clock.pos_x"),                                  OptionKey::TypeInteger, &Option::mMain.mClockPosX,                       (void *)-1                             },
 };
 
 static const OptionKey gConfigOptionKeys[] =
@@ -226,7 +226,7 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.folder_tree.item_height"),                    OptionKey::TypeBoolean, &Option::mConfig.mFolderTreeIsItemHeight,       (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.folder_tree.item_height_size"),               OptionKey::TypeInteger, &Option::mConfig.mFolderTreeItemHeight,         (void *)0                              },
     { XPR_STRING_LITERAL("config.folder_tree.custom_font"),                    OptionKey::TypeBoolean, &Option::mConfig.mFolderTreeCustomFont,         (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.folder_tree.custom_font_name"),               OptionKey::TypeString,   Option::mConfig.mFolderTreeCustomFontText,     (void *)XPR_STRING_LITERAL("")         },
+    { XPR_STRING_LITERAL("config.folder_tree.custom_font_name"),               OptionKey::TypeString,   Option::mConfig.mFolderTreeCustomFontText,     (void *)XPR_STRING_LITERAL(""),        MAX_FONT_TEXT + 1                      },
     { XPR_STRING_LITERAL("config.folder_tree.init_no_expand"),                 OptionKey::TypeBoolean, &Option::mConfig.mFolderTreeInitNoExpand,       (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.folder_tree.select_delay"),                   OptionKey::TypeBoolean, &Option::mConfig.mFolderTreeSelDelay,           (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.folder_tree.select_delay_time"),              OptionKey::TypeInteger, &Option::mConfig.mFolderTreeSelDelayTime,       (void *)DEF_FLD_SEL_DELAY_MSEC         },
@@ -238,12 +238,12 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.view4.file_list.background_image"),           OptionKey::TypeBoolean, &Option::mConfig.mFileListBkgndImage[3],        (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view5.file_list.background_image"),           OptionKey::TypeBoolean, &Option::mConfig.mFileListBkgndImage[4],        (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view6.file_list.background_image"),           OptionKey::TypeBoolean, &Option::mConfig.mFileListBkgndImage[5],        (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.view1.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[0],    (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view2.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[1],    (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view3.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[2],    (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view4.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[3],    (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view5.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[4],    (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view6.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[5],    (void *)XPR_STRING_LITERAL("")         },
+    { XPR_STRING_LITERAL("config.view1.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[0],    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view2.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[1],    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view3.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[2],    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view4.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[3],    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view5.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[4],    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view6.file_list.background_image_path"),      OptionKey::TypeString,   Option::mConfig.mFileListBkgndImagePath[5],    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
     { XPR_STRING_LITERAL("config.view1.file_list.background_color_type"),      OptionKey::TypeInteger, &Option::mConfig.mFileListBkgndColorType[0],    (void *)COLOR_TYPE_DEFAULT             },
     { XPR_STRING_LITERAL("config.view2.file_list.background_color_type"),      OptionKey::TypeInteger, &Option::mConfig.mFileListBkgndColorType[1],    (void *)COLOR_TYPE_DEFAULT             },
     { XPR_STRING_LITERAL("config.view3.file_list.background_color_type"),      OptionKey::TypeInteger, &Option::mConfig.mFileListBkgndColorType[2],    (void *)COLOR_TYPE_DEFAULT             },
@@ -280,19 +280,19 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.view4.file_list.init_folder"),                OptionKey::TypeInteger, &Option::mConfig.mFileListInitFolderType[3],    (void *)INIT_TYPE_NONE                 },
     { XPR_STRING_LITERAL("config.view5.file_list.init_folder"),                OptionKey::TypeInteger, &Option::mConfig.mFileListInitFolderType[4],    (void *)INIT_TYPE_NONE                 },
     { XPR_STRING_LITERAL("config.view6.file_list.init_folder"),                OptionKey::TypeInteger, &Option::mConfig.mFileListInitFolderType[5],    (void *)INIT_TYPE_NONE                 },
-    { XPR_STRING_LITERAL("config.view1.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[0],        (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view2.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[1],        (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view3.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[2],        (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view4.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[3],        (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view5.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[4],        (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.view6.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[5],        (void *)XPR_STRING_LITERAL("")         },
+    { XPR_STRING_LITERAL("config.view1.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[0],        (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view2.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[1],        (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view3.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[2],        (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view4.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[3],        (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view5.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[4],        (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.view6.file_list.init_folder_path"),           OptionKey::TypeString,   Option::mConfig.mFileListInitFolder[5],        (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
     { XPR_STRING_LITERAL("config.view1.file_list.no_last_network_folder"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListNoNetLastFolder[0],   (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view2.file_list.no_last_network_folder"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListNoNetLastFolder[1],   (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view3.file_list.no_last_network_folder"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListNoNetLastFolder[2],   (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view4.file_list.no_last_network_folder"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListNoNetLastFolder[3],   (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view5.file_list.no_last_network_folder"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListNoNetLastFolder[4],   (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.view6.file_list.no_last_network_folder"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListNoNetLastFolder[5],   (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.file_list.size_unit"),                        OptionKey::TypeInteger, &Option::mConfig.mFileListSizeUnit,             (void *)SIZE_UNIT_BYTE                 },
+    { XPR_STRING_LITERAL("config.file_list.size_unit"),                        OptionKey::TypeInteger, &Option::mConfig.mFileListSizeUnit,             (void *)SIZE_UNIT_DEFAULT              },
     { XPR_STRING_LITERAL("config.file_list.list_type"),                        OptionKey::TypeInteger, &Option::mConfig.mFileListListType,             (void *)LIST_TYPE_ALL                  },
     { XPR_STRING_LITERAL("config.file_list.show_parent_folder"),               OptionKey::TypeBoolean, &Option::mConfig.mFileListParentFolder,         (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.up_and_select_sub_folder"),         OptionKey::TypeBoolean, &Option::mConfig.mFileListGoUpSelSubFolder,     (void *)XPR_TRUE                       },
@@ -306,10 +306,10 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.file_list.name_case_type"),                   OptionKey::TypeInteger, &Option::mConfig.mFileListNameCaseType,         (void *)NAME_CASE_TYPE_DEFAULT         },
     { XPR_STRING_LITERAL("config.file_list.create_text_file_and_edit"),        OptionKey::TypeBoolean, &Option::mConfig.mFileListCreateAndEditText,    (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.custom_font"),                      OptionKey::TypeBoolean, &Option::mConfig.mCustomFont,                   (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.file_list.custom_font_name"),                 OptionKey::TypeString,   Option::mConfig.mCustomFontText,               (void *)XPR_STRING_LITERAL("")         },
+    { XPR_STRING_LITERAL("config.file_list.custom_font_name"),                 OptionKey::TypeString,   Option::mConfig.mCustomFontText,               (void *)XPR_STRING_LITERAL(""),        MAX_FONT_TEXT + 1                      },
     { XPR_STRING_LITERAL("config.file_list.auto_column_width"),                OptionKey::TypeBoolean, &Option::mConfig.mFileListAutoColumnWidth,      (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.column_ellipsis_name"),             OptionKey::TypeBoolean, &Option::mConfig.mFileListColumnEllipsisName,   (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.file_list.column_ellipsis_size"),             OptionKey::TypeBoolean, &Option::mConfig.mFileListColumnEllipsisSize,   (void *)XPR_TRUE                       },
+    { XPR_STRING_LITERAL("config.file_list.column_ellipsis_size"),             OptionKey::TypeBoolean, &Option::mConfig.mFileListColumnEllipsisSize,   (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.column_ellipsis_type"),             OptionKey::TypeBoolean, &Option::mConfig.mFileListColumnEllipsisType,   (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.file_list.column_ellipsis_date"),             OptionKey::TypeBoolean, &Option::mConfig.mFileListColumnEllipsisDate,   (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.file_list.column_ellipsis_attr"),             OptionKey::TypeBoolean, &Option::mConfig.mFileListColumnEllipsisAttr,   (void *)XPR_TRUE                       },
@@ -317,26 +317,24 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.file_list.default_view_style"),               OptionKey::TypeInteger, &Option::mConfig.mFileListDefaultViewStyle,     (void *)VIEW_STYLE_DETAILS             },
     { XPR_STRING_LITERAL("config.file_list.default_sort"),                     OptionKey::TypeInteger, &Option::mConfig.mFileListDefaultSort,          (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.default_sort_rrder"),               OptionKey::TypeInteger, &Option::mConfig.mFileListDefaultSortOrder,     (void *)1                              },
-    { XPR_STRING_LITERAL("config.file_list.save_folder_layout"),               OptionKey::TypeBoolean, &Option::mConfig.mFileListSaveFolderLayout,     (void *)SAVE_FOLDER_LAYOUT_DEFAULT     },
+    { XPR_STRING_LITERAL("config.file_list.save_folder_layout"),               OptionKey::TypeInteger, &Option::mConfig.mFileListSaveFolderLayout,     (void *)SAVE_FOLDER_LAYOUT_NONE        },
     { XPR_STRING_LITERAL("config.file_list.verify_folder_layout_on_exit"),     OptionKey::TypeBoolean, &Option::mConfig.mFileListExitVerifyFolderLayout, (void *)XPR_TRUE                     },
-    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_16"),              OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile16,     (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_32"),              OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile32,     (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_48"),              OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile48,     (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_256"),             OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile256,    (void *)XPR_STRING_LITERAL("")         },
-    { XPR_STRING_LITERAL("config.file_list.size_unit_single_selected"),        OptionKey::TypeInteger, &Option::mConfig.mSingleSelFileSizeUnit,        (void *)SIZE_UNIT_BYTE                 },
-    { XPR_STRING_LITERAL("config.file_list.size_unit_multiple_selected"),      OptionKey::TypeInteger, &Option::mConfig.mMultiSelFileSizeUnit,         (void *)SIZE_UNIT_BYTE                 },
+    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_16"),              OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile16,     (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_32"),              OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile32,     (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_48"),              OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile48,     (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.file_list.custom_icon_path_256"),             OptionKey::TypeString,   Option::mConfig.mFileListCustomIconFile256,    (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
+    { XPR_STRING_LITERAL("config.file_list.size_unit_single_selected"),        OptionKey::TypeInteger, &Option::mConfig.mSingleSelFileSizeUnit,        (void *)SIZE_UNIT_DEFAULT              },
+    { XPR_STRING_LITERAL("config.file_list.size_unit_multiple_selected"),      OptionKey::TypeInteger, &Option::mConfig.mMultiSelFileSizeUnit,         (void *)SIZE_UNIT_DEFAULT              },
     { XPR_STRING_LITERAL("config.file_list.theme_style"),                      OptionKey::TypeBoolean, &Option::mConfig.mFileListClassicThemeStyle,    (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_list.grid_lines"),                       OptionKey::TypeBoolean, &Option::mConfig.mFileListGridLines,            (void *)XPR_FALSE                      },
-    // New profiles use full-row focus by default. Existing explicit values
-    // remain selectable through the appearance settings dialog.
-    { XPR_STRING_LITERAL("config.file_list.full_row_select"),                  OptionKey::TypeBoolean, &Option::mConfig.mFileListFullRowSelect,        (void *)XPR_TRUE                       },
+    { XPR_STRING_LITERAL("config.file_list.full_row_select"),                  OptionKey::TypeBoolean, &Option::mConfig.mFileListFullRowSelect,        (void *)XPR_FALSE                      },
 
     { XPR_STRING_LITERAL("config.thumbnail.width"),                            OptionKey::TypeInteger, &Option::mConfig.mThumbnailWidth,               (void *)DEF_THUMB_SIZE                 },
     { XPR_STRING_LITERAL("config.thumbnail.height"),                           OptionKey::TypeInteger, &Option::mConfig.mThumbnailHeight,              (void *)DEF_THUMB_SIZE                 },
     { XPR_STRING_LITERAL("config.thumbnail.save_cache"),                       OptionKey::TypeBoolean, &Option::mConfig.mThumbnailSaveCache,           (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("config.thumbnail.cache_path"),                       OptionKey::TypeString,   Option::mConfig.mThumbnailCachePath,            (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH + 1                       },
     { XPR_STRING_LITERAL("config.thumbnail.priority"),                         OptionKey::TypeInteger, &Option::mConfig.mThumbnailPriority,            (void *)THUMBNAIL_PRIORITY_BELOW_NORMAL },
     { XPR_STRING_LITERAL("config.thumbnail.load_by_extension"),                OptionKey::TypeInteger, &Option::mConfig.mThumbnailLoadByExt,           (void *)XPR_TRUE                       },
-    { XPR_STRING_LITERAL("config.thumbnail.cache_path"),                       OptionKey::TypeString,   Option::mConfig.mThumbnailCachePath,        (void *)XPR_STRING_LITERAL(""), XPR_MAX_PATH + 1 },
 
     { XPR_STRING_LITERAL("config.drive_last_folder"),                          OptionKey::TypeBoolean, &Option::mConfig.mDriveLastFolder,              (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.drive_with_shift_key"),                       OptionKey::TypeBoolean, &Option::mConfig.mDriveShiftKey,                (void *)XPR_FALSE                      },
@@ -348,7 +346,6 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.recent_file"),                                OptionKey::TypeBoolean, &Option::mConfig.mRecentFile,                   (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.animation_menu"),                             OptionKey::TypeBoolean, &Option::mConfig.mAnimationMenu,                (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.standard_menu"),                              OptionKey::TypeBoolean, &Option::mConfig.mStandardMenu,                 (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("config.display.ui_scale_percent"),                   OptionKey::TypeInteger, &Option::mConfig.mUIScalePercent,               (void *)100                            },
 
     { XPR_STRING_LITERAL("config.tab.switch_to_new_tab"),                      OptionKey::TypeBoolean, &Option::mConfig.mTabSwitchToNewTab,            (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.tab.auto_fit"),                               OptionKey::TypeBoolean, &Option::mConfig.mTabAutoFit,                   (void *)XPR_FALSE                      },
@@ -365,7 +362,7 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.file_scrap.context_menu"),                    OptionKey::TypeBoolean, &Option::mConfig.mFileScrapContextMenu,         (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.file_scrap.save"),                            OptionKey::TypeBoolean, &Option::mConfig.mFileScrapSave,                (void *)XPR_FALSE                      },
 
-    { XPR_STRING_LITERAL("config.clipboard.separator"),                        OptionKey::TypeString,   Option::mConfig.mClipboardSeparator,           (void *)XPR_STRING_LITERAL("\\r\\n")   },
+    { XPR_STRING_LITERAL("config.clipboard.separator"),                        OptionKey::TypeString,   Option::mConfig.mClipboardSeparator,           (void *)XPR_STRING_LITERAL("\\r\\n"),  MAX_CLIP_SEPARATOR + 1                },
 
     { XPR_STRING_LITERAL("config.working_folder.real_path"),                   OptionKey::TypeBoolean, &Option::mConfig.mWorkingFolderRealPath,        (void *)XPR_FALSE                      },
 
@@ -380,6 +377,8 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.file_op.external_move"),                      OptionKey::TypeBoolean, &Option::mConfig.mExternalMoveFileOp,           (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_op.external_delete"),                    OptionKey::TypeBoolean, &Option::mConfig.mExternalDeleteFileOp,         (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.file_op.complete_flash"),                     OptionKey::TypeBoolean, &Option::mConfig.mFileOpCompleteFlash,          (void *)XPR_FALSE                      },
+
+    { XPR_STRING_LITERAL("config.display.ui_scale_percent"),                   OptionKey::TypeInteger, &Option::mConfig.mUIScalePercent,               (void *)100                            },
 
     { XPR_STRING_LITERAL("config.history.save"),                               OptionKey::TypeBoolean, &Option::mConfig.mSaveHistory,                  (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.history.count"),                              OptionKey::TypeInteger, &Option::mConfig.mHistoryCount,                 (void *)DEF_HISTORY                    },
@@ -408,7 +407,7 @@ static const OptionKey gConfigOptionKeys[] =
 
     { XPR_STRING_LITERAL("config.update_check.enable"),                        OptionKey::TypeInteger, &Option::mConfig.mUpdateCheckEnable,            (void *)XPR_TRUE                       },
 
-    { XPR_STRING_LITERAL("config.language"),                                   OptionKey::TypeString,   Option::mConfig.mLanguage,                     (void *)XPR_STRING_LITERAL("English")  },
+    { XPR_STRING_LITERAL("config.language"),                                   OptionKey::TypeString,   Option::mConfig.mLanguage,                     (void *)XPR_STRING_LITERAL("English"), 0xff                                  },
 };
 
 void Option::Main::clearView(void)
@@ -859,14 +858,14 @@ static void loadOptionKeys(fxfile::base::ConfFileEx &aConfFile, ConfFile::Sectio
             {
                 xpr_tchar_t *sValue    = (xpr_tchar_t *)sOptionKey->mValue;
                 xpr_tchar_t *sDefValue = (xpr_tchar_t *)sOptionKey->mDefValue;
-
                 const xpr_tchar_t *sLoadedValue = aConfFile.getValueS(aSection,
                                                                       sOptionKey->mKey,
                                                                       sDefValue);
+
                 if (sOptionKey->mCapacity > 0)
                     _tcsncpy_s(sValue, sOptionKey->mCapacity, sLoadedValue, _TRUNCATE);
                 else
-                    _tcscpy(sValue, sLoadedValue);
+                    sValue[0] = XPR_STRING_LITERAL('\0');
                 break;
             }
 
@@ -974,13 +973,55 @@ double Option::getScaleFactor(void)
 {
     if (mConfig.mUIScalePercent <= 0)
         return 1.0;
-    return (double)mConfig.mUIScalePercent / 100.0;
+    xpr_sint_t sPercent = mConfig.mUIScalePercent;
+    if (sPercent < 25) sPercent = 25;
+    if (sPercent > 300) sPercent = 300;
+
+    const double sRequestedScale = (double)sPercent / 100.0;
+
+    // A literal 25% scale turns the normal 12-16 pixel Windows UI font into
+    // an unreadable 3-4 pixel font while fixed 16-pixel toolbar images remain
+    // unchanged.  Treat values below 100% as a compact-density range instead:
+    // 25/50/75/100% become 62.5/75/87.5/100% effective geometry.  This keeps
+    // all FxFile-owned surfaces legible and gives them one common scale.
+    if (sRequestedScale < 1.0)
+        return 0.5 + (sRequestedScale * 0.5);
+
+    return sRequestedScale;
 }
 
 double Option::getToolbarScaleFactor(void)
 {
-    double sBase = getScaleFactor();
-    return sBase * 1.3;
+    // Compatibility entry point for existing toolbar/clock callers.  Menus,
+    // toolbars, popup menus and pane controls must use the same effective
+    // scale; a private 1.3 multiplier was the source of divergent UI ratios.
+    return getScaleFactor();
+}
+
+void Option::scaleLogFont(LOGFONT &aLogFont)
+{
+    const double sScale = Option::getScaleFactor();
+    if (sScale > 1.01 || sScale < 0.99)
+    {
+        double sScaledHeight = (double)aLogFont.lfHeight * sScale;
+        LONG sNewHeight = (LONG)(sScaledHeight + ((sScaledHeight >= 0.0) ? 0.5 : -0.5));
+
+        // Ten pixels is the minimum at which Korean menu/list glyphs remain
+        // readable.  It also prevents a 25-percent content scale from making
+        // owner-drawn menus much smaller than Windows chrome and dialogs.
+        const LONG kMinimumReadableFontHeight = 10;
+        if (aLogFont.lfHeight < 0 && sNewHeight > -kMinimumReadableFontHeight)
+            sNewHeight = -kMinimumReadableFontHeight;
+        else if (aLogFont.lfHeight > 0 && sNewHeight < kMinimumReadableFontHeight)
+            sNewHeight = kMinimumReadableFontHeight;
+        aLogFont.lfHeight = sNewHeight;
+
+        if (aLogFont.lfWidth != 0)
+        {
+            double sScaledWidth = (double)aLogFont.lfWidth * sScale;
+            aLogFont.lfWidth = (LONG)(sScaledWidth + ((sScaledWidth >= 0.0) ? 0.5 : -0.5));
+        }
+    }
 }
 
 void Option::getScaledFont(LOGFONT &aOutLogFont, const xpr_tchar_t *aCustomFontText)
@@ -998,11 +1039,6 @@ void Option::getScaledFont(LOGFONT &aOutLogFont, const xpr_tchar_t *aCustomFontT
         aOutLogFont = sNcm.lfMessageFont;
     }
 
-    double sScale = Option::getScaleFactor();
-    if (sScale > 1.01 || sScale < 0.99)
-    {
-        aOutLogFont.lfHeight = (LONG)(aOutLogFont.lfHeight * sScale);
-        if (aOutLogFont.lfWidth != 0)
-            aOutLogFont.lfWidth = (LONG)(aOutLogFont.lfWidth * sScale);
-    }
+    Option::scaleLogFont(aOutLogFont);
 }
+

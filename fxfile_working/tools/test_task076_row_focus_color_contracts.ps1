@@ -35,6 +35,7 @@ $language = Read-Text 'src\fxfile\Languages\Korean.xml'
 $resource = Read-Text 'src\fxfile\fxfile.rc'
 $applyOption = Function-Body $explorer 'void ExplorerCtrl::applyOption' 'void ExplorerCtrl::applyTextColor'
 $cacheRowFocusOption = Function-Body $explorer 'void ExplorerCtrl::cacheRowFocusOption' 'void ExplorerCtrl::setOption'
+$reportSelectionDraw = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawParentFolderIcon'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
 $thumbnailDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdrawThumbnail' 'LRESULT ExplorerCtrl::OnThumbnailProc'
 
@@ -57,12 +58,12 @@ Check 'Every Explorer pane receives its own configured row-focus color' (
 Check 'Selected active report rows use the configured color in the final item paint without changing selection state' (
     $explorerHeader.Contains('mRowFocusColor') -and
     $customDraw.Contains('XPR_IS_TRUE(mOption.mFullRowSelect)') -and
-    $customDraw.Contains('isFocusedSelectedItem(sItemIndex)') -and
+    $reportSelectionDraw.Contains('if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))') -and
+    -not $reportSelectionDraw.Contains('isFocusedSelectedItem(sItemIndex)') -and
     $customDraw.Contains('CDRF_NOTIFYPOSTPAINT') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrText   = mRowFocusTextColor;') -and
+    $reportSelectionDraw.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
     $customDraw.Contains('CDRF_NEWFONT') -and
-    $customDraw.Contains('XPR_IS_TRUE(sFocusedSelected)') -and
+    $customDraw.Contains('applyReportSelectionDrawState(sNmLvCustomDraw);') -and
     -not $customDraw.Contains('SetItemState(') -and
     -not $customDraw.Contains('SetItem('))
 Check 'Custom colors receive cached contrast text and do not add hot-path allocation or scheduling' (

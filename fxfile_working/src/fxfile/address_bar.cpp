@@ -1053,13 +1053,7 @@ void AddressBar::setCustomFont(CFont *aFont)
     if (aFont != XPR_NULL && aFont->m_hObject != XPR_NULL)
     {
         aFont->GetLogFont(&sLogFont);
-        double sScale = Option::getScaleFactor();
-        if (sScale > 1.01 || sScale < 0.99)
-        {
-            sLogFont.lfHeight = (LONG)(sLogFont.lfHeight * sScale);
-            if (sLogFont.lfWidth != 0)
-                sLogFont.lfWidth = (LONG)(sLogFont.lfWidth * sScale);
-        }
+        Option::scaleLogFont(sLogFont);
     }
     else
     {

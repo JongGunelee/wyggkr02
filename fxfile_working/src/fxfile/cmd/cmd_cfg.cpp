@@ -23,6 +23,7 @@ namespace fxfile
 {
 namespace cmd
 {
+
 xpr_sint_t SaveOptionCommand::canExecute(CommandContext &aContext)
 {
     return StateEnable;

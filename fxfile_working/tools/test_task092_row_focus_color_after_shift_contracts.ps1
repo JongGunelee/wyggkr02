@@ -36,8 +36,9 @@ $leftDown = Function-Body $explorer 'void ExplorerCtrl::OnLButtonDown' 'void Exp
 $leftUp = Function-Body $explorer 'void ExplorerCtrl::OnLButtonUp' 'void ExplorerCtrl::OnRButtonDown'
 $keyUp = Function-Body $explorer 'void ExplorerCtrl::OnKeyUp' 'void ExplorerCtrl::OnMarqueebegin'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
-$fill = Function-Body $explorer 'void ExplorerCtrl::fillRowFocusBackground' 'void ExplorerCtrl::applyRowFocusDrawState'
 $drawState = Function-Body $explorer 'void ExplorerCtrl::applyRowFocusDrawState' 'void ExplorerCtrl::OnCustomdraw('
+$reportSelection = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawFinalReportSelection'
+$finalPaint = Function-Body $explorer 'void ExplorerCtrl::drawFinalReportSelection' 'void ExplorerCtrl::drawParentFolderIcon'
 $setOption = Function-Body $explorer 'void ExplorerCtrl::setOption' 'void ExplorerCtrl::setImageList'
 $paneSetViewIndex = Function-Body $pane 'void ExplorerPane::setViewIndex' 'void ExplorerPane::setExplorerObserver'
 $splitView = Function-Body $mainFrame 'void MainFrame::splitView' 'xpr_sint_t MainFrame::getViewCount'
@@ -74,15 +75,21 @@ Check 'Paint targets the native focused selected row before the Shift anchor fal
     $snapshot.Contains('GetItemState(') -and $snapshot.Contains('LVIS_SELECTED'))
 Check 'Mouse repaint is requested only after the native click notification identifies the final row' (
     $click.Contains('mFocusedItemIndex = sNmItemActivate->iItem;') -and
-    $click.Contains('Invalidate(XPR_FALSE);') -and
+    $click.Contains('redrawFocusItemChange(sOldFocused, sNmItemActivate->iItem);') -and
+    -not $click.Contains('Invalidate(XPR_FALSE);') -and
+    -not $leftDown.Contains('mFocusedItemIndex =') -and
     -not $leftDown.Contains('Invalidate('))
 Check 'Keyboard repaint reads the final focused selected row after native navigation' (
     $keySuperPos -ge 0 -and $keyFocusedPos -gt $keySuperPos -and
-    $keyUp.Contains('Invalidate(XPR_FALSE);'))
+    $keyUp.Contains('redrawFocusItemChange(sOldFocused, sItemIndex);') -and
+    -not $keyUp.Contains('Invalidate(XPR_FALSE);'))
 Check 'Report paint fills the focused row with the exact configured color' (
-    $fill.Contains('::SetDCBrushColor(aNmLvCustomDraw->nmcd.hdc, mOption.mRowFocusColor)') -and
-    $fill.Contains('::FillRect(') -and
-    $customDraw.Contains('applyRowFocusDrawState(sNmLvCustomDraw);'))
+    $drawState.Contains('clrTextBk = mOption.mRowFocusColor;') -and
+    $drawState.Contains('clrText   = mRowFocusTextColor;') -and
+    $reportSelection.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
+    -not $reportSelection.Contains('::FillRect(') -and
+    $finalPaint.Contains('sBackgroundColor = mOption.mRowFocusColor;') -and
+    $finalPaint.Contains('::FillRect('))
 Check 'Content and tile layouts mapped to native report view use the same row-focus paint path' (
     ([regex]::Matches($customDraw, 'XPR_IS_TRUE\(isReportView\(\)\)').Count -ge 2) -and
     -not $customDraw.Contains('getViewStyle() == VIEW_STYLE_DETAILS'))
@@ -95,7 +102,9 @@ Check 'Row-focus paint remains allocation-free and never mutates native selectio
     -not $customDraw.Contains('SetItemState(') -and
     -not $customDraw.Contains('SetSelectionMark(') -and
     -not $customDraw.Contains('PostMessage(') -and
-    -not $customDraw.Contains('SetTimer('))
+    -not $customDraw.Contains('SetTimer(') -and
+    -not $finalPaint.Contains('SetItemState(') -and
+    -not $finalPaint.Contains('SetSelectionMark('))
 Check 'Shift range anchors remain owned by the native ListView mouse handlers' (
     $leftDown.Contains('super::OnLButtonDown(aFlags, aPoint);') -and
     $leftUp.Contains('super::OnLButtonUp(aFlags, aPoint);') -and

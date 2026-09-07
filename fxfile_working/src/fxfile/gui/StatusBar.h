@@ -50,6 +50,7 @@ public:
 
 public:
     xpr_sint_t getDefaultHeight(void);
+    void updateUIScale(void);
 
 protected:
     struct PaneItem;

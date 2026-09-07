@@ -201,6 +201,17 @@ void PathBar::setPath(LPITEMIDLIST aFullPidl)
     if (XPR_IS_NULL(aFullPidl))
         return;
 
+    // A same-folder refresh reaches this method for every pane even though the
+    // path icon has not changed.  The old implementation overwrote mIcon with
+    // a newly allocated SHGFI_ICON handle without releasing the previous one.
+    // That leaked one USER object and three GDI objects per refresh and, after
+    // prolonged six-pane use, increased repaint latency enough to expose blank
+    // ListView frames.  Keep the existing icon for an identical PIDL; on a real
+    // path change, release the owned handle before acquiring its replacement.
+    const xpr_bool_t sSamePath =
+        (XPR_IS_NOT_NULL(mFullPidl) &&
+         fxfile::base::Pidl::compare(mFullPidl, aFullPidl) == 0) ? XPR_TRUE : XPR_FALSE;
+
     COM_FREE(mFullPidl);
     mFullPidl = fxfile::base::Pidl::clone(aFullPidl);
 
@@ -215,8 +226,12 @@ void PathBar::setPath(LPITEMIDLIST aFullPidl)
         GetDispFullPath(mFullPidl, mPath);
     }
 
-    if (XPR_IS_TRUE(mIsIcon))
+    if (XPR_IS_TRUE(mIsIcon) &&
+        (XPR_IS_FALSE(sSamePath) || XPR_IS_NULL(mIcon)))
+    {
+        DESTROY_ICON(mIcon);
         mIcon = GetItemIcon(mFullPidl);
+    }
 
     SetWindowText(mPath);
 

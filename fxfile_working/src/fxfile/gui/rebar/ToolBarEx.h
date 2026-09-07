@@ -143,6 +143,7 @@ protected:
     CImageList      m_imageListCold;
     CImageList      m_imageListHot;
     CImageList      m_imageListDisabled;
+    CFont           m_fontUIScale;
     COLORREF        m_clrMask;
     HGLOBAL         m_hToolbarData;
 

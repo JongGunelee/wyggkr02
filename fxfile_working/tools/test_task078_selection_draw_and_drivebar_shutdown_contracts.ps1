@@ -28,18 +28,18 @@ $explorerHeader = Read-Text 'src\fxfile\explorer_ctrl.h'
 $pane = Read-Text 'src\fxfile\explorer_pane.cpp'
 $driveToolbar = Read-Text 'src\fxfile\drive_toolbar.cpp'
 $customDraw = Function-Body $explorer 'void ExplorerCtrl::OnCustomdraw(' 'void ExplorerCtrl::OnCustomdrawThumbnail'
+$reportSelection = Function-Body $explorer 'void ExplorerCtrl::applyReportSelectionDrawState' 'void ExplorerCtrl::drawParentFolderIcon'
 $filtering = Function-Body $explorer 'void ExplorerCtrl::applyCustomDrawFiltering' 'void ExplorerCtrl::OnCustomdraw'
 $destroyDrivePathBar = Function-Body $pane 'void ExplorerPane::destroyDrivePathBar' 'DrivePathBar *ExplorerPane::getDrivePathBar'
 $destroyDriveBar = Function-Body $driveToolbar 'void DriveToolBar::destroyDriveBar' 'void DriveToolBar::refresh'
 $iconUpdate = Function-Body $driveToolbar 'LRESULT DriveToolBar::OnDriveIconUpdate' 'void DriveToolBar::createDriveBar'
 
-Check 'Custom draw obtains selection from the list model, then handles full-row and first-cell paint separately at final item paint' (
+Check 'Custom draw obtains every live selection from the list model, then handles full-row and first-cell paint separately at final item paint' (
     $explorerHeader.Contains('isFocusedSelectedItem') -and
     $explorer.Contains('mFocusedItemIndex') -and
     $customDraw.Contains('XPR_IS_TRUE(mOption.mFullRowSelect)') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrTextBk = mOption.mRowFocusColor;') -and
-    $customDraw.Contains('sNmLvCustomDraw->clrText   = mRowFocusTextColor;') -and
-    $customDraw.Contains('XPR_IS_TRUE(sFocusedSelected)') -and
+    $reportSelection.Contains('applyRowFocusDrawState(aNmLvCustomDraw);') -and
+    $reportSelection.Contains('if (!XPR_TEST_BITS(sNativeState, LVIS_SELECTED))') -and
     $customDraw.Contains('CDRF_NEWFONT'))
 Check 'Item notifications restore filtering before the focused selection receives final application-owned paint' (
     $filtering.Contains('mOption.mTextColorType') -and

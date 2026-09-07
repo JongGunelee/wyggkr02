@@ -19,8 +19,9 @@
 namespace fxfile
 {
 ShellIcon::ShellIcon(void)
-    : mHwnd(XPR_NULL), mMsg(0)
-    , mEvent(XPR_NULL)
+    : mEvent(XPR_NULL)
+    , mGeneration(1)
+    , mHwnd(XPR_NULL), mMsg(0)
 {
 }
 
@@ -35,19 +36,37 @@ ShellIcon::~ShellIcon(void)
 
 void ShellIcon::clear(void)
 {
-    xpr::MutexGuard sLockGuard(mMutex);
+    DWORD sWorkerThreadId = 0;
 
-    IconDeque::iterator sIterator;
-    AsyncIcon *sAsyncIcon;
-
-    sIterator = mIconDeque.begin();
-    for (; sIterator != mIconDeque.end(); ++sIterator)
     {
-        sAsyncIcon = *sIterator;
-        XPR_SAFE_DELETE(sAsyncIcon);
+        xpr::MutexGuard sLockGuard(mMutex);
+
+        // Invalidate both queued work and the one request that may already be
+        // inside a shell extension.  Each pane owns its own generation.
+        ++mGeneration;
+        if (mGeneration == 0)
+            mGeneration = 1;
+
+        IconDeque::iterator sIterator;
+        AsyncIcon *sAsyncIcon;
+
+        sIterator = mIconDeque.begin();
+        for (; sIterator != mIconDeque.end(); ++sIterator)
+        {
+            sAsyncIcon = *sIterator;
+            XPR_SAFE_DELETE(sAsyncIcon);
+        }
+
+        mIconDeque.clear();
+
+        if (XPR_IS_NOT_NULL(mThread.getThreadHandle().mHandle))
+            sWorkerThreadId = (DWORD)mThread.getThreadId();
     }
 
-    mIconDeque.clear();
+    // Never hold mMutex while asking COM to cancel: the worker must be able to
+    // leave the shell call and acquire that mutex for its generation gate.
+    if (sWorkerThreadId != 0)
+        ::CoCancelCall(sWorkerThreadId, 0);
 }
 
 void ShellIcon::stopThread(void)
@@ -117,6 +136,7 @@ xpr_bool_t ShellIcon::getAsyncIcon(AsyncIcon *aAsyncIcon)
         if (mIconDeque.size() >= kMaxQueueSize)
             return XPR_FALSE;
 
+        aAsyncIcon->mGeneration = mGeneration;
         mIconDeque.push_back(aAsyncIcon);
 
         ::SetEvent(mEvent);
@@ -237,6 +257,22 @@ xpr_sint_t ShellIcon::runThread(xpr::Thread &aThread)
         }
 
         COM_RELEASE(sShellFolder);
+
+        xpr_bool_t sCurrentGeneration = XPR_FALSE;
+        {
+            xpr::MutexGuard sLockGuard(mMutex);
+            sCurrentGeneration = (sAsyncIcon->mGeneration == mGeneration &&
+                                  mThread.isStop() == XPR_FALSE) ? XPR_TRUE : XPR_FALSE;
+        }
+
+        // A pane may navigate while its worker is blocked in a shell extension.
+        // Discard that eventual stale completion before it reaches the UI queue;
+        // ExplorerCtrl::mCode remains the second, UI-side identity guard.
+        if (XPR_IS_FALSE(sCurrentGeneration))
+        {
+            XPR_SAFE_DELETE(sAsyncIcon);
+            continue;
+        }
 
         sResult = ::PostMessage(mHwnd, mMsg, (WPARAM)sAsyncIcon, (LPARAM)XPR_NULL);
         if (XPR_IS_FALSE(sResult))

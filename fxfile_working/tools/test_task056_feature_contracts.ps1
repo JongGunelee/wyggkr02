@@ -36,7 +36,7 @@ Assert-True ($null -ne $korean.DocumentElement) 'Korean language XML must parse.
 # Cache path option: persistence, bounded load, UI and runtime propagation.
 Assert-True ($optionH.Contains('mThumbnailCachePath[XPR_MAX_PATH + 1]')) 'Config must own a bounded thumbnail cache path.'
 Assert-True ($optionCpp.Contains('config.thumbnail.cache_path')) 'Thumbnail cache path must be persisted.'
-Assert-True ($optionCpp.Contains('XPR_MAX_PATH + 1 },')) 'Thumbnail cache key must declare its destination capacity.'
+Assert-True ([regex]::IsMatch($optionCpp, 'config\.thumbnail\.cache_path[^\r\n]*mThumbnailCachePath[^\r\n]*XPR_MAX_PATH\s*\+\s*1')) 'Thumbnail cache key must declare its destination capacity.'
 Assert-True ($optionCpp.Contains('_tcsncpy_s(sValue, sOptionKey->mCapacity, sLoadedValue, _TRUNCATE)')) 'Bounded string option load must prevent corrupt-config overflow.'
 Assert-True ($explorerH.Contains('mThumbnailCachePath[XPR_MAX_PATH + 1]')) 'Explorer option must carry the cache path.'
 Assert-True ($paneCpp.Contains('mThumbnailCachePath')) 'ExplorerPane must copy the cache path.'
@@ -94,3 +94,4 @@ if ($script:Failed.Count -gt 0) {
 }
 
 Write-Host "PASS: $($script:Passed) Task056 cache/column contracts; no user file or cache was created, moved, or deleted."
+exit 0
