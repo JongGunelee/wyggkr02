@@ -553,7 +553,15 @@ CWnd *MainFrame::onSplitterPaneCreate(Splitter &aSplitter, xpr_sint_t aRow, xpr_
     sExplorerView->setObserver(dynamic_cast<ExplorerViewObserver *>(this));
     sExplorerView->setViewIndex(sViewIndex);
 
-    DWORD sStyle = WS_CHILD | WS_VISIBLE | WS_BORDER;
+    // During initial restoration the frame prepares every saved pane as one
+    // batch. Creating ExplorerView with WS_VISIBLE let an out-of-process
+    // compositor or inspector observe 1..N-1 file lists in the short interval
+    // before OnCreateClient() hid the completed splitter. Create startup panes
+    // hidden at the window-style boundary; runtime split changes keep their
+    // historical immediate visibility after mDeferStartupViews clears.
+    DWORD sStyle = WS_CHILD | WS_BORDER;
+    if (XPR_IS_FALSE(mDeferStartupViews))
+        sStyle |= WS_VISIBLE;
     xpr_uint_t sId = AFX_IDW_EXPLORER_VIEW + aRow * sMaxColumnCount + aColumn;
 
     if (sExplorerView->Create(XPR_NULL, XPR_NULL, sStyle, CRect(0, 0, 0, 0), this, sId, XPR_NULL) == XPR_FALSE)

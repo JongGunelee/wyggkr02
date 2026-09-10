@@ -1159,6 +1159,9 @@ function Get-SmokeExpectedViewCount([string]$StageRoot) {
     $mainConfig = Join-Path $StageRoot 'fxfile\fxfile-main.conf'
     $rowCount = 1
     $columnCount = 1
+    $splitLocked = $false
+    $lockedRowCount = 0
+    $lockedColumnCount = 0
     foreach ($line in Get-Content -LiteralPath $mainConfig) {
         if ($line -match '^main\.view\.row_count\s*=\s*(\d+)') {
             $rowCount = [int]$Matches[1]
@@ -1166,6 +1169,19 @@ function Get-SmokeExpectedViewCount([string]$StageRoot) {
         elseif ($line -match '^main\.view\.column_count\s*=\s*(\d+)') {
             $columnCount = [int]$Matches[1]
         }
+        elseif ($line -match '^main\.view\.split_locked\s*=\s*(\d+)') {
+            $splitLocked = ([int]$Matches[1] -ne 0)
+        }
+        elseif ($line -match '^main\.view\.locked_row_count\s*=\s*(\d+)') {
+            $lockedRowCount = [int]$Matches[1]
+        }
+        elseif ($line -match '^main\.view\.locked_column_count\s*=\s*(\d+)') {
+            $lockedColumnCount = [int]$Matches[1]
+        }
+    }
+    if ($splitLocked -and $lockedRowCount -ge 1 -and $lockedColumnCount -ge 1) {
+        $rowCount = $lockedRowCount
+        $columnCount = $lockedColumnCount
     }
     Assert-True ($rowCount -ge 1 -and $columnCount -ge 1) "Invalid saved view layout: ${rowCount}x${columnCount}"
     return $rowCount * $columnCount

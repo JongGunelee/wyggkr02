@@ -366,6 +366,9 @@ protected:
     void       postEnumeration(xpr_bool_t aUpdateBuddy);
 
     void watchFileChange(void);
+    void watchFileChangeLegacy(void);
+    void scheduleDirectoryRefresh(void);
+    void reconcileDirectoryRefresh(void);
 
     void addParentItem(void);
     void addDriveItem(void);
@@ -528,6 +531,8 @@ protected:
     AdvFileChangeWatcher::AdvWatchId mAdvWatchId;
     xpr_bool_t                       mNotify;
     xpr_bool_t                       mDestroying;
+    xpr_bool_t                       mDeferredDirectoryRefresh;
+    xpr::string                      mDeferredDirectoryRefreshPath;
 
     typedef std::tr1::unordered_multimap<xpr::string, LPLVITEMDATA> NameMap;
     typedef std::pair<NameMap::iterator, NameMap::iterator> NameMapPairIterator;

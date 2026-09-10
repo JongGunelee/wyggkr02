@@ -448,6 +448,31 @@ public:
         }
     }
 
+    void appendWatchFailedNotifies(NotifyList &aNotifyList)
+    {
+        const xpr_sint64_t sNow = xpr::timer_ms();
+        WatchList::const_iterator sIterator = mWatchList.begin();
+        for (; sIterator != mWatchList.end(); ++sIterator)
+        {
+            AdvWatchItem *sWatchItem = *sIterator;
+            if (XPR_IS_NULL(sWatchItem))
+                continue;
+
+            NotifyInfo *sNotifyInfo = new NotifyInfo;
+            if (XPR_IS_NULL(sNotifyInfo))
+                continue;
+
+            sNotifyInfo->mHwnd        = sWatchItem->mHwnd;
+            sNotifyInfo->mMsg         = sWatchItem->mMsg;
+            sNotifyInfo->mAdvWatchId  = sWatchItem->mAdvWatchId;
+            sNotifyInfo->mEvent       = EventWatchFailed;
+            sNotifyInfo->mDir         = sWatchItem->mPath;
+            sNotifyInfo->mNotifyCount = 1;
+            sNotifyInfo->mTime        = sNow;
+            aNotifyList.push_back(sNotifyInfo);
+        }
+    }
+
     void OnCompletionRoutine(LPOVERLAPPED aOverlapped,
                              DWORD aNumberOfBytes,
                              DWORD aError,
@@ -537,7 +562,15 @@ public:
         // Rearm only after the completed buffer has been fully consumed.  One
         // DriveWatchItem owns exactly one in-flight OVERLAPPED request.
         if (XPR_IS_FALSE(mStopping) && XPR_IS_FALSE(readDirectoryChanges()))
+        {
+            // The public watch id is assigned before the monitor thread opens
+            // and arms the directory handle.  A rearm failure must therefore
+            // be made visible to the owner; otherwise the pane believes it is
+            // still watched forever.  Reconcile once, then let ExplorerCtrl
+            // switch to the legacy watcher.
             appendUpdateDirNotifies(aNotifyList);
+            appendWatchFailedNotifies(aNotifyList);
+        }
     }
 
     void OnFileChanged(AdvWatchOverlapped *aAdvWatchOverlapped, FILE_NOTIFY_INFORMATION *aFileNotifyInformation, NotifyList &aNotifyList)
@@ -1034,19 +1067,28 @@ void AdvFileChangeWatcher::processTasks(TaskList &aTaskList)
 
 void AdvFileChangeWatcher::registerTask(Task &aTask)
 {
-    xpr::string sRootPath;
-    if (!getRootPath(aTask.mAdvWatchItem->mPath, sRootPath))
+    if (XPR_IS_NULL(aTask.mAdvWatchItem))
         return;
 
-    xpr_bool_t sResult = XPR_FALSE;
+    xpr::string sRootPath;
+    if (!getRootPath(aTask.mAdvWatchItem->mPath, sRootPath))
+    {
+        queueWatchFailedNotify(*aTask.mAdvWatchItem);
+        return;
+    }
+
     DriveWatchItem *sDriveWatchItem = XPR_NULL;
+    xpr_bool_t sNewDriveWatchItem = XPR_FALSE;
 
     DriveWatchMap::iterator sIterator = mDriveWatchMap.find(sRootPath);
     if (sIterator == mDriveWatchMap.end())
     {
         sDriveWatchItem = new DriveWatchItem;
         if (XPR_IS_NOT_NULL(sDriveWatchItem))
+        {
             mDriveWatchMap[sRootPath] = sDriveWatchItem;
+            sNewDriveWatchItem = XPR_TRUE;
+        }
     }
     else
     {
@@ -1055,38 +1097,73 @@ void AdvFileChangeWatcher::registerTask(Task &aTask)
             mDriveWatchMap.erase(sIterator);
     }
 
-    if (XPR_IS_NOT_NULL(sDriveWatchItem))
+    if (XPR_IS_NULL(sDriveWatchItem))
     {
-        AdvWatchId sNewAdvWatchId;
-        sNewAdvWatchId = sDriveWatchItem->registerWatch(sRootPath, aTask.mAdvWatchItem);
-        if (sNewAdvWatchId != InvalidAdvWatchId)
-        {
-            if (sDriveWatchItem->getRegisteredCount() == 1)
-            {
-                sDriveWatchItem->readDirectoryChanges();
-            }
-
-            sResult = XPR_TRUE;
-        }
-        else
-        {
-            XPR_SAFE_DELETE(sDriveWatchItem);
-            mDriveWatchMap.erase(sRootPath);
-            return;
-        }
+        queueWatchFailedNotify(*aTask.mAdvWatchItem);
+        return;
     }
 
-    if (XPR_IS_FALSE(sResult))
+    const AdvWatchId sNewAdvWatchId =
+        sDriveWatchItem->registerWatch(sRootPath, aTask.mAdvWatchItem);
+    if (sNewAdvWatchId == InvalidAdvWatchId)
+    {
+        queueWatchFailedNotify(*aTask.mAdvWatchItem);
+        if (XPR_IS_TRUE(sNewDriveWatchItem) &&
+            sDriveWatchItem->getRegisteredCount() == 0)
+        {
+            mDriveWatchMap.erase(sRootPath);
+            XPR_SAFE_DELETE(sDriveWatchItem);
+        }
         return;
+    }
 
-    if (XPR_IS_NOT_NULL(sDriveWatchItem))
-        mIdDriveWatchMap[aTask.mAdvWatchItem->mAdvWatchId] = sDriveWatchItem;
+    if (sDriveWatchItem->getRegisteredCount() == 1 &&
+        XPR_IS_FALSE(sDriveWatchItem->readDirectoryChanges()))
+    {
+        // registerWatch() assigned the public id, but the asynchronous
+        // ReadDirectoryChangesW request did not become live.  Report that
+        // state before deleting the registered item so the pane can install
+        // its fallback watcher instead of keeping a false-success id.
+        queueWatchFailedNotify(*aTask.mAdvWatchItem);
+        sDriveWatchItem->unregisterWatch(sNewAdvWatchId);
+        if (sDriveWatchItem->getRegisteredCount() == 0)
+        {
+            mDriveWatchMap.erase(sRootPath);
+            XPR_SAFE_DELETE(sDriveWatchItem);
+        }
+        aTask.mAdvWatchItem = XPR_NULL;
+        return;
+    }
+
+    mIdDriveWatchMap[sNewAdvWatchId] = sDriveWatchItem;
 
     aTask.mAdvWatchItem = XPR_NULL;
 }
 
+void AdvFileChangeWatcher::queueWatchFailedNotify(const AdvWatchItem &aAdvWatchItem)
+{
+    NotifyInfo *sNotifyInfo = new NotifyInfo;
+    if (XPR_IS_NULL(sNotifyInfo))
+        return;
+
+    sNotifyInfo->mHwnd        = aAdvWatchItem.mHwnd;
+    sNotifyInfo->mMsg         = aAdvWatchItem.mMsg;
+    sNotifyInfo->mAdvWatchId  = aAdvWatchItem.mAdvWatchId;
+    sNotifyInfo->mEvent       = EventWatchFailed;
+    sNotifyInfo->mDir         = aAdvWatchItem.mPath;
+    sNotifyInfo->mNotifyCount = 1;
+    sNotifyInfo->mTime        = xpr::timer_ms();
+
+    NotifyList sNotifyList;
+    sNotifyList.push_back(sNotifyInfo);
+    queueNotifies(sNotifyList);
+}
+
 void AdvFileChangeWatcher::modifyTask(Task &aTask)
 {
+    if (XPR_IS_NULL(aTask.mAdvWatchItem))
+        return;
+
     DriveWatchItem *sOldDriveWatchItem = XPR_NULL;
     DriveWatchItem *sNewDriveWatchItem = XPR_NULL;
 
@@ -1096,30 +1173,41 @@ void AdvFileChangeWatcher::modifyTask(Task &aTask)
 
     AdvWatchId sNewAdvWatchId = InvalidAdvWatchId;
 
-    xpr_bool_t sResult = aTask.mAdvWatchItem->isValidate();
-
     // compare
     if (XPR_IS_NOT_NULL(sOldDriveWatchItem))
     {
         AdvWatchItem *sOldAdvWatchItem = sOldDriveWatchItem->getRegisteredItem(aTask.mOldAdvWatchId);
         if (XPR_IS_NOT_NULL(sOldAdvWatchItem) && XPR_IS_NOT_NULL(aTask.mAdvWatchItem))
         {
-            if (sOldAdvWatchItem->mPath == aTask.mAdvWatchItem->mPath)
+            if (_tcsicmp(sOldAdvWatchItem->mPath.c_str(),
+                         aTask.mAdvWatchItem->mPath.c_str()) == 0)
             {
                 if (sOldAdvWatchItem->mAdvWatchId != aTask.mAdvWatchItem->mAdvWatchId)
                 {
-                    // new item change
+                    // Replace only the subscriber.  The directory handle and
+                    // its already-live OVERLAPPED request remain owned by the
+                    // same DriveWatchItem.
                     sOldDriveWatchItem->unregisterWatch(aTask.mOldAdvWatchId);
-                    mIdDriveWatchMap.erase(sOldIdIterator);
+                    mIdDriveWatchMap.erase(aTask.mOldAdvWatchId);
 
                     xpr::string sRootPath;
                     if (getRootPath(aTask.mAdvWatchItem->mPath, sRootPath))
                     {
-                        sOldDriveWatchItem->registerWatch(sRootPath, aTask.mAdvWatchItem);
+                        sNewAdvWatchId = sOldDriveWatchItem->registerWatch(
+                            sRootPath, aTask.mAdvWatchItem);
+                        if (sNewAdvWatchId != InvalidAdvWatchId)
+                        {
+                            mIdDriveWatchMap[sNewAdvWatchId] = sOldDriveWatchItem;
+                            aTask.mAdvWatchItem = XPR_NULL;
+                            return;
+                        }
+                    }
 
-                        mIdDriveWatchMap[aTask.mAdvWatchItem->mAdvWatchId] = sOldDriveWatchItem;
-
-                        aTask.mAdvWatchItem = XPR_NULL;
+                    queueWatchFailedNotify(*aTask.mAdvWatchItem);
+                    if (sOldDriveWatchItem->getRegisteredCount() == 0)
+                    {
+                        mDriveWatchMap.erase(sOldDriveWatchItem->mRootPath);
+                        XPR_SAFE_DELETE(sOldDriveWatchItem);
                     }
                 }
 
@@ -1133,18 +1221,23 @@ void AdvFileChangeWatcher::modifyTask(Task &aTask)
     {
         sOldDriveWatchItem->unregisterWatch(aTask.mOldAdvWatchId);
     }
+    mIdDriveWatchMap.erase(aTask.mOldAdvWatchId);
 
     // new
     {
         xpr::string sRootPath;
         if (getRootPath(aTask.mAdvWatchItem->mPath, sRootPath))
         {
+            xpr_bool_t sCreatedDriveWatchItem = XPR_FALSE;
             DriveWatchMap::iterator sIterator = mDriveWatchMap.find(sRootPath);
             if (sIterator == mDriveWatchMap.end())
             {
                 sNewDriveWatchItem = new DriveWatchItem;
                 if (XPR_IS_NOT_NULL(sNewDriveWatchItem))
+                {
                     mDriveWatchMap[sRootPath] = sNewDriveWatchItem;
+                    sCreatedDriveWatchItem = XPR_TRUE;
+                }
             }
             else
             {
@@ -1157,15 +1250,23 @@ void AdvFileChangeWatcher::modifyTask(Task &aTask)
                 sNewAdvWatchId = sNewDriveWatchItem->registerWatch(sRootPath, aTask.mAdvWatchItem);
             if (sNewAdvWatchId != InvalidAdvWatchId)
             {
-                if (sNewDriveWatchItem->getRegisteredCount() == 1)
+                if (sNewDriveWatchItem->getRegisteredCount() == 1 &&
+                    XPR_IS_FALSE(sNewDriveWatchItem->readDirectoryChanges()))
                 {
-                    sNewDriveWatchItem->readDirectoryChanges();
+                    queueWatchFailedNotify(*aTask.mAdvWatchItem);
+                    sNewDriveWatchItem->unregisterWatch(sNewAdvWatchId);
+                    aTask.mAdvWatchItem = XPR_NULL;
+                    sNewAdvWatchId = InvalidAdvWatchId;
                 }
             }
-            else
+
+            if (XPR_IS_NOT_NULL(sNewDriveWatchItem) &&
+                sNewDriveWatchItem->getRegisteredCount() == 0 &&
+                (sNewAdvWatchId == InvalidAdvWatchId ||
+                 XPR_IS_TRUE(sCreatedDriveWatchItem)))
             {
-                XPR_SAFE_DELETE(sNewDriveWatchItem);
                 mDriveWatchMap.erase(sRootPath);
+                XPR_SAFE_DELETE(sNewDriveWatchItem);
             }
         }
     }
@@ -1180,14 +1281,13 @@ void AdvFileChangeWatcher::modifyTask(Task &aTask)
         }
     }
 
-    if (sOldIdIterator != mIdDriveWatchMap.end())
-        mIdDriveWatchMap.erase(sOldIdIterator);
-
     if (XPR_IS_NOT_NULL(sNewDriveWatchItem) && sNewAdvWatchId != InvalidAdvWatchId)
-        mIdDriveWatchMap[aTask.mAdvWatchItem->mAdvWatchId] = sNewDriveWatchItem;
+        mIdDriveWatchMap[sNewAdvWatchId] = sNewDriveWatchItem;
 
     if (sNewAdvWatchId != InvalidAdvWatchId)
         aTask.mAdvWatchItem = XPR_NULL;
+    else if (XPR_IS_NOT_NULL(aTask.mAdvWatchItem))
+        queueWatchFailedNotify(*aTask.mAdvWatchItem);
 }
 
 void AdvFileChangeWatcher::unregisterTask(Task &aTask)
@@ -1260,6 +1360,15 @@ void AdvFileChangeWatcher::queueNotifies(NotifyList &aNotifyList)
         if (XPR_IS_NULL(sNotifyInfo))
             continue;
 
+        // A watch-health control message must never be coalesced into an
+        // ordinary directory summary.  ExplorerCtrl needs the exact signal
+        // to abandon a false-success advanced watch and install its fallback.
+        if (sNotifyInfo->mEvent == EventWatchFailed)
+        {
+            mNotifyList.push_back(sNotifyInfo);
+            continue;
+        }
+
         xpr_bool_t sMerged = XPR_FALSE;
 
         // Repeated writes to the same file are common (cloud sync, AV and
@@ -1296,7 +1405,8 @@ void AdvFileChangeWatcher::queueNotifies(NotifyList &aNotifyList)
         {
             NotifyInfo *sPending = *sIterator;
             if (XPR_IS_NULL(sPending) ||
-                sPending->mAdvWatchId != sNotifyInfo->mAdvWatchId)
+                sPending->mAdvWatchId != sNotifyInfo->mAdvWatchId ||
+                sPending->mEvent == EventWatchFailed)
             {
                 ++sIterator;
                 continue;
@@ -1339,8 +1449,18 @@ void AdvFileChangeWatcher::queueNotifies(NotifyList &aNotifyList)
             // The queue can only remain full here if it consists of other
             // watchers.  Collapse the oldest watcher's records too; silently
             // dropping one exact event would leave a stale row indefinitely.
-            NotifyInfo *sOldest = mNotifyList.front();
-            mNotifyList.pop_front();
+            NotifyList::iterator sOldestIterator = mNotifyList.begin();
+            while (sOldestIterator != mNotifyList.end() &&
+                   (XPR_IS_NULL(*sOldestIterator) ||
+                    (*sOldestIterator)->mEvent == EventWatchFailed))
+                ++sOldestIterator;
+
+            NotifyInfo *sOldest = XPR_NULL;
+            if (sOldestIterator != mNotifyList.end())
+            {
+                sOldest = *sOldestIterator;
+                mNotifyList.erase(sOldestIterator);
+            }
             if (XPR_IS_NOT_NULL(sOldest))
             {
                 NotifyList::iterator sOldIterator = mNotifyList.begin();
@@ -1348,7 +1468,8 @@ void AdvFileChangeWatcher::queueNotifies(NotifyList &aNotifyList)
                 {
                     NotifyInfo *sOldPending = *sOldIterator;
                     if (XPR_IS_NOT_NULL(sOldPending) &&
-                        sOldPending->mAdvWatchId == sOldest->mAdvWatchId)
+                        sOldPending->mAdvWatchId == sOldest->mAdvWatchId &&
+                        sOldPending->mEvent != EventWatchFailed)
                     {
                         sOldest->mNotifyCount += sOldPending->mNotifyCount;
                         XPR_SAFE_DELETE(sOldPending);
@@ -1402,6 +1523,12 @@ xpr_sint_t AdvFileChangeWatcher::runNotifyThread(Thread &aThread)
                 NotifyList &sPending = mNotifyMap[sNotifyInfo->mAdvWatchId];
                 xpr_bool_t sMerged = XPR_FALSE;
 
+                if (sNotifyInfo->mEvent == EventWatchFailed)
+                {
+                    sPending.push_back(sNotifyInfo);
+                    continue;
+                }
+
                 if (sPending.empty() == false &&
                     sPending.front()->mEvent == EventUpdateDir)
                 {
@@ -1412,14 +1539,21 @@ xpr_sint_t AdvFileChangeWatcher::runNotifyThread(Thread &aThread)
 
                 if (sNotifyInfo->mEvent == EventUpdateDir)
                 {
-                    while (sPending.empty() == false)
+                    NotifyList::iterator sOldIterator = sPending.begin();
+                    while (sOldIterator != sPending.end())
                     {
-                        NotifyInfo *sOld = sPending.front();
-                        sPending.pop_front();
+                        NotifyInfo *sOld = *sOldIterator;
+                        if (XPR_IS_NOT_NULL(sOld) &&
+                            sOld->mEvent == EventWatchFailed)
+                        {
+                            ++sOldIterator;
+                            continue;
+                        }
                         sNotifyInfo->mNotifyCount += sOld->mNotifyCount;
                         XPR_SAFE_DELETE(sOld);
+                        sOldIterator = sPending.erase(sOldIterator);
                     }
-                    sPending.push_back(sNotifyInfo);
+                    sPending.push_front(sNotifyInfo);
                     continue;
                 }
 
@@ -1447,22 +1581,47 @@ xpr_sint_t AdvFileChangeWatcher::runNotifyThread(Thread &aThread)
                 if (XPR_IS_FALSE(sMerged))
                     sPending.push_back(sNotifyInfo);
 
-                if (sPending.size() > kMaxNotifyPerWatch)
+                xpr_size_t sDataNotifyCount = 0;
+                NotifyList::iterator sCountIterator = sPending.begin();
+                for (; sCountIterator != sPending.end(); ++sCountIterator)
                 {
-                    NotifyInfo *sSummary = sPending.back();
-                    sPending.pop_back();
-                    while (sPending.empty() == false)
+                    if (XPR_IS_NOT_NULL(*sCountIterator) &&
+                        (*sCountIterator)->mEvent != EventWatchFailed)
+                        ++sDataNotifyCount;
+                }
+
+                if (sDataNotifyCount > kMaxNotifyPerWatch)
+                {
+                    NotifyInfo *sSummary = XPR_NULL;
+                    NotifyList::reverse_iterator sSummaryIterator = sPending.rbegin();
+                    for (; sSummaryIterator != sPending.rend(); ++sSummaryIterator)
                     {
-                        NotifyInfo *sOld = sPending.front();
-                        sPending.pop_front();
+                        if (XPR_IS_NOT_NULL(*sSummaryIterator) &&
+                            (*sSummaryIterator)->mEvent != EventWatchFailed)
+                        {
+                            sSummary = *sSummaryIterator;
+                            break;
+                        }
+                    }
+
+                    NotifyList::iterator sOldIterator = sPending.begin();
+                    while (sOldIterator != sPending.end())
+                    {
+                        NotifyInfo *sOld = *sOldIterator;
+                        if (XPR_IS_NULL(sOld) || sOld == sSummary ||
+                            sOld->mEvent == EventWatchFailed)
+                        {
+                            ++sOldIterator;
+                            continue;
+                        }
                         sSummary->mNotifyCount += sOld->mNotifyCount;
                         XPR_SAFE_DELETE(sOld);
+                        sOldIterator = sPending.erase(sOldIterator);
                     }
                     sSummary->mEvent = EventUpdateDir;
                     sSummary->mFileName.clear();
                     sSummary->mOldDir.clear();
                     sSummary->mOldFileName.clear();
-                    sPending.push_back(sSummary);
                 }
             }
         }

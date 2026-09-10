@@ -1,11 +1,11 @@
 # 📁 Windows 10/11 최적화 fxfile 소스 코드 및 기술 이력 가이드
 
-> **Task 114 후속 정정:** 상세 목록의 선택 행 색은 첫 행·중간 행·마지막 행을 포함한 모든 live-selected 행에 창별 `row_focus_color`를 적용한다. Task 107~113의 “포커스 한 행만 사용자 색, 보조 선택은 시스템 색” 정책은 이 범위에서 대체한다. 키보드 포커스와 Shift 기준점은 여전히 native ListView가 소유한다. 검증 범위와 배포 결과는 문서 끝 Task 114를 우선 참조한다.
+> **Task 115 후속 정정:** 상세 목록의 최종 선택 행 합성은 헤더 좌표를 ListView 좌표로 변환한 뒤 현재 가로 스크롤 오프셋을 적용한다. 외부 생성·이름 변경·삭제 이벤트는 고급 watcher의 비동기 등록/재무장 실패와 Shell PIDL 일시 지연을 복구하며, 시작 패널은 처음부터 숨김으로 생성해 전체 준비 후 한 번에 공개한다. Task 114의 모든 live-selected 행 색 정책은 그대로 보존한다. 검증 범위와 배포 결과는 문서 끝 Task 115를 우선 참조한다.
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 문서·정리 운영 기준: 2026-09-06 — Task 114 후속 정정 (Task 113의 최종 postpaint는 보존하고, 상세 목록의 모든 live-selected 행에 창별 설정 색을 적용하며, 작업 종료 정리 시 인라인 재귀 삭제의 실행 전 정책 차단·PowerShell 5.1 한글 경로 오해석·빈 합계 실패를 재발 방지 절차로 고정)_
-_현재 기능/배포 기준: Task 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
+_현재 문서·정리 운영 기준: 2026-09-10 — Task 115 후속 정정 (가로 스크롤 좌표계, 외부 변경 watcher 실패 복구, 6-pane 실제 동적 갱신, 시작 원자 공개 및 잠금 분할 smoke 기대값을 보증하고 작업 종료 정리는 0.7/114.6 절차를 적용)_
+_현재 기능/배포 기준: Task 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
 _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절대경로는 당시 증거로 보존하며, 현재 실행 명령으로 복사하지 않는다._
 
@@ -77,7 +77,8 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | OBJ·더미 시험 파일·C:/D: 용량·작업공간 정리·삭제 명령 정책 차단 | 114.5~114.6, 101, 054~055, 061 | `blocked by policy`, `file-backed cleanup`, `PowerShell 7`, `UTF-8`, `stray artifact`, `/Fo`, `RESULTS.md`, `synthetic fixture`, `staging`, `FreeGiB`, `TeraBox`, `cleanup`, `retention` |
 | 파일/폴더 선택 시 열 단위·행 전체 포커스 전환, `[..] 상위 폴더로` 포함 선택 항목 화이트 플래시(White Flash), 장시간 창 #1~#6 전환·새로고침 후 재발, GDI/USER·아이콘 누적, 선택 글자만 흰색으로 남거나 환경 설정 포커스 색이 보이지 않는 현상, 상위 폴더 행 선택 표시 소실, 다른 행 선택 후 상위 폴더 행에 남는 유령 선택색, 마우스 호버(Hover/InfoTip) 시 흰색 소실, 다중 창·과도 상태 찰나의 플래시 방지, 창별 색상, Ctrl/Shift 다중 선택, 모든 분할 pane·콘텐츠/타일/상세 보기 일관성 | 113, 112, 111, 110, 109, 108, 107, 106, 105, 099, 098, 097, 092, 091, 090, 089, 088, 087, 086, 083, 077, 076, 075 | `drawFinalReportSelection`, `CDDS_ITEMPOSTPAINT`, `fillReportSelectionBackground`, `PathBar::setPath`, `GetItemIcon`, `DESTROY_ICON`, `GetGuiResources`, `GDI`, `USER`, `generation`, `CDRF_NOTIFYITEMDRAW`, `CDRF_NOTIFYPOSTPAINT`, `CDRF_SKIPDEFAULT`, `LVS_EX_DOUBLEBUFFER`, `live ListView selection`, `화이트 플래시`, `White Flash`, `호버 소실`, `CDIS_HOT`, `InfoTip`, `LVIS_SELECTED`, `LVIS_FOCUSED`, `redrawFocusItemChange`, `CDIS_SELECTED`, `Shift`, `SelectionMark`, `row_focus_color`, `full_row_select`, `isReportView`, `VIEW_STYLE_CONTENT`, `LVS_REPORT`, `OnCustomdraw`, `ExplorerPane`, `ExplorerCtrl` |
 | 일괄 이름 변경·열 말줄임·수동 열폭·창/분할 폭 연동·썸네일 캐시·간헐 무응답 | 072, 069, 056, 058~059 | `BatchRename`, `Repeat=0`, `column_ellipsis`, `OnHdnItemChanged`, `manual width`, `responsive`, `OnSize`, `viewport`, `thumbnail`, `IOCP`, `응답 없음` |
-| 자동 갱신·갱신 시 자동 정렬·2×2 패널 변경 반영 | 071, 070, 069 | `config.refresh.no`, `config.refresh.sort`, `파일 변경 즉시 화면 갱신`, `화면 갱신 후 자동 정렬`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
+| 자동 갱신·갱신 시 자동 정렬·외부 다운로드/복사/이동이 pane #1~#6에 늦게 보임·watcher 등록/재무장 실패 복구 | 115, 071, 070, 069 | `config.refresh.no`, `config.refresh.sort`, `EventWatchFailed`, `ReadDirectoryChangesW`, `scheduleDirectoryRefresh`, `파일 변경 즉시 화면 갱신`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
+| 좁은 창의 선택 행을 가로 스크롤할 때 크기 이후 문자가 밀림·헤더와 선택행 열 불일치·시작 pane 부분 공개 | 115, 114, 113, 050 | `drawFinalReportSelection`, `HeaderCtrl`, `ClientToScreen`, `ScreenToClient`, `horizontal scroll`, `atomic layout publication`, `locked split`, `PartialVisibleViewCounts` |
 | 대형/특수 폴더(`00 월마감`/`0000 FxFile`) 응답 없음·폴더 아이콘 깨짐·전 파일 비동기 아이콘 | 064~066 | `CSparseImageList`, `ForceImagePresent`, `SHDefExtractIconW`, `COleMessageFilter`, `FileIconInit`, `GetFileExtIconIndex`, `TypeIconIndex`, `dummy` |
 | '폴더 비교하기(R)' 현대화·비교 총괄 보고서·통계 대시보드·단일/다중 창(Pane 1~6) 스마트 비교 감지·마크다운 리포트·UI 전면 한글화 및 한글 인코딩 오류 재발 방지 | 100 (100.1~100.7) | `ID_WINDOW_COMPARE`, `FolderCompareSetupDlg`, `FolderCompareReportDlg`, `SyncDirs`, `compareWindow`, `Markdown 리포트`, `클립보드 복사`, `폴더 비교 총괄 보고서`, `벤치마킹`, `실기 런타임 자동화`, `한글화 5대 원칙`, `RC 템플릿`, `UTF-8 BOM`, `인코딩 오류 재발 방지`, `치환 앵커링`, `PowerShell UTF-8` |
 | 작업 완료 후 임시 파일·백업·빌드 캐시·스크래치 스크립트·7z 아카이브 완전 정리, C:/D: 디스크 위생 절차 | 114.5~114.6, 101 (101.1~101.6) | `cleanup`, `blocked by policy`, `file-backed cleanup`, `PowerShell 7`, `7z`, `.bak`, `.tmp`, `scratch`, `임시 파일`, `백업 파일`, `빌드 캐시`, `.vs`, `ipch`, `obj`, `staging`, `residual`, `stray artifact`, `디스크 위생`, `정리 자동화`, `post-task cleanup`, `Remove-Item` |
@@ -10253,3 +10254,55 @@ fxfile_working        238.05      2349  (순수 소스 및 필수 라이브러�
 - 초입 `0.7.3`을 정리 차단의 단일 표준 절차로 추가했다. 이후 코딩 AI는 `차단 원문 확인 → 삭제 0/부분 삭제 구분 → 읽기 전용 대상표 → 승인 범위 확정 → PowerShell 7 파일 기반 Audit/Delete → 부재/보존/30초 재생성 감사 → 일회용 스크립트 제거` 순서를 사용한다.
 - 삭제 정책 차단을 관리자 권한·파일 잠금·백신 문제로 오진하지 않는다. 파일 기반 정리기도 차단되면 다른 셸이나 난독화로 회피하지 않고 실행 환경 차단으로 종료 보고한다.
 - 이번 정리 성공 후 실제 삭제 대상 재생성 0, 보호 대상 누락 0, 관련 프로세스 0, 일회용 정리기 잔류 0을 확인했다. 이 결과가 앞의 “정리 미완료” 기록을 최종 상태에서 대체하며, 앞 기록은 실패 이력으로만 유효하다.
+
+## Task 115 — 가로 스크롤 선택 행 좌표 무결성·외부 변경 즉시 갱신·6-pane 원자 공개 (2026-09-10)
+
+### 115.1 요청과 현재 환경 판정
+
+- 사용자는 좁은 창 #1~#6에서 선택 행을 가로 스크롤할 때 `크기` 열 이후 내용이 열과 함께 이동하지 않고 뒤로 밀리는 현상, 그리고 브라우저 다운로드·FxFile 외부 복사/이동으로 바뀐 파일이 상위 폴더로 나갔다 돌아와야 보이는 간헐적 갱신 누락을 근본 해결하도록 요청했다.
+- 설치 정본 `fxfile\fxfile.conf`의 실제 값은 `config.refresh.no = 0`, `config.refresh.sort = 1`이었다. 자동 갱신을 끈 사용자 설정이나 사용법 오해가 원인이 아니다. Windows 11 파일시스템 자체가 재진입 전까지 파일을 숨긴 것도 아니다. FxFile의 최종 선택 행 사용자 도색 좌표계와 watcher 실패 복구 경계가 원인이었다.
+- 작업 시작 전 FxFile/빌드 관련 프로세스 0개, C: 약 68.98GiB/29.77%, D: 약 2,041GiB/54.79%를 확인했다. 정본 복구본은 `__BUILD_TEMP_BACKUP__\task115_before_20260910_061402_809`이며 소스 2,346파일·249,029,210바이트와 세 패키지 설정 스냅샷을 포함한다. 앞선 `061126_287`, `061214_874` 생성 호출은 제한시간에 중단되어 당시 완결성을 확정할 수 없었고 사용하지 않았다. 정리 직전에는 각각 2,346/2,368파일이 남아 있었지만 정본보다 먼저 시작된 중복·비정본 복사이므로 제거했다.
+
+### 115.2 원인과 구현 — 선택 행 가로 스크롤
+
+- `ExplorerCtrl::drawFinalReportSelection()`의 최종 ITEMPOSTPAINT는 선택 배경·아이콘·각 열 문자를 원자적으로 다시 합성한다. 기존 코드는 `HeaderCtrl::GetItemRect()`가 돌려주는 **헤더 client 좌표**를 곧바로 **ListView client 좌표**처럼 사용했다.
+- report ListView는 가로 스크롤 시 헤더 자식 창 자체를 왼쪽으로 이동한다. 따라서 native 일반 행은 정상 스크롤되지만 사용자 최종 도색된 선택 행의 `크기`·`종류`·`수정한 날짜` 문자와 grid separator는 스크롤 전 열 좌표에 다시 그려져 사용자가 본 밀림/불일치가 발생했다.
+- `mHeaderCtrl->ClientToScreen()` 후 `ExplorerCtrl::ScreenToClient()`로 현재 헤더 원점을 ListView 좌표로 한 번 변환하고, 모든 열 문자 사각형과 grid separator 사각형에 같은 `sHeaderOrigin.x`를 적용했다. 별도 pane별 코드가 아니라 공용 `ExplorerCtrl` 경로이므로 창 #1~#6, 1×1/1×2/2×2/2×3에서 동일하게 적용된다.
+- live selection, 창별 `row_focus_color`, 첫·중간·마지막 선택 행, Shift/Ctrl 선택, 아이콘/overlay/cut, focus cue, 말줄임·정렬, `SaveDC/RestoreDC`와 Task 113~114의 final-paint 순서는 변경하지 않았다.
+
+### 115.3 원인과 구현 — 외부 변경 갱신 복구
+
+- `ReadDirectoryChangesW`의 생성/이름 변경/수정 통지가 브라우저·클라우드 provider·백신의 임시 소유 구간에서 먼저 도착하면 Shell PIDL 생성이 잠시 실패할 수 있었다. 기존 exact handler가 `false`를 반환하면 그 일회성 이벤트는 폐기되어, 재진입 때 전체 열거하기 전까지 새 파일이 안 보일 수 있었다.
+- `AdvFileChangeWatcher::registerWatch()/modifyWatch()`는 공개 watch ID를 먼저 반환하고 monitor thread가 뒤에서 디렉터리를 열어 `ReadDirectoryChangesW`를 무장한다. 최초 open/read 또는 완료 후 재무장 실패를 UI에 알리지 않아 pane가 실제 감시가 없는 ID를 정상으로 보유할 수 있었다.
+- `EventWatchFailed` 제어 이벤트를 추가했다. 최초 무장 실패는 실패 이벤트를 보낸 뒤 잘못된 등록을 제거하고, 재무장 실패는 `EventUpdateDir`과 실패 이벤트를 함께 보낸다. queue merge/overflow는 이 제어 이벤트를 일반 변경 요약에 섞거나 버리지 않는다.
+- `ExplorerCtrl`은 실패 ID를 폐기하고 독립 `FileChangeWatcher` legacy fallback을 즉시 설치한다. exact create/delete/rename/modify 처리 실패는 250ms 단발 `TM_ID_NOTIFY_RECONCILE`로 같은 경로의 전체 디렉터리 갱신을 병합한다. 이는 무조건 주기 polling이 아니며, 탐색 경로가 바뀌었거나 `자동 갱신 사용 안함`이면 stale 작업을 폐기하고 파괴 시 timer/상태를 제거한다.
+- 정상 이벤트는 종전 세밀 갱신·자동 정렬 경로를 계속 사용한다. 외부 도구가 아직 최종 파일을 만들지 않았거나 네트워크/클라우드 자체가 통지를 장시간 주지 않는 시간까지 0ms라고 보증하지는 않지만, FxFile이 받은 이벤트와 watcher 실패를 조용히 영구 유실하는 경로는 제거했다.
+
+### 115.4 시작 원자 공개와 검증 도구 후속 결함
+
+- 최초 `BuildDeployVerify`에서 x64/x32 컴파일은 성공했으나 x64 smoke가 `partial file-list counts ...: 2`로 중단되어 세 패키지를 자동 롤백했다. 새 갱신 timer의 문제가 아니라 `onSplitterPaneCreate()`가 시작 ExplorerView를 `WS_VISIBLE`로 생성한 뒤 `OnCreateClient()`가 모든 pane 생성 후 숨기는 기존 순서가 원인이었다. 외부 검사기는 이 짧은 구간의 2개 visible 목록을 실제로 관측할 수 있었다.
+- 시작 복원 중에는 `WS_VISIBLE` 없이 pane를 생성하고, `mDeferStartupViews`가 해제된 일반 실행 중 분할 변경만 종전처럼 즉시 visible로 생성한다. 모든 저장 경로 준비 뒤 `mSplitter.showPane(TRUE)` 한 번으로 공개하여 부분 창 상태를 창 스타일 경계에서 제거했다.
+- 다음 성공 smoke를 감사하던 중 실제 잠금 레이아웃은 2×3인데 검증 도구가 일반 `row_count=2`, `column_count=2`만 읽어 기대값 4, 준비값 6으로 합격시킨 결함을 발견했다. `main.view.split_locked=1`이면 `locked_row_count`, `locked_column_count`를 우선하도록 고쳤다. 새 프리플라이트 뒤 x64/x32 모두 정확한 기대값 6/준비값 6, 부분 visible count 0으로 다시 검증했다.
+
+### 115.5 시험·빌드·세 패키지 배포 증거
+
+- 신규 `tools\test_task115_horizontal_scroll_and_refresh_recovery_contracts.ps1`은 수정 전 핵심 계약 실패를 확인한 뒤 최종 **12/12 PASS**다. 가로 스크롤 좌표 변환/문자·grid 공통 좌표, 공용 6-pane 경로, watcher 실패 이벤트·fallback·단발 경로 결속 갱신, 시작 hidden 생성, 잠금 분할 smoke 기대값을 검사한다.
+- `tools\test_task*.ps1` 전체 **33개 스크립트, 실패 0**을 확인했다. Task069 29/29, Task070 17/17, Task113 9/9, Task114 8/8, Task115 12/12를 포함한다.
+- `Test-Task070AutoRefreshSortRuntime.ps1`에 `-PaneCount 4|6`을 추가하고 실제 신규 run_x64를 격리 복사해 2×3 여섯 pane에서 외부 생성 `a_new.txt`, 이름 변경 `z_anchor.txt -> b_renamed.txt`, 삭제 `a_new.txt`를 수행했다. 여섯 pane 모두 재탐색 없이 정렬된 기대 목록에 도달, 정상 종료, 강제 종료 0, 시험 데이터 제거 성공이다. 최종 증거는 `__BUILD_TEMP_BACKUP__\task115_current_six_pane_refresh_20260910_065237_302.json`, 실행 파일 SHA-256 `C7081F1ED1D5551B837E308C982D24A977E721F5457664452BA2167170F7BB84`다.
+- 첫 동적 시험은 성공 배포 폴더의 `packages\run_x64`를 신규 패키지로 오인했으나 그 위치가 교체 전 롤백본임을 SHA-256 `3AF32265...` 불일치로 발견했다. 그 결과는 합격 증거에서 제외하고 실제 run_x64로 다시 시험했다. 교훈은 manifest의 `packages`가 rollback snapshot일 수 있으므로 동적 시험 직전 실행 파일 해시를 현재 manifest/운영본과 반드시 대조하는 것이다.
+- Release x64/x32 빌드와 설치본 x64·run_x64·run_x32 원자 배포 성공. 최종 성공 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260910_065633_915\deployment_manifest.json`이다.
+  - 설치본 x64/run_x64 SHA-256: `C7081F1ED1D5551B837E308C982D24A977E721F5457664452BA2167170F7BB84`.
+  - run_x32 SHA-256: `AE9D95B8707A109CF78C1DDF5C5749631CBB0C2C2D6940407C92F57996FC06FA`.
+  - 설정 10개 정본·언어·아키텍처 일치, 세 루트 `fxfile.ini`/`.fxfile` 부재.
+  - 정확한 잠금 2×3 no-INI smoke: x64 skeleton 2.43초/ready 11.79초, x32 skeleton 1.72초/ready 19.15초, 모두 6/6 pane, 원자 공개 True, 부분 공개 0, Exit 0, 강제 종료 False.
+
+### 115.6 보증 경계·정리·재발 방지
+
+- 자동 동적 검증은 현재 Windows 11의 로컬 D: 격리 폴더·x64·2×3에서 파일 생성/이름 변경/삭제와 정렬을 검증했다. x32는 동일 소스 컴파일·정적 계약·6/6 no-INI smoke로 검증했다. 사용자가 제시한 특정 실제 폴더와 브라우저 다운로드 서버의 네트워크 완료 시간 자체를 조작하지 않았다.
+- 가로 스크롤은 수정된 좌표 계약, 공용 6-pane 호출 경로, x64/x32 실제 빌드와 원자 smoke로 확인했다. 이 실행 환경에서 사용자의 마우스와 동일한 좁은 창 픽셀 캡처를 별도로 자동 비교했다고 과장하지 않는다. 재발 인수 시 좁은 1×1/2×3, 첫·중간·마지막 선택 행, full-row on/off, 가로 scrollbar 좌·중·우 위치에서 헤더/문자/grid를 함께 본다.
+- 빌드 경고는 기존 C4828/C4005 및 x32 LNK4098 계열이 남아 있어 경고 0 빌드라고 기록하지 않는다. 두 아키텍처 Release와 배포 검증은 Exit 0이다.
+- 종료 정리는 0.7 및 114.6의 파일 기반 PowerShell 7 절차로 완료했다. 제한시간 중단 복구본 2개, 구 preflight 2개, 구/실패/대체 배포 3개, 최신 완료 smoke 복제본, build cache/obj 3개, 무효 동적 stage/evidence, 최종 동적 stage, Task114 구 복구본까지 **15개 대상·9,861파일·1,946,498,907바이트(약 1.81GiB)**를 삭제했다. 내부 reparse 0, 삭제 대상 재생성 0, 보호 대상 누락 0, 관련 프로세스 0이다. 증거는 최신 배포의 `cleanup_task115_manifest.json`이다.
+- Task115 정본 복구본·최신 PASS 프리플라이트·최신 성공 manifest·최종 6-pane 동적 JSON·`bin`·세 운영 패키지·장기 선택행 실기 증거는 보존했다. 일회용 정리 스크립트는 결과 확인 후 소스에서 제거했으며, 세 패키지 루트 포인터 부재와 마지막 `VerifyOnly`를 다시 감사한다.
+- 최종 `Build-Deploy-Verify.ps1 -Mode VerifyOnly` Exit 0이다. 세 패키지 필수 설정 10개 정본 일치, 설치본 x64/run_x64 동일 해시, x32 아키텍처 해시, 루트 `fxfile.ini`/`.fxfile` 부재를 재확인했다. 세 패키지의 `.obj/.tmp/.bak/.log/.dmp/.ilk/.pdb/.exp/.lib` 잔류 0, 빌드 cache 0, 관련 프로세스 0이다. 종료 시 C: 68.96GiB/29.77%, D: 2,041.56GiB/54.79%였다.
+
+**-- 선택 행 가로 스크롤 좌표계·외부 변경 이벤트 유실·watcher false-success·시작 부분 공개·잠금 2×3 smoke 기대값 근본 수정, 6-pane 동적 갱신 및 세 패키지 배포 완료 (Task 115, 2026-09-10) --**

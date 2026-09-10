@@ -7,7 +7,10 @@ param(
     [string]$EvidencePath,
 
     [ValidateSet('Sorted', 'RefreshOnly', 'NoRefresh')]
-    [string]$Mode = 'Sorted'
+    [string]$Mode = 'Sorted',
+
+    [ValidateSet(4, 6)]
+    [int]$PaneCount = 4
 )
 
 Set-StrictMode -Version Latest
@@ -127,7 +130,7 @@ public static class FxTask070ListView
         return names.ToArray();
     }
 
-    public static View[] GetViews(IntPtr frame, int processId)
+    public static View[] GetViews(IntPtr frame, int processId, int maximumViews)
     {
         var handles = new List<IntPtr>();
         EnumChildWindows(frame, delegate(IntPtr hwnd, IntPtr unused)
@@ -154,7 +157,7 @@ public static class FxTask070ListView
                 Handle = hwnd.ToInt64(), Left = window.Left, Top = window.Top,
                 Names = ReadNames(hwnd, processId)
             };
-        }).OrderBy(view => view.Top).ThenBy(view => view.Left).Take(4).ToArray();
+        }).OrderBy(view => view.Top).ThenBy(view => view.Left).Take(maximumViews).ToArray();
     }
 }
 '@
@@ -162,11 +165,11 @@ public static class FxTask070ListView
 function Get-ViewNames([Diagnostics.Process]$Process) {
     $Process.Refresh()
     if ($Process.HasExited -or $Process.MainWindowHandle -eq [IntPtr]::Zero) { return @() }
-    @([FxTask070ListView]::GetViews($Process.MainWindowHandle, $Process.Id))
+    @([FxTask070ListView]::GetViews($Process.MainWindowHandle, $Process.Id, $PaneCount))
 }
 
 function Test-ExpectedOrder([object[]]$Views, [string[]]$Expected) {
-    if ($Views.Count -ne 4) { return $false }
+    if ($Views.Count -ne $PaneCount) { return $false }
     $tracked = @('a_new.txt', 'b_renamed.txt', 'm_middle.txt', 'z_anchor.txt')
     foreach ($view in $Views) {
         $actual = @($view.Names | Where-Object { $_ -in $tracked })
@@ -184,7 +187,7 @@ function Wait-ExpectedOrder([Diagnostics.Process]$Process, [string[]]$Expected, 
     } while ([DateTime]::UtcNow -lt $deadline -and -not $Process.HasExited)
     $snapshot = @(Get-ViewNames $Process)
     $summary = @($snapshot | ForEach-Object { $_.Names -join ', ' }) -join ' / '
-    throw "The four panes did not reach expected order '$($Expected -join ', ')' within $Seconds seconds. Actual: $summary"
+    throw "The $PaneCount panes did not reach expected order '$($Expected -join ', ')' within $Seconds seconds. Actual: $summary"
 }
 
 $stage = [IO.Path]::GetFullPath($StageRoot)
@@ -213,6 +216,7 @@ $report = [ordered]@{
     Result = 'FAIL'
     CapturedAt = (Get-Date).ToString('o')
     Mode = $Mode
+    PaneCount = $PaneCount
     StageRoot = $stage
     ExecutableSha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
     ViewCount = 0
@@ -227,7 +231,7 @@ $report = [ordered]@{
 try {
     New-Item -ItemType Directory -Path $testRoot | Out-Null
     $panePaths = @()
-    foreach ($index in 1..4) {
+    foreach ($index in 1..$PaneCount) {
         $panePath = Join-Path $testRoot "pane$index"
         New-Item -ItemType Directory -Path $panePath | Out-Null
         New-Item -ItemType File -Path (Join-Path $panePath 'm_middle.txt') | Out-Null
@@ -235,7 +239,11 @@ try {
         $panePaths += $panePath
     }
 
-    $arguments = '-w 2x2 --dir1 "{0}" --dir2 "{1}" --dir3 "{2}" --dir4 "{3}"' -f $panePaths
+    $split = if ($PaneCount -eq 6) { '2x3' } else { '2x2' }
+    $directoryArguments = for ($index = 0; $index -lt $PaneCount; ++$index) {
+        '--dir{0} "{1}"' -f ($index + 1), $panePaths[$index]
+    }
+    $arguments = '-w {0} {1}' -f $split, ($directoryArguments -join ' ')
     $oldCompat = $env:__COMPAT_LAYER
     try {
         $env:__COMPAT_LAYER = 'RunAsInvoker'

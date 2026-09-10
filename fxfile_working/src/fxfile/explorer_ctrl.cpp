@@ -73,6 +73,7 @@ enum
     TM_ID_RENAME_VISTA = 20,
     TM_ID_CLICK_RENAME = 42, // internal rename timer id (label click)
     TM_ID_AUTO_COLUMN_REFLOW = 43,
+    TM_ID_NOTIFY_RECONCILE = 44,
 };
 
 //
@@ -209,6 +210,7 @@ ExplorerCtrl::ExplorerCtrl(void)
     mWatchId            = FileChangeWatcher::InvalidWatchId;
     mAdvWatchId         = AdvFileChangeWatcher::InvalidAdvWatchId;
     mDestroying         = XPR_FALSE;
+    mDeferredDirectoryRefresh = XPR_FALSE;
 }
 
 ExplorerCtrl::~ExplorerCtrl(void)
@@ -524,7 +526,12 @@ void ExplorerCtrl::OnDestroy(void)
     HWND sHwnd = GetSafeHwnd();
 
     if (::IsWindow(sHwnd))
+    {
         ::KillTimer(sHwnd, TM_ID_AUTO_COLUMN_REFLOW);
+        ::KillTimer(sHwnd, TM_ID_NOTIFY_RECONCILE);
+    }
+    mDeferredDirectoryRefresh = XPR_FALSE;
+    mDeferredDirectoryRefreshPath.clear();
 
     Thumbnail::instance().cancelAsyncImage(sHwnd, WM_THUMBNAIL_PROC);
     ShellColumnManager::instance().cancelOwner(sHwnd,
@@ -4045,6 +4052,10 @@ void ExplorerCtrl::getItemAttributes(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aP
 
 void ExplorerCtrl::watchFileChange(void)
 {
+    KillTimer(TM_ID_NOTIFY_RECONCILE);
+    mDeferredDirectoryRefresh = XPR_FALSE;
+    mDeferredDirectoryRefreshPath.clear();
+
     if (XPR_IS_NULL(mTvItemData))
         return;
 
@@ -4110,6 +4121,14 @@ void ExplorerCtrl::watchFileChange(void)
 
     XPR_SAFE_DELETE(sAdvWatchItem);
 
+    watchFileChangeLegacy();
+}
+
+void ExplorerCtrl::watchFileChangeLegacy(void)
+{
+    if (XPR_IS_NULL(mTvItemData) || isFileSystemFolder() == XPR_FALSE)
+        return;
+
     FileChangeWatcher::WatchItem sWatchItem;
     sWatchItem.mHwnd = m_hWnd;
     sWatchItem.mMsg  = WM_FILE_CHANGE_NOTIFY;
@@ -4121,6 +4140,53 @@ void ExplorerCtrl::watchFileChange(void)
     else
         mWatchId = FileChangeWatcher::instance().modifyWatch(mWatchId,
                                                               &sWatchItem);
+}
+
+void ExplorerCtrl::scheduleDirectoryRefresh(void)
+{
+    if (XPR_IS_TRUE(mDestroying) || GetSafeHwnd() == XPR_NULL ||
+        XPR_IS_NULL(mTvItemData) || mOption.mNoRefresh == XPR_TRUE)
+        return;
+
+    // A create/rename notification may precede Shell PIDL availability while
+    // a browser, cloud provider or antivirus still owns the new file.  Do not
+    // discard that one-shot event.  Coalesce all failures from the same burst
+    // into one short, path-bound directory reconciliation.
+    mDeferredDirectoryRefresh = XPR_TRUE;
+    mDeferredDirectoryRefreshPath = getCurPath();
+    KillTimer(TM_ID_NOTIFY_RECONCILE);
+    SetTimer(TM_ID_NOTIFY_RECONCILE, 250, XPR_NULL);
+}
+
+void ExplorerCtrl::reconcileDirectoryRefresh(void)
+{
+    if (XPR_IS_FALSE(mDeferredDirectoryRefresh))
+        return;
+
+    mDeferredDirectoryRefresh = XPR_FALSE;
+
+    if (XPR_IS_TRUE(mDestroying) || mOption.mNoRefresh == XPR_TRUE ||
+        XPR_IS_NULL(mTvItemData) ||
+        _tcsicmp(mDeferredDirectoryRefreshPath.c_str(), getCurPath()) != 0)
+    {
+        mDeferredDirectoryRefreshPath.clear();
+        return;
+    }
+
+    LPITEMIDLIST sFullPidl = fxfile::base::Pidl::clone(mTvItemData->mFullPidl);
+    mDeferredDirectoryRefreshPath.clear();
+    if (XPR_IS_NULL(sFullPidl))
+        return;
+
+    Shcn sShcn = {0};
+    sShcn.mEventId = SHCNE_UPDATEDIR;
+    sShcn.mPidl1   = sFullPidl;
+    sShcn.mItem1   = reinterpret_cast<uintptr_t>(sFullPidl);
+    sShcn.mHwnd    = m_hWnd;
+
+    const xpr_bool_t sResult = OnShcnUpdateDir(&sShcn);
+    endShcn(SHCNE_UPDATEDIR, sResult);
+    COM_FREE(sFullPidl);
 }
 
 void ExplorerCtrl::addParentItem(void)
@@ -6413,6 +6479,11 @@ void ExplorerCtrl::OnTimer(UINT_PTR aIdEvent)
         KillTimer(aIdEvent);
         reflowAutomaticColumnWidths();
     }
+    else if (aIdEvent == TM_ID_NOTIFY_RECONCILE)
+    {
+        KillTimer(aIdEvent);
+        reconcileDirectoryRefresh();
+    }
     else if (XPR_IS_RANGE(TM_ID_DRAG_SCROLL_BEGIN, aIdEvent, TM_ID_DRAG_SCROLL_END))
     {
         KillTimer(aIdEvent);
@@ -7783,11 +7854,24 @@ void ExplorerCtrl::drawFinalReportSelection(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     }
 
     const xpr_sint_t sColumnCount = XPR_IS_NOT_NULL(mHeaderCtrl) ? mHeaderCtrl->GetItemCount() : 0;
+    CPoint sHeaderOrigin(0, 0);
+    if (XPR_IS_NOT_NULL(mHeaderCtrl))
+    {
+        // HDM_GETITEMRECT returns header-client coordinates.  In report view
+        // the ListView moves the header window left as SB_HORZ changes, so
+        // using those coordinates directly redraws selected subitems at their
+        // unscrolled positions.  Map the header origin into this ListView's
+        // client space once and apply the live horizontal offset to every
+        // text cell and grid separator in the final paint transaction.
+        mHeaderCtrl->ClientToScreen(&sHeaderOrigin);
+        ScreenToClient(&sHeaderOrigin);
+    }
     for (xpr_sint_t sColumn = 0; sColumn < sColumnCount; ++sColumn)
     {
         CRect sHeaderRect;
         if (mHeaderCtrl->GetItemRect(sColumn, &sHeaderRect) == FALSE)
             continue;
+        sHeaderRect.OffsetRect(sHeaderOrigin.x, 0);
 
         CRect sCellRect(sHeaderRect.left, sSelectionRect.top, sHeaderRect.right, sSelectionRect.bottom);
         CRect sVisibleCellRect;
@@ -7839,6 +7923,7 @@ void ExplorerCtrl::drawFinalReportSelection(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
                 CRect sHeaderRect;
                 if (mHeaderCtrl->GetItemRect(sColumn, &sHeaderRect) != FALSE)
                 {
+                    sHeaderRect.OffsetRect(sHeaderOrigin.x, 0);
                     ::MoveToEx(aNmLvCustomDraw->nmcd.hdc, sHeaderRect.right - 1, sSelectionRect.top, XPR_NULL);
                     ::LineTo(aNmLvCustomDraw->nmcd.hdc, sHeaderRect.right - 1, sSelectionRect.bottom);
                 }
@@ -8950,15 +9035,30 @@ LRESULT ExplorerCtrl::OnAdvFileChangeNotify(WPARAM wParam, LPARAM lParam)
     if (XPR_IS_NULL(sNotifyInfo))
         return 0;
 
-    // The payload is heap-owned until this handler accepts it.  Returning
-    // early for NoRefresh previously leaked every queued notification.
-    if (mOption.mNoRefresh == XPR_TRUE)
+    if (sNotifyInfo->mAdvWatchId != mAdvWatchId)
     {
         XPR_SAFE_DELETE(sNotifyInfo);
         return 0;
     }
 
-    if (sNotifyInfo->mAdvWatchId != mAdvWatchId)
+    if (sNotifyInfo->mEvent == AdvFileChangeWatcher::EventWatchFailed)
+    {
+        // registerWatch()/modifyWatch() return an identity before the monitor
+        // thread opens and arms ReadDirectoryChangesW.  If that asynchronous
+        // step or a later rearm fails, retire the false-success identity and
+        // keep this pane live through the independent legacy watcher.
+        const AdvFileChangeWatcher::AdvWatchId sFailedWatchId = mAdvWatchId;
+        mAdvWatchId = AdvFileChangeWatcher::InvalidAdvWatchId;
+        AdvFileChangeWatcher::instance().unregisterWatch(sFailedWatchId);
+        watchFileChangeLegacy();
+        scheduleDirectoryRefresh();
+        XPR_SAFE_DELETE(sNotifyInfo);
+        return 0;
+    }
+
+    // The payload is heap-owned until this handler accepts it.  Returning
+    // early for NoRefresh previously leaked every queued notification.
+    if (mOption.mNoRefresh == XPR_TRUE)
     {
         XPR_SAFE_DELETE(sNotifyInfo);
         return 0;
@@ -9075,6 +9175,15 @@ LRESULT ExplorerCtrl::OnAdvFileChangeNotify(WPARAM wParam, LPARAM lParam)
 
             break;
         }
+    }
+
+    if (XPR_IS_FALSE(sResult) &&
+        sNotifyInfo->mEvent != AdvFileChangeWatcher::EventUpdateDir)
+    {
+        // Exact create/delete/rename/modify can race Shell PIDL visibility.
+        // One delayed full reconciliation closes that gap without converting
+        // normal operation into periodic polling.
+        scheduleDirectoryRefresh();
     }
 
     endShcn(sEventId, sResult);

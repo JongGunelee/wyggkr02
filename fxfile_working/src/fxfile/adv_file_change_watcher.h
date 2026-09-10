@@ -36,6 +36,7 @@ public:
         EventDeleted,
         EventRenamed,
         EventUpdateDir,
+        EventWatchFailed,
     };
 
     struct NotifyInfo
@@ -116,6 +117,8 @@ protected:
     void unregisterTask(Task &aTask);
     void unregisterAllTasks(void);
     void clearTasks(TaskList &aTaskList);
+
+    void queueWatchFailedNotify(const AdvWatchItem &aAdvWatchItem);
 
     void queueNotifies(NotifyList &aNotifyList);
     void clearNotifies(NotifyList &aNotifyList);
