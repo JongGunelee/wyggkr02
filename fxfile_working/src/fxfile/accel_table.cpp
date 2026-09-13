@@ -24,7 +24,7 @@ namespace
 {
 #pragma pack(push, 1)
 
-// 100 bytes
+// 96 bytes (packed on-disk format; do not change without a format version bump)
 typedef struct FileHeader
 {
     xpr_char_t   mProgram[12];
@@ -58,15 +58,17 @@ AccelTable::~AccelTable(void)
 
 xpr_bool_t AccelTable::load(const xpr_tchar_t *aPath, ACCEL *aAccel, xpr_sint32_t *aCount, xpr_sint32_t aMaxCount)
 {
-    if (XPR_IS_NULL(aPath) || XPR_IS_NULL(aAccel) || aCount <= 0 || aMaxCount <= 0)
+    if (XPR_IS_NULL(aPath) || XPR_IS_NULL(aAccel) || XPR_IS_NULL(aCount) || aMaxCount <= 0)
         return XPR_FALSE;
 
+    *aCount = 0;
+
     xpr_rcode_t sRcode;
-    xpr_ssize_t sReadSize;
+    xpr_ssize_t sReadSize = 0;
     xpr::FileIo sFileIo;
 
     sRcode = sFileIo.open(aPath, xpr::FileIo::OpenModeReadOnly);
-    if (XPR_RCODE_IS_ERROR(sRcode))
+    if (XPR_RCODE_IS_ERROR(sRcode) || sReadSize != sizeof(FileHeader))
         return XPR_FALSE;
 
     xpr_bool_t sResult = XPR_FALSE;
@@ -85,14 +87,18 @@ xpr_bool_t AccelTable::load(const xpr_tchar_t *aPath, ACCEL *aAccel, xpr_sint32_
         //----------------------------------------------------------------------
         // Check File Footer
         //----------------------------------------------------------------------
-        sFileIo.seekFromEnd(-(xpr_sint64_t)sizeof(DWORD));
-
-        FileFooter sFileFooter = {0};
-        sRcode = sFileIo.read(&sFileFooter, sizeof(FileFooter), &sReadSize);
+        sRcode = sFileIo.seekFromEnd(-(xpr_sint64_t)sizeof(FileFooter));
         if (XPR_RCODE_IS_ERROR(sRcode))
             return XPR_FALSE;
 
-        sFileIo.seekFromBegin(sizeof(FileHeader));
+        FileFooter sFileFooter = {0};
+        sRcode = sFileIo.read(&sFileFooter, sizeof(FileFooter), &sReadSize);
+        if (XPR_RCODE_IS_ERROR(sRcode) || sReadSize != sizeof(FileFooter))
+            return XPR_FALSE;
+
+        sRcode = sFileIo.seekFromBegin(sizeof(FileHeader));
+        if (XPR_RCODE_IS_ERROR(sRcode))
+            return XPR_FALSE;
 
         sResult = (sFileFooter.mEndCode == kEndCode) ? XPR_TRUE : XPR_FALSE;
         if (sResult == XPR_TRUE)
@@ -102,14 +108,29 @@ xpr_bool_t AccelTable::load(const xpr_tchar_t *aPath, ACCEL *aAccel, xpr_sint32_
             //----------------------------------------------------------------------
             xpr_sint_t sLoadedCount = 0;
             sRcode = sFileIo.read(&sLoadedCount, sizeof(xpr_sint_t), &sReadSize);
-            if (XPR_RCODE_IS_ERROR(sRcode))
+            if (XPR_RCODE_IS_ERROR(sRcode) || sReadSize != sizeof(xpr_sint_t))
                 return XPR_FALSE;
 
-            if (sLoadedCount <= aMaxCount)
+            if (0 <= sLoadedCount && sLoadedCount <= aMaxCount)
             {
                 sRcode = sFileIo.read(aAccel, sizeof(ACCEL) * sLoadedCount, &sReadSize);
-                if (XPR_RCODE_IS_ERROR(sRcode))
+                if (XPR_RCODE_IS_ERROR(sRcode) || sReadSize != (xpr_ssize_t)(sizeof(ACCEL) * sLoadedCount))
                     return XPR_FALSE;
+
+                const xpr_byte_t kAllowedFlags = FVIRTKEY | FNOINVERT | FSHIFT | FCONTROL | FALT;
+                for (xpr_sint_t i = 0; i < sLoadedCount; ++i)
+                {
+                    if (aAccel[i].cmd == 0 || aAccel[i].key == 0 || (aAccel[i].fVirt & ~kAllowedFlags) != 0)
+                        return XPR_FALSE;
+
+                    for (xpr_sint_t j = 0; j < i; ++j)
+                    {
+                        const xpr_byte_t sComparableFlags = FVIRTKEY | FSHIFT | FCONTROL | FALT;
+                        if ((aAccel[i].fVirt & sComparableFlags) == (aAccel[j].fVirt & sComparableFlags) &&
+                            aAccel[i].key == aAccel[j].key)
+                            return XPR_FALSE;
+                    }
+                }
 
                 *aCount = sLoadedCount;
 
@@ -129,13 +150,13 @@ xpr_bool_t AccelTable::save(xpr_tchar_t *aPath, ACCEL *aAccel, xpr_sint32_t aCou
         return XPR_FALSE;
 
     xpr_rcode_t sRcode;
-    xpr_ssize_t sWrittenSize;
+    xpr_ssize_t sWrittenSize = 0;
     xpr_sint_t  sOpenMode;
     xpr::FileIo sFileIo;
 
     sOpenMode = xpr::FileIo::OpenModeCreate | xpr::FileIo::OpenModeTruncate | xpr::FileIo::OpenModeWriteOnly;
     sRcode = sFileIo.open(aPath, sOpenMode);
-    if (XPR_RCODE_IS_ERROR(sRcode))
+    if (XPR_RCODE_IS_ERROR(sRcode) || sWrittenSize != sizeof(FileHeader))
         return XPR_FALSE;
 
     //----------------------------------------------------------------------
@@ -151,18 +172,18 @@ xpr_bool_t AccelTable::save(xpr_tchar_t *aPath, ACCEL *aAccel, xpr_sint32_t aCou
     sFileHeader.mFileType     = 1;
 
     sRcode = sFileIo.write(&sFileHeader, sizeof(FileHeader), &sWrittenSize);
-    if (XPR_RCODE_IS_ERROR(sRcode))
+    if (XPR_RCODE_IS_ERROR(sRcode) || sWrittenSize != sizeof(xpr_sint32_t))
         return XPR_FALSE;
 
     //----------------------------------------------------------------------
     // File Body
     //----------------------------------------------------------------------
     sRcode = sFileIo.write(&aCount, sizeof(xpr_sint32_t), &sWrittenSize);
-    if (XPR_RCODE_IS_ERROR(sRcode))
+    if (XPR_RCODE_IS_ERROR(sRcode) || sWrittenSize != (xpr_ssize_t)(sizeof(ACCEL) * aCount))
         return XPR_FALSE;
 
     sRcode = sFileIo.write(aAccel, sizeof(ACCEL) * aCount, &sWrittenSize);
-    if (XPR_RCODE_IS_ERROR(sRcode))
+    if (XPR_RCODE_IS_ERROR(sRcode) || sWrittenSize != sizeof(FileFooter))
         return XPR_FALSE;
 
     //----------------------------------------------------------------------

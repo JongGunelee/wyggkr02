@@ -204,6 +204,11 @@ void CommandStringTable::loadCommands(void)
     mCommandString[ID_VIEW_PIC_ZOOM_100]              = XPR_STRING_LITERAL("cmd.picture.zoom_100");
     mCommandString[ID_VIEW_PIC_RATIO]                 = XPR_STRING_LITERAL("cmd.picture.resize_by_ratio");
     mCommandString[ID_VIEW_PIC_DOCKING]               = XPR_STRING_LITERAL("cmd.picture.docking");
+    mCommandString[ID_VIEW_PIC_DOCK_ACTIVE]            = XPR_STRING_LITERAL("cmd.picture.dock_target_active");
+    mCommandString[ID_VIEW_PIC_DOCK_PANE_1]            = XPR_STRING_LITERAL("cmd.picture.dock_target_pane_1");
+    mCommandString[ID_VIEW_PIC_DOCK_PANE_2]            = XPR_STRING_LITERAL("cmd.picture.dock_target_pane_2");
+    mCommandString[ID_VIEW_PIC_DOCK_PANE_3]            = XPR_STRING_LITERAL("cmd.picture.dock_target_pane_3");
+    mCommandString[ID_VIEW_PIC_DOCK_PANE_4]            = XPR_STRING_LITERAL("cmd.picture.dock_target_pane_4");
     mCommandString[ID_VIEW_PIC_AUTO_HIDE]             = XPR_STRING_LITERAL("cmd.picture.auto_hide");
     mCommandString[ID_VIEW_PIC_LOCK]                  = XPR_STRING_LITERAL("cmd.picture.lock_picture_size");
     mCommandString[ID_VIEW_PIC_CLIENT]                = XPR_STRING_LITERAL("cmd.picture.lock_window_size");

@@ -87,13 +87,13 @@ $script:OptionalRuntimeConfigFiles = @(
 
 $script:RequiredArtifactFiles = @{
     x64 = @(
-        'fxfile.exe', 'fxfile-launcher.exe', 'fxfile-crash.dll',
+        'fxfile.exe', 'fxfile.chm', 'fxfile-launcher.exe', 'fxfile-crash.dll',
         'fxfile-keyhook.dll', 'libxprw.dll', 'libgfl340.dll',
         'libxml2-2.dll', 'mfc140u.dll', 'msvcp140.dll',
         'vcruntime140.dll', 'vcruntime140_1.dll', 'zlib1.dll'
     )
     x32 = @(
-        'fxfile.exe', 'fxfile-launcher.exe', 'fxfile-crash.dll',
+        'fxfile.exe', 'fxfile.chm', 'fxfile-launcher.exe', 'fxfile-crash.dll',
         'fxfile-keyhook.dll', 'libxprw.dll', 'libgfl340.dll',
         'libxml2-2.dll', 'mfc140u.dll', 'msvcp140.dll',
         'vcruntime140.dll', 'zlib1.dll'
@@ -790,6 +790,52 @@ function Invoke-ArchitectureBuild([string]$Arch) {
     }
 }
 
+function Build-HelpArtifact {
+    $helpRoot = Join-Path $script:ProjectRoot 'docs\htmlhelp'
+    $helpProject = Join-Path $helpRoot 'flyExplorer.hhp'
+    $helpSource = Join-Path $helpRoot 'Html\shortkey.htm'
+    $compiledHelp = Join-Path $helpRoot 'flyExplorer.chm'
+    Assert-True (Test-Path -LiteralPath $helpProject -PathType Leaf) "HTML Help project is missing: $helpProject"
+    Assert-True (Test-Path -LiteralPath $helpSource -PathType Leaf) "Shortcut manual source is missing: $helpSource"
+
+    $compiler = Get-Command 'hhc.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $compiler) {
+        $knownCompiler = 'C:\Program Files (x86)\HTML Help Workshop\hhc.exe'
+        Assert-True (Test-Path -LiteralPath $knownCompiler -PathType Leaf) (
+            'HTML Help Workshop is required to build fxfile.chm. Install it or make hhc.exe available in PATH.')
+        $compilerPath = $knownCompiler
+    }
+    else {
+        $compilerPath = $compiler.Source
+    }
+
+    if (Test-Path -LiteralPath $compiledHelp -PathType Leaf) {
+        Remove-Item -LiteralPath $compiledHelp -Force
+    }
+    Write-Step 'Building fxfile.chm from the audited shortcut manual.'
+    Push-Location $helpRoot
+    try {
+        & $compilerPath $helpProject | Out-Host
+        # hhc.exe commonly returns 1 even after a successful compilation, so
+        # the generated artifact and its freshness are the authoritative checks.
+    }
+    finally {
+        Pop-Location
+    }
+    Assert-True (Test-Path -LiteralPath $compiledHelp -PathType Leaf) 'HTML Help compiler did not create flyExplorer.chm.'
+    $compiledItem = Get-Item -LiteralPath $compiledHelp
+    $sourceItem = Get-Item -LiteralPath $helpSource
+    Assert-True ($compiledItem.Length -gt 1KB) 'Compiled CHM is unexpectedly small.'
+    Assert-True ($compiledItem.LastWriteTimeUtc -ge $sourceItem.LastWriteTimeUtc) 'Compiled CHM is older than the shortcut manual source.'
+
+    foreach ($arch in @('x64', 'x32')) {
+        $destination = Join-Path $script:ArtifactRoots[$arch] 'fxfile.chm'
+        Copy-Item -LiteralPath $compiledHelp -Destination $destination -Force
+        Assert-True ((Get-FileSha256 $compiledHelp) -eq (Get-FileSha256 $destination)) (
+            "Failed to stage the compiled manual for $arch`: $destination")
+    }
+}
+
 function Get-ArtifactRootFiles([string]$Arch) {
     $root = $script:ArtifactRoots[$Arch]
     Assert-True (Test-Path -LiteralPath $root -PathType Container) "Artifact root does not exist: $root"
@@ -809,14 +855,14 @@ function Get-ArtifactRootFiles([string]$Arch) {
     }
 
     $files = @(Get-ChildItem -LiteralPath $root -File -Force | Where-Object {
-        $_.Extension -ieq '.dll' -or $_.Name -imatch '^fxfile.*\.exe$'
+        $_.Extension -ieq '.dll' -or $_.Name -imatch '^fxfile.*\.exe$' -or $_.Name -ieq 'fxfile.chm'
     } | Sort-Object Name)
 
     foreach ($required in $script:RequiredArtifactFiles[$Arch]) {
         Assert-True ($files.Name -icontains $required) "Required $Arch artifact is missing: $required"
     }
 
-    foreach ($file in $files) {
+    foreach ($file in $files | Where-Object { $_.Extension -ieq '.exe' -or $_.Extension -ieq '.dll' }) {
         $actualArch = Get-PeArchitecture $file.FullName
         Assert-True ($actualArch -eq $Arch) "Architecture mismatch in $($file.FullName): expected $Arch, got $actualArch"
     }
@@ -1026,7 +1072,9 @@ function Test-DeploymentState {
             Assert-FileMatches $artifact.FullName (Join-Path $package.Root $artifact.Name) ("{0} artifact {1}" -f $package.Name, $artifact.Name)
         }
 
-        $expectedBinaryNames = @($script:ArtifactFiles[$package.Arch] | ForEach-Object { $_.Name } | Sort-Object)
+        $expectedBinaryNames = @($script:ArtifactFiles[$package.Arch] | Where-Object {
+            $_.Extension -ieq '.exe' -or $_.Extension -ieq '.dll'
+        } | ForEach-Object { $_.Name } | Sort-Object)
         $actualBinaryNames = @(Get-ChildItem -LiteralPath $package.Root -File -Force | Where-Object {
             $_.Extension -ieq '.exe' -or $_.Extension -ieq '.dll'
         } | ForEach-Object { $_.Name } | Sort-Object)
@@ -1429,6 +1477,8 @@ try {
         Add-StorageCheckpoint 'AfterX64Build' -Enforce | Out-Null
         Invoke-ArchitectureBuild 'x32'
         Add-StorageCheckpoint 'AfterX32Build' -Enforce | Out-Null
+        Build-HelpArtifact
+        Add-StorageCheckpoint 'AfterHelpBuild' -Enforce | Out-Null
     }
 
     Initialize-ArtifactManifests

@@ -1,5 +1,9 @@
 # 📁 Windows 10/11 최적화 fxfile 소스 코드 및 기술 이력 가이드
 
+> **Task 123 매뉴얼 단축키 의미 정정:** Task 122의 “전수 감사”는 실행 리소스·사용자 가속기·명령 노출·전역 후크만 검사했고, CHM 매뉴얼의 `단축키 활용` 표와 실제 `해당 명령`을 행별로 대조하지 않았다. 따라서 그 표현은 범위가 불완전했으며 Task 123이 이를 정정한다. 실제 기본 가속기 60개를 매뉴얼의 명령 ID 60개와 1:1 계약으로 고정하고, 잘못 기재된 `Ctrl+G`, `Ctrl+T`, `Ctrl+W`, 개발자/파일명 복사, Alt 방향키와 오래된 키를 바로잡았다. CHM도 이제 통합 빌드·세 배포·해시 검증의 필수 산출물이다. 상세는 문서 끝 Task 123을 우선 참조한다.
+
+> **Task 122 단축키 무결성 후속 정정:** 기본 가속기 60개/52개 명령, 사용자 저장 `fxfile-accel.dat`, 단축키 설정 UI, 본체 명령 라우팅, 런처의 `Windows 키+지정 키` 전역 후크를 분리 감사했다. 그림 보기 도킹 대상 5개 명령이 실제 메뉴·핸들러·번역에는 있으나 명령 문자열 표에서 빠져 사용자 지정 단축키 목록에 나타나지 않던 누락을 복구했다. 저장 파일의 음수/초과 개수·잘린 읽기·잘못된 플래그·빈 키/명령·중복 조합과 설정 UI의 100개 배열 초과를 거부하고, 같은 키 재지정은 기존 소유자를 원자 교체한다. 상세 구현·검증·GUI 자동화 한계는 문서 끝 Task 122를 우선 참조한다.
+
 > **Task 121 후속 정정:** 비동기 폴더 전환에서 `[..] 상위 폴더로`를 worker 완료 전에 선게시한 Task 119 경로는 완료 단계의 로컬 `sAddedParentItem`이 `False`여서 기본 선택·포커스를 생략했다. 또한 `OnSetFocus()`는 선택이 없을 때 `LVIS_FOCUSED`만 설정하고 `LVIS_SELECTED`/SelectionMark/내부 캐시를 확정하지 않아 사용자가 ↓를 눌러야 선택행이 보였다. Task 121은 탐색 착지를 `commitNavigationSelection()` 한 곳으로 통합하고, 비동기 선게시·열거 완료·포커스 진입 모두 선택/포커스/SelectionMark/캐시를 원자적으로 맞춘다. 동일 폴더 새로고침의 기존 다중 선택 복원은 우선권을 유지한다. 세 배포본에서 폴더 진입과 상위 복귀 직후 방향키 0회 native 선택·포커스를 직접 검증했다. 상세 원인·증거는 문서 끝 Task 121을 우선 참조한다.
 
 > **Task 120 후속 정정:** Task 119의 “여섯 ListView 첫 행/0.923초”는 실제 파일·폴더가 아니라 비-Desktop pane의 합성 `[..] 상위 폴더로` 1행을 성공으로 인정한 잘못된 계측이었다. Task 120은 각 pane의 native item count가 실제로 증가해야 first-content가 되도록 고치고, 현재 비어 있지 않은 6개 저장 폴더에서는 `count > 1`을 실제 행의 엄격한 증거로 사용한다. 저장 history PIDL 복원은 현재 폴더 열거·동기 redraw·키보드 준비 뒤의 유휴 타이머 작업으로 내렸으며, 숨김 `desktop.ini` 등이 첫 batch를 소비해도 다음 실제 행이 즉시 진행되도록 초기 8개를 1개씩 게시한다. 최종 직접 실기에서 실제 행은 설치 x64 2.942초, run_x64 1.803초, run_x32 2.880초였고 parent-only 구간은 각각 65/98/106ms였다. 절대시간은 현재 PC 표본이며 다른 cold/provider 환경의 상한 보장은 아니다. 상세 정정·실패·증거는 문서 끝 Task 120을 우선 참조한다.
@@ -10,8 +14,8 @@
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 문서·정리 운영 기준: 2026-09-13 — Task 121 후속 정정 (폴더 전환 착지의 native 선택·포커스·SelectionMark·내부 캐시를 원자적으로 확정하고, 동일 폴더 새로고침 상태 복원은 보존하며 작업 종료 정리는 0.7/114.6 절차를 적용)_
-_현재 기능/배포 기준: Task 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
+_현재 문서·정리 운영 기준: 2026-09-14 — Task 123 후속 정정 (실제 가속기와 매뉴얼 설명을 60/60 명령 ID 계약으로 고정하고 CHM을 필수 통합 배포 산출물로 관리하며 작업 종료 정리는 0.7/114.6 절차를 적용)_
+_현재 기능/배포 기준: Task 123 → 122 → 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
 _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절대경로는 당시 증거로 보존하며, 현재 실행 명령으로 복사하지 않는다._
 
@@ -85,6 +89,7 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | 일괄 이름 변경·열 말줄임·수동 열폭·창/분할 폭 연동·썸네일 캐시·간헐 무응답 | 072, 069, 056, 058~059 | `BatchRename`, `Repeat=0`, `column_ellipsis`, `OnHdnItemChanged`, `manual width`, `responsive`, `OnSize`, `viewport`, `thumbnail`, `IOCP`, `응답 없음` |
 | 자동 갱신·갱신 시 자동 정렬·외부 다운로드/복사/이동이 pane #1~#6에 늦게 보임·watcher 등록/재무장 실패 복구 | 117, 116, 115, 071, 070, 069 | `DirectoryEnumerationWorker`, `generation`, `first batch`, `dirty reconcile`, `config.refresh.no`, `config.refresh.sort`, `EventWatchFailed`, `ReadDirectoryChangesW`, `scheduleDirectoryRefresh`, `파일 변경 즉시 화면 갱신`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
 | 최초 활성화·폴더 진입·`[..]` 상위 복귀 직후 ↓ 없이 선택행 표시, 마우스 없이 Tab·Shift+Tab으로 pane #1~#6 직접 전환, 주소 표시줄 우회와 row 0 착지 | 121, 118, 117, 050 | `commitNavigationSelection`, `focusParentFolderRow`, `mDirectoryEnumerationParentPublished`, `sRestoredRefreshState`, `LVIS_SELECTED`, `LVIS_FOCUSED`, `SelectionMark`, `moveFocus`, `requestStartupKeyboardFocus`, `VK_TAB`, `ShiftTab`, `SysListView32` |
+| 본체 기본/사용자 지정 단축키·매뉴얼 `단축키 활용` 설명 일치·CHM 배포·단축키 설정 목록 누락·키 충돌·저장 파일 손상·런처 전역 Windows 키 조합 | 123, 122, 013 | `shortkey.htm`, `fxfile.chm`, `data-command`, `IDR_MAINFRAME ACCELERATORS`, `fxfile-accel.dat`, `AccelTable`, `AccelTableDlg`, `MAX_ACCEL`, `CommandStringTable`, `fxfile-keyhook`, `WH_KEYBOARD_LL`, `단축키 설정` |
 | 좁은 창의 선택 행을 가로 스크롤할 때 크기 이후 문자가 밀림·헤더와 선택행 열 불일치·시작 pane 부분 공개 | 115, 114, 113, 050 | `drawFinalReportSelection`, `HeaderCtrl`, `ClientToScreen`, `ScreenToClient`, `horizontal scroll`, `atomic layout publication`, `locked split`, `PartialVisibleViewCounts` |
 | 대형/특수 폴더(`00 월마감`/`0000 FxFile`) 응답 없음·폴더 아이콘 깨짐·전 파일 비동기 아이콘 | 064~066 | `CSparseImageList`, `ForceImagePresent`, `SHDefExtractIconW`, `COleMessageFilter`, `FileIconInit`, `GetFileExtIconIndex`, `TypeIconIndex`, `dummy` |
 | '폴더 비교하기(R)' 현대화·비교 총괄 보고서·통계 대시보드·단일/다중 창(Pane 1~6) 스마트 비교 감지·마크다운 리포트·UI 전면 한글화 및 한글 인코딩 오류 재발 방지 | 100 (100.1~100.7) | `ID_WINDOW_COMPARE`, `FolderCompareSetupDlg`, `FolderCompareReportDlg`, `SyncDirs`, `compareWindow`, `Markdown 리포트`, `클립보드 복사`, `폴더 비교 총괄 보고서`, `벤치마킹`, `실기 런타임 자동화`, `한글화 5대 원칙`, `RC 템플릿`, `UTF-8 BOM`, `인코딩 오류 재발 방지`, `치환 앵커링`, `PowerShell UTF-8` |
@@ -10673,3 +10678,88 @@ fxfile_working        238.05      2349  (순수 소스 및 필수 라이브러�
 - 현재 실기는 저장된 첫 활성 pane에서 실제 폴더 진입/상위 복귀를 수행했고, 6 pane 전체 적용은 공통 클래스 단일 구현·정적 계약·Tab 여섯 pane 실기로 검증했다. 모든 가능한 Shell 가상 namespace/provider의 절대 응답시간을 보장하지는 않는다.
 
 **-- 비동기 parent-row 선게시와 완료 선택 조건의 불일치를 제거하고 선택/포커스/SelectionMark/캐시를 원자 확정하여 세 배포본 폴더 진입·상위 복귀 직후 방향키 0회 PASS, 45/45 회귀·x64/x32 빌드·세 배포·no-INI 완료 (Task 121, 2026-09-13) --**
+
+---
+
+## Task 122 — 시스템 단축키 전수 감사, 누락 복구 및 저장 가속기 무결성 보증 (2026-09-13)
+
+### 122.1 요청과 최종 판정
+
+- 사용자는 가이드 준수 아래 시스템 단축키가 정상 동작하는지, 누락된 단축키가 없는지 전수점검하고 모두 사용할 수 있도록 요구했다.
+- FxFile의 키 체계는 (1) `IDR_MAINFRAME ACCELERATORS`의 본체 기본 단축키, (2) `fxfile-accel.dat`에 저장되는 사용자 지정 단축키, (3) `PreTranslateMessage()`의 주소/북마크/드라이브 특수 입력, (4) `fxfile-launcher`+`fxfile-keyhook.dll`의 전역 `Windows 키+지정 키`로 분리된다. 이 네 경로를 섞어 한 종류의 성공으로 판단하지 않았다.
+- 기본 표는 **60개 키 조합·52개 명령**, 충돌 조합 0개였고 세 패키지의 기존 `fxfile-accel.dat`는 464바이트·60개·footer `0xFFFFFFFF`·SHA-256 동일이었다. 그러나 사용자 지정 목록 누락 5개와 손상 파일/배열 경계 결함이 확인되어 수정했다.
+
+### 122.2 발견된 원인·잠재 오류
+
+1. 그림 보기의 `ID_VIEW_PIC_DOCK_ACTIVE`, `ID_VIEW_PIC_DOCK_PANE_1~4`는 메뉴, 실행/업데이트 핸들러, 한국어 문자열이 모두 있었지만 `CommandStringTable` 매핑만 빠졌다. 단축키 설정 창은 이 표에서 표시 문자열을 못 얻은 명령을 건너뛰므로 사용자가 해당 5개 명령에 키를 지정할 수 없었다.
+2. `AccelTable::load()`의 인자 검사는 `aCount` 포인터 대신 `aCount <= 0`을 비교했고, 저장 count가 음수여도 `<= MAX`를 통과했다. 고정/가변 읽기의 실제 byte 수, 허용 플래그, 빈 키/명령, 중복 chord도 확인하지 않아 잘리거나 변조된 설정을 런타임 표로 만들 수 있었다.
+3. 설정 창 `OnAssign()`은 `mCount == MAX_ACCEL`에서도 다음 배열 원소를 기록했으며, 같은 조합을 다른 명령에 지정할 때 기존 소유자를 제거하지 않아 어떤 명령이 실행될지 순서에 의존했다. 선택 없는 Remove/Reset 및 빈 command 목록도 방어가 부족했다.
+4. `MainFrame::setAccelerator()`는 음수만 거부하고 `MAX_ACCEL` 초과를 검사하지 않아 외부 입력이 들어오면 `mAccel` 복사 범위를 넘을 수 있었다.
+
+### 122.3 무결성 보증 구현
+
+- 다섯 그림 도킹 대상 명령을 `CommandStringTable`에 연결해 `[도구] > 단축키 설정`의 전체/보기 메뉴에서 사용자 지정 가능하게 했다. 기본 키를 임의 부여해 기존 사용자 조합을 충돌시키지는 않았다.
+- 로더는 null count 포인터, 음수/초과 count, 부분 header/count/body/footer, 허용되지 않은 flag, key/cmd 0, 동일 modifier+key 중복을 모두 거부한다. 실패 시 기존 설계대로 리소스 기본 가속기 표로 안전 복귀한다. count 출력은 읽기 전에 0으로 초기화한다.
+- writer도 네 구간의 실제 write byte 수를 확인한다. on-disk `FileHeader` 주석은 packed 실제 크기 96바이트로 바로잡았으며 파일 버전/배치는 변경하지 않았다.
+- 설정 UI는 빈 키/빈 선택을 거부하고 100개 상한을 넘지 않는다. 같은 chord 재지정은 기존 항목을 먼저 제거한 뒤 새 명령 하나만 소유하도록 하며, 동일 명령·동일 chord 재지정은 무변경 처리한다. Remove/개별 Reset의 무선택 경계와 기본 복원의 상한도 방어한다.
+- 본체는 빈/초과 가속기 표 교체를 거부한다. Edit 컨트롤은 기존처럼 애플리케이션 가속기에서 제외하여 이름 변경·주소 입력 중 문자 키가 명령으로 탈취되지 않게 보존했다.
+- 런처 전역 단축키는 별도 기능이다. `WH_KEYBOARD_LL` 설치, 저장된 virtual key 로드, 좌/우 Windows 키 동시 조건, 후크 제거 경로를 확인했다. Windows 키 입력은 자동화 안전 정책상 실제 주입하지 않았으며 정적 계약과 x64/x32 런처 빌드로 검증했다.
+
+### 122.4 검증·배포 증거와 한계
+
+- 신규 `tools\test_task122_shortcut_integrity_contracts.ps1`은 기본 60개, chord 충돌 0, 명령 정의, 저장 형식 방어, UI 상한/재지정, Edit 제외, 전역 후크의 **19/19 계약을 PASS**했다. 전체 `tools\test_*.ps1`은 **46/46 PASS, 실패 0**이다.
+- 최종 통합 x64/x32 Release 빌드·설치 x64/run_x64/run_x32 배포·격리 no-INI smoke가 성공했다. manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_195523_928\deployment_manifest.json`이다.
+- 설치 x64/run_x64 SHA-256은 `34FBBF0E02BC63FEFBD3094D17679C9F564AF59BFF80FC25DB9E700478709BFB`, run_x32는 `F677FB8456830FA9A0CA9D34C6123A1646CBF75D094AF1E67651CE3CAAE5DE92`; 설정 10개 canonical 일치 `True`, 최종 VerifyOnly Exit 0이다. 격리 smoke에서 x64/x32 모두 저장된 6개 view ready를 통과했다.
+- 첫 통합 빌드에서 새 `sReadSize/sWrittenSize` 비교에 대해 C4700 경고가 검출됐다. API 성공 시 값이 설정되는 경로였지만 경고 없는 명시성을 위해 두 변수를 0으로 초기화하고 **두 아키텍처를 다시 빌드·재배포**했다. 위 해시/manifest가 보완 후 최종본이며 첫 중간 manifest는 정리했다.
+- Windows GUI 제어 보조 모듈은 시험 시 `Trusted RPC service is not configured`로 사용할 수 없었다. 따라서 삭제·외부 프로그램 실행 등 부작용 명령 60개를 실제 키로 전부 발동했다고 주장하지 않는다. 대신 모든 chord/command의 정적 연결, 설정 파일 실데이터, x64/x32 빌드, 격리 실행, 기존 키보드 회귀를 조합했다. 향후 GUI RPC가 제공되면 비파괴 대표 키와 격리 fixture의 파괴적 키를 분리 실기한다.
+
+### 122.5 백업·정리·재발 방지
+
+- 변경 전 복구본은 `__BUILD_TEMP_BACKUP__\task122_before_20260913_194431_095`, 필수 PASS preflight는 `__BUILD_TEMP_BACKUP__\preflight_20260913_194328_841`에 보존했다.
+- 파일 기반 Audit→Delete로 최종 산출물과 무관한 첫 중간 배포, `build_cmake`, `build_cmake_x32`, `obj`의 정확한 4개 대상·1,621파일·881,762,614바이트(약 840.91MiB)를 삭제했다. reparse 0, 작업공간 경계 내부를 확인했고 정리기 자체도 제거했다. 최종 확인은 잔여 대상 0, FxFile/launcher 프로세스 0, C: 여유 86.42GiB, D: 여유 2,119.11GiB다.
+- 재발 방지 규칙: 새 정적 메뉴 명령은 handler와 번역만 추가하지 말고 `CommandStringTable`의 단축키 설정 노출을 함께 검사한다. 사용자 지정 파일은 신뢰하지 않으며 count·정확한 byte 수·flag·key/cmd·chord 유일성을 모두 통과해야 한다. 배열 상한은 UI와 MainFrame 양쪽에서 중복 방어하고, 기본 단축키 수/충돌/전역 후크 계약을 Task 122 검사로 지속 고정한다.
+
+**-- 기본 60개/52명령과 사용자 지정·특수 입력·전역 후크를 분리 감사하고 도킹 대상 5개 누락, 손상 accel 파일, 중복 chord, MAX_ACCEL 초과를 해결하여 19/19 신규·46/46 전체 계약, x64/x32 빌드·세 배포·no-INI·VerifyOnly 완료 (Task 122, 2026-09-13) --**
+
+---
+
+## Task 123 — 매뉴얼 `단축키 활용`과 실제 명령의 60/60 의미 계약 및 CHM 통합 배포 (2026-09-14)
+
+### 123.1 요청과 이전 감사의 오류
+
+- 사용자는 매뉴얼의 `단축키 활용`에 적힌 키가 `해당 명령` 설명과 다르게 동작하는 이유와, Task 122에서 전수점검했다고 한 근거를 문제 삼았다.
+- **사용자 지적이 맞다.** Task 122는 RC 기본 가속기, 사용자 저장 형식, 설정 UI 명령 노출, 런처 전역 키를 검사했지만 `docs\htmlhelp\Html\shortkey.htm`의 설명을 실제 명령과 행별 대조하지 않았다. 따라서 당시 “전수점검”은 프로그램 내부 범위에 한정됐음에도 범위를 명시하지 않은 과대 보고였다.
+- 기존 설치/run의 `fxfile.chm`은 2026-08-29 구본이었고, 통합 배포 도구도 CHM을 필수 산출물로 취급하지 않았다. 소스 HTML을 고쳐도 사용자가 보는 세 매뉴얼이 자동 갱신되지 않는 두 번째 결함이었다.
+
+### 123.2 확인된 대표 불일치와 정정
+
+- `Ctrl+G`: 구 매뉴얼의 이미지 포맷 변경이 아니라 실제 `ID_GO_PATH`, 즉 **경로 지정 이동**이다.
+- `Ctrl+T`: 구 매뉴얼의 텍스트 내보내기가 아니라 `ID_WINDOW_TAB_NEW`, 즉 **새 탭**이다.
+- `Ctrl+W`: 구 매뉴얼의 작업창 표시/숨김이 아니라 `ID_WINDOW_TAB_CLOSE`, 즉 **현재 탭 닫기**다.
+- `Shift+Alt+C`는 `ID_EDIT_FILENAME_COPY` **파일명 복사**, 개발자 경로명 복사는 `Ctrl+Shift+Alt+C`의 `ID_EDIT_DEV_PATH_COPY`다.
+- Alt+왼쪽/오른쪽은 뒤로/앞으로, Alt+아래/위는 같은 수준의 다음/이전 폴더다. 구 문서의 방향 설명을 실제 명령으로 교정했다.
+- 기본 가속기 표에 없는 오래된 `Shift+F2`, `Shift+Ctrl+V` 설명은 제거했다. 반대로 Alt+F4, Ctrl+F, Ctrl+I, Ctrl+F4, Ctrl+Tab, Ctrl+Shift+Tab, Shift+F6 등 실제 기본값 누락을 포함해 현재 60개를 모두 수록했다.
+- 폴더 트리/파일 목록의 Windows 기본 상호작용은 본체 가속기와 별도 문맥 표로 분리했다. 사용자 지정 `fxfile-accel.dat`가 기본값을 바꿀 수 있다는 우선순위도 명시했다.
+
+### 123.3 구현과 자동 재발 방지
+
+- `docs\htmlhelp\Html\shortkey.htm`을 UTF-8 정식 문서로 재구성하고 각 기본 단축키 행에 실제 command ID인 `data-command`를 기록했다.
+- 신규 `tools\test_task123_manual_shortcut_semantics_contracts.ps1`은 RC의 `IDR_MAINFRAME ACCELERATORS`를 직접 파싱해 키·modifier·command를 정규화한 뒤 매뉴얼의 60행과 다중집합으로 완전 비교한다. 개수만 같고 뜻이 다른 상태도 실패하며, 대표 의미와 폐기 키, UTF-8, 사용자 지정 우선순위도 별도 검사한다.
+- `tools\Build-Deploy-Verify.ps1`은 HTML Help Workshop의 `hhc.exe`로 매뉴얼을 빌드하고 생성·크기·소스보다 새 시각을 검사한 뒤 `bin\x64`/`bin\x32`에 `fxfile.chm`을 동시 배치한다. CHM은 이제 `RequiredArtifactFiles`와 manifest에 포함되므로 세 패키지 중 하나라도 누락되거나 해시가 다르면 배포/VerifyOnly가 실패한다. CHM에는 PE 아키텍처 검사를 잘못 적용하지 않으며 EXE/DLL 루트 정합성 검사는 종전 범위를 유지한다.
+
+### 123.4 검증·배포 증거
+
+- Task 123 계약은 **60/60 매핑 PASS**, 전체 `tools\test_*.ps1`은 **47/47 PASS, 실패 0**이다.
+- 필수 PASS 프리플라이트는 `__BUILD_TEMP_BACKUP__\preflight_20260913_202211_378\preflight_report.json`이며 필수 실패 0, Git 비저장소만 비차단 경고다.
+- 통합 x64/x32 Release 빌드, HTML Help 컴파일, 설치 x64/run_x64/run_x32 배포와 no-INI smoke 성공 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_202253_055\deployment_manifest.json`이다.
+- 설치 x64/run_x64 실행 파일 SHA-256은 `705ECBDABB4ADBC1687D335DF3039DCEF8FD8B48721DB05757971B849DF81349`, run_x32는 `2C7669F978FE0D3E4954AD41190409E43FB4FA1A2CAFBF7FB6B8EF278816286F`이다. 세 `fxfile.chm`은 모두 291,305바이트, SHA-256 `4C2C99089066D0F1FA47A57921A46B6046D5244A614B9E416450E4CE954A8FEF`로 동일하다. 설정 10개 canonical 일치, 루트 `fxfile.ini`/`.fxfile` 미생성도 manifest에서 통과했다.
+- 변경 전 복구본은 `__BUILD_TEMP_BACKUP__\task123_before_20260913_201601_562`에 보존했다.
+- 설치본 CHM을 7-Zip으로 별도 추출해 내부 `Html\shortkey.htm`의 SHA-256이 소스와 동일함을 확인했다. 검증용 추출/빈 decompile 폴더, 생성 중간 `flyExplorer.chm`, `build_cmake`/`build_cmake_x32`/`obj`, Task 122 구 성공 배포·구 preflight 2세대는 §0.7.3의 명시 경로·workspace 경계·reparse 0 검사 뒤 제거했다. 최신 Task 123 복구본·PASS preflight·성공 manifest·`bin`·세 배포본은 보호했으며 정리 후 C: 약 86.27GiB, D: 약 2,119.11GiB 여유와 관련 빌드/FxFile 프로세스 0을 확인했다.
+
+### 123.5 교훈과 완료 판정 규칙
+
+- “단축키 전수점검”은 최소 (1) 실제 가속기, (2) command handler, (3) 사용자 설정 UI, (4) 저장/복원, (5) 전역 키, (6) 사용자가 읽는 매뉴얼, (7) 최종 CHM 배포를 각각 검증했다는 증거가 있어야 한다. 일부만 검사했으면 그 범위를 명시하고 전수라는 표현을 쓰지 않는다.
+- 문서 표의 문자열 육안 확인만으로 완료하지 않는다. 각 행을 안정된 command ID로 연결하고 RC와 자동 비교한다. 기본 단축키가 추가·삭제·변경되면 매뉴얼과 동시에 바뀌지 않는 커밋은 Task 123 계약에서 실패해야 한다.
+- HTML 원본 수정은 배포 완료가 아니다. 컴파일된 CHM의 생성·manifest 포함·세 패키지 동일 해시까지 확인해야 사용자 환경 반영으로 판정한다.
+
+**-- Task 122의 매뉴얼 누락 감사를 명시적으로 정정하고 실제 RC 60개와 매뉴얼 60행을 command ID로 완전 결합하여 60/60 신규·47/47 전체 계약, CHM 빌드·x64/x32·세 배포·no-INI 완료 (Task 123, 2026-09-14) --**

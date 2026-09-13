@@ -4614,7 +4614,7 @@ void MainFrame::moveFocus(xpr_sint_t aCurWnd, xpr_bool_t aShiftKey, xpr_bool_t a
 
 void MainFrame::setAccelerator(ACCEL *aAccel, xpr_sint_t aCount)
 {
-    if (XPR_IS_NULL(aAccel) || aCount < 0)
+    if (XPR_IS_NULL(aAccel) || aCount <= 0 || aCount > MAX_ACCEL)
         return;
 
     // save to file

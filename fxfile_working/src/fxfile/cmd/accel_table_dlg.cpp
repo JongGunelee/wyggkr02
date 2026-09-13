@@ -438,6 +438,9 @@ void AccelTableDlg::fillRecursiveCategory(CommandList &aCommandList, CMenu *aMen
 void AccelTableDlg::OnSelchangeCommands(void) 
 {
     xpr_sint_t sCurSel = mCommandWnd.GetCurSel();
+    if (sCurSel < 0)
+        return;
+
     Command *sCommand = (Command *)mCommandWnd.GetItemData(sCurSel);
 
     mCurKeysWnd.ResetContent();
@@ -648,19 +651,45 @@ void AccelTableDlg::OnAssign(void)
     }
 
     xpr_sint_t sCurSel = mCommandWnd.GetCurSel();
-    if (sCurSel >= 0)
+    if (sCurSel >= 0 && sVirtualKeyCode != 0)
     {
         Command *sCommand = (Command *)mCommandWnd.GetItemData(sCurSel);
+
+        xpr_byte_t sVirt = FVIRTKEY | FNOINVERT;
+        if (sModifier & HOTKEYF_CONTROL) sVirt |= FCONTROL;
+        if (sModifier & HOTKEYF_SHIFT)   sVirt |= FSHIFT;
+        if (sModifier & HOTKEYF_ALT)     sVirt |= FALT;
+
+        // A key chord must have exactly one owner. Reassigning it replaces the
+        // previous command instead of persisting an ambiguous duplicate.
+        for (xpr_sint_t i = 0; i < mCount; ++i)
+        {
+            const xpr_byte_t sComparableFlags = FVIRTKEY | FSHIFT | FCONTROL | FALT;
+            if ((mAccel[i].fVirt & sComparableFlags) == (sVirt & sComparableFlags) &&
+                mAccel[i].key == sVirtualKeyCode)
+            {
+                if (mAccel[i].cmd == sCommand->mId)
+                {
+                    OnSelchangeCommands();
+                    return;
+                }
+
+                mCount--;
+                if ((mCount - i) > 0)
+                    memmove(mAccel + i, mAccel + i + 1, sizeof(ACCEL) * (mCount - i));
+                memset(mAccel + mCount, 0, sizeof(ACCEL));
+                break;
+            }
+        }
+
+        if (mCount >= MAX_ACCEL)
+            return;
 
         // Command ID
         mAccel[mCount].cmd = (xpr_ushort_t)sCommand->mId;
 
         // Flag Virtual Key
-        if (sModifier & HOTKEYF_CONTROL) mAccel[mCount].fVirt |= FCONTROL;
-        if (sModifier & HOTKEYF_SHIFT)   mAccel[mCount].fVirt |= FSHIFT;
-        if (sModifier & HOTKEYF_ALT)     mAccel[mCount].fVirt |= FALT;
-        mAccel[mCount].fVirt |= FVIRTKEY;
-        mAccel[mCount].fVirt |= FNOINVERT;
+        mAccel[mCount].fVirt = sVirt;
 
         // Virtual Key
         mAccel[mCount].key = sVirtualKeyCode;
@@ -675,6 +704,8 @@ void AccelTableDlg::OnRemove(void)
 {
     xpr_sint_t nComCurSel = mCommandWnd.GetCurSel();
     xpr_sint_t nKeyCurSel = mCurKeysWnd.GetCurSel();
+    if (nComCurSel < 0 || nKeyCurSel < 0)
+        return;
 
     Command *sCommand = (Command *)mCommandWnd.GetItemData(nComCurSel);
     DWORD sAccelKey = (DWORD)mCurKeysWnd.GetItemData(nKeyCurSel);
@@ -715,6 +746,9 @@ void AccelTableDlg::OnReset(void)
 
     xpr_sint_t i;
     xpr_sint_t sComCurSel = mCommandWnd.GetCurSel();
+    if (sComCurSel < 0)
+        return;
+
     Command *sCommand = (Command *)mCommandWnd.GetItemData(sComCurSel);
 
     i = 0;
@@ -750,6 +784,9 @@ void AccelTableDlg::OnReset(void)
     {
         if (sAccel[i].cmd == sCommand->mId)
         {
+            if (mCount >= MAX_ACCEL)
+                break;
+
             mAccel[mCount].cmd   = sAccel[i].cmd;
             mAccel[mCount].fVirt = sAccel[i].fVirt;
             mAccel[mCount].key   = sAccel[i].key;
