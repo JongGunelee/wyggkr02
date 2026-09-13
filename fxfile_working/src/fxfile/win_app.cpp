@@ -309,7 +309,7 @@ xpr_bool_t WinApp::InitInstance(void)
         xpr_tchar_t sDirDbg[XPR_MAX_PATH + 1] = {0};
         GetModuleDir(sDirDbg, XPR_MAX_PATH);
         xpr_tchar_t sMsg[2048];
-        _stprintf(sMsg, XPR_STRING_LITERAL("Error: Language Pack (Korean.xml) load FAILED!\n\n1. Search Dir: %s\\Languages\\\n2. Found Count: %d\n\nPlease check if Korean.xml exists in the above path."), 
+        _stprintf(sMsg, XPR_STRING_LITERAL("Error: Language Pack (Korean.xml) load FAILED!\n\n1. Search Dir: %s\\Languages\\\n2. Found Count: %Iu\n\nPlease check if Korean.xml exists in the above path."),
                   sDirDbg, mLanguageTable->getLanguageCount());
         MessageBox(XPR_NULL, sMsg, FXFILE_PROGRAM_NAME, MB_OK | MB_ICONSTOP);
         return XPR_FALSE;

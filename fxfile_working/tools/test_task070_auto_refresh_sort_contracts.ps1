@@ -42,6 +42,7 @@ $legacyNotify = Function-Body $explorer 'LRESULT ExplorerCtrl::OnFileChangeNotif
 $advancedNotify = Function-Body $explorer 'LRESULT ExplorerCtrl::OnAdvFileChangeNotify' 'void ExplorerCtrl::enumerateShcn'
 $shellNotify = Function-Body $explorer 'LRESULT ExplorerCtrl::OnShellChangeNotify' 'xpr_bool_t ExplorerCtrl::beginShcn'
 $finishNotify = Function-Body $explorer 'void ExplorerCtrl::endShcn' 'LRESULT ExplorerCtrl::OnFileChangeNotify'
+$timer = Function-Body $explorer 'void ExplorerCtrl::OnTimer' 'xpr_bool_t ExplorerCtrl::doPasteSelect'
 $reconcile = Function-Body $explorer 'void ExplorerCtrl::reconcileFileOperationItems' 'LRESULT ExplorerCtrl::OnShellChangeNotify'
 $runtimeTest = Read-Text 'tools\Test-Task070AutoRefreshSortRuntime.ps1'
 
@@ -93,21 +94,25 @@ Check 'No-refresh policy suppresses shell and both directory watcher paths' (
     $advancedNotify.Contains('mOption.mNoRefresh == XPR_TRUE'))
 Check 'Windows shell notification path completes through common sort policy' (
     $shellNotify.Contains('endShcn(sEventId, sResult);'))
-Check 'Legacy directory watcher completes through common sort policy' (
-    $legacyNotify.Contains('const xpr_bool_t sResult = OnShcnUpdateDir') -and
-    $legacyNotify.Contains('endShcn(SHCNE_UPDATEDIR, sResult);'))
-Check 'Advanced watcher records changed state for create delete rename modify and directory refresh' (
+Check 'Legacy directory watcher routes coarse refresh off the UI thread' (
+    $legacyNotify.Contains('scheduleDirectoryRefresh();') -and
+    -not $legacyNotify.Contains('OnShcnUpdateDir('))
+Check 'Advanced watcher handles exact events and routes coarse refresh off the UI thread' (
     $advancedNotify.Contains('sResult = OnShcnCreateItem') -and
     $advancedNotify.Contains('sResult = OnShcnDeleteItem') -and
     $advancedNotify.Contains('sResult = OnShcnRenameItem') -and
-    $advancedNotify.Contains('sResult = OnShcnUpdateDir'))
+    $advancedNotify.Contains('case AdvFileChangeWatcher::EventUpdateDir:') -and
+    $advancedNotify.Contains('scheduleDirectoryRefresh();') -and
+    -not $advancedNotify.Contains('sResult = OnShcnUpdateDir('))
 Check 'Advanced watcher completes through common sort policy' (
     $advancedNotify.Contains('endShcn(sEventId, sResult);'))
 Check 'Common sort policy preserves in-place rename editing' (
     $finishNotify.Contains('mOption.mRefreshSort == XPR_TRUE') -and
-    $finishNotify.Contains('GetEditControl()') -and
-    $finishNotify.Contains('mRenameResorting') -and
-    $finishNotify.Contains('resortItems();'))
+    $finishNotify.Contains('scheduleRefreshSort();') -and
+    $timer.Contains('TM_ID_NOTIFY_SORT') -and
+    $timer.Contains('GetEditControl()') -and
+    $timer.Contains('mRenameResorting') -and
+    $timer.Contains('resortItems();'))
 Check 'File-operation UI reconciliation also honors refresh-sort' (
     $reconcile.Contains('mOption.mRefreshSort == XPR_TRUE') -and
     $reconcile.Contains('resortItems();'))

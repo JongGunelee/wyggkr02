@@ -50,10 +50,21 @@ int wmain(int aArgumentCount, wchar_t **aArguments)
         sOperation.fFlags |= FOF_ALLOWUNDO;
 
     HRESULT sError = S_OK;
+    fxfile::ModernShellFileOperation::ExecutionInfo sExecutionInfo;
     const fxfile::ModernShellFileOperation::Result sResult =
-        fxfile::ModernShellFileOperation::tryExecute(&sOperation, &sError);
+        fxfile::ModernShellFileOperation::tryExecute(
+            &sOperation, &sError, &sExecutionInfo);
     ::CoUninitialize();
-    wprintf(L"result=%d hr=0x%08lx\n", static_cast<int>(sResult), sError);
+    wprintf(L"result=%d hr=0x%08lx items=%Iu\n",
+            static_cast<int>(sResult), sError, sExecutionInfo.mItems.size());
+    for (size_t i = 0; i < sExecutionInfo.mItems.size(); ++i)
+    {
+        const fxfile::ModernShellFileOperation::ItemResult &sItem =
+            sExecutionInfo.mItems[i];
+        wprintf(L"item=%Iu hr=0x%08lx source=\"%s\" target=\"%s\"\n",
+                i, sItem.mResult, sItem.mSourcePath.c_str(),
+                sItem.mTargetPath.c_str());
+    }
     return sResult == fxfile::ModernShellFileOperation::ResultSucceeded ? 0 :
            (sResult == fxfile::ModernShellFileOperation::ResultNotApplicable ? 4 : 1);
 }

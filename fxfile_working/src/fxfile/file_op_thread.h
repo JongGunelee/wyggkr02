@@ -12,6 +12,8 @@
 #pragma once
 
 #include <vector>
+#include "adaptive_file_operation.h"
+#include "modern_shell_file_operation.h"
 
 namespace fxfile
 {
@@ -68,7 +70,9 @@ protected:
     struct SourceSnapshot
     {
         xpr::string mPath;
+        xpr::string mExpectedTargetPath;
         xpr_bool_t  mDirectory;
+        xpr_bool_t  mExistedBefore;
     };
 
     // Captured by the file-operation worker.  UI handlers must never probe
@@ -76,11 +80,21 @@ protected:
     // anti-virus filters may block GetFileAttributes for seconds.
     struct ResultSnapshot
     {
+        enum Outcome
+        {
+            OutcomeSucceeded,
+            OutcomeFailed,
+            OutcomeCancelled,
+            OutcomeUnprocessed,
+        };
+
         xpr::string mSourcePath;
         xpr::string mTargetPath;
         xpr_bool_t  mDirectory;
         xpr_bool_t  mSourceGone;
         xpr_bool_t  mTargetExists;
+        Outcome     mOutcome;
+        DWORD       mError;
     };
 
 protected:
@@ -94,10 +108,22 @@ protected:
     HANDLE          mStopEvent;
     xpr_bool_t      mUndo;
     xpr_bool_t      mOperationSucceeded;
+    DWORD           mOperationError;
+    xpr_uint64_t    mOperationId;
+    xpr_uint64_t    mAcceptedTick;
+    xpr_uint64_t    mWorkerStartedTick;
+    xpr_uint64_t    mPreparationFinishedTick;
+    xpr_uint64_t    mExecutionFinishedTick;
+    xpr_uint64_t    mVerificationFinishedTick;
+    xpr::string     mEngineName;
+    xpr::string     mEngineReason;
+    AdaptiveFileOperation::ExecutionInfo mAdaptiveExecutionInfo;
+    ModernShellFileOperation::ExecutionInfo mModernExecutionInfo;
     std::vector<SourceSnapshot> mSourceSnapshots;
     std::vector<ResultSnapshot> mResultSnapshots;
 
     static xpr_bool_t mCompleteFlash;
+    static volatile LONG mNextOperationId;
 
 protected:
     static xpr_sint_t mRefCount;

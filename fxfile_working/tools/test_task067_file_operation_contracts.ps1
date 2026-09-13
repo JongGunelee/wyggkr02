@@ -41,8 +41,12 @@ Check 'Status is updated after reconciliation' ($explorer.Contains('updateStatus
 Check 'Source snapshots retain directory type' ($threadHeader.Contains('mDirectory'))
 Check 'Storage type query is volume-deduplicated first' ($adaptive.IndexOf('sQueriedVolumes.insert(sSourceVolume)') -lt $adaptive.IndexOf('queryStorageKind(aPlan.files[i].source, NULL)'))
 Check 'Access-denied direct copy can fall back safely' ($adaptive.Contains('case ERROR_ACCESS_DENIED:'))
-Check 'Modern shell tracks copy results' ($modern.Contains('STDMETHODIMP PostCopyItem') -and $modern.Contains('record(aItem, aResult);'))
-Check 'Modern shell tracks move results' ($modern.Contains('STDMETHODIMP PostMoveItem') -and $modern.Contains('record(aItem, aResult);'))
+Check 'Modern shell tracks copy results and the actual destination item' (
+    $modern.Contains('STDMETHODIMP PostCopyItem') -and
+    $modern.Contains('record(aItem, aResult, aNewItem);'))
+Check 'Modern shell tracks move results and the actual destination item' (
+    $modern.Contains('STDMETHODIMP PostMoveItem') -and
+    $modern.Contains('record(aItem, aResult, aNewItem);'))
 Check 'Per-item shell failure prevents false success' ($modern.Contains('!sSink->failed().empty()') -and $modern.Contains('sResult = E_FAIL;'))
 
 $failed = @($checks | Where-Object { -not $_.Passed })

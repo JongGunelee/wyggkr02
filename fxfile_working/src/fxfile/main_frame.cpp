@@ -101,10 +101,17 @@ enum
     WM_COMPARE_DIRS_STATUS  = WM_USER + 2,
     WM_DEFERRED_STARTUP_VIEWS = WM_USER + 3,
     WM_DEFERRED_STARTUP_HISTORY = WM_USER + 4,
+    WM_DEFERRED_STARTUP_KEYBOARD_FOCUS = WM_USER + 5,
+    TM_ID_DEFERRED_STARTUP_HISTORY = 0x5f01,
 };
+
+const UINT kInitialStartupHistoryDelayMilliseconds = 250;
+const UINT kNextStartupHistoryDelayMilliseconds = 25;
 
 const xpr_tchar_t kStartupLayoutReadyProperty[] =
     XPR_STRING_LITERAL("FxFile.StartupLayoutReadyViewCount");
+const xpr_tchar_t kStartupLayoutFirstContentProperty[] =
+    XPR_STRING_LITERAL("FxFile.StartupLayoutFirstContentViewCount");
 const xpr_tchar_t kStartupLayoutSkeletonProperty[] =
     XPR_STRING_LITERAL("FxFile.StartupLayoutSkeletonPainted");
 } // namespace anonymous
@@ -123,6 +130,12 @@ MainFrame::MainFrame(void)
     , mDeferStartupViews(XPR_TRUE)
     , mStartupViewBatchPending(XPR_FALSE)
     , mStartupLayoutPublished(XPR_FALSE)
+    , mStartupKeyboardFocusReady(XPR_FALSE)
+    , mStartupKeyboardFocusPending(XPR_TRUE)
+    , mStartupHistoryViewIndex(0)
+    , mStartupHistoryPosted(XPR_FALSE)
+    , mStartupFirstContentViewMask(0)
+    , mStartupReadyViewMask(0)
 {
     mSplitFullPidl[0] = XPR_NULL;
     mSplitFullPidl[1] = XPR_NULL;
@@ -263,6 +276,7 @@ BEGIN_MESSAGE_MAP(MainFrame, super)
     ON_MESSAGE(WM_COMPARE_DIRS_STATUS, OnCompareDirsStatus)
     ON_MESSAGE(WM_DEFERRED_STARTUP_VIEWS, OnDeferredStartupViews)
     ON_MESSAGE(WM_DEFERRED_STARTUP_HISTORY, OnDeferredStartupHistory)
+    ON_MESSAGE(WM_DEFERRED_STARTUP_KEYBOARD_FOCUS, OnDeferredStartupKeyboardFocus)
 END_MESSAGE_MAP()
 
 void MainFrame::init(void)
@@ -364,6 +378,12 @@ xpr_bool_t MainFrame::LoadFrame(xpr_uint_t aIdResource, DWORD aDefaultStyle, CWn
 xpr_bool_t MainFrame::OnCreateClient(LPCREATESTRUCT aCreateStruct, CCreateContext *aCreateContext)
 {
     TraceStartup(XPR_STRING_LITERAL("MainFrame.OnCreateClient.begin"));
+    mStartupFirstContentViewMask = 0;
+    mStartupReadyViewMask = 0;
+    mStartupHistoryViewIndex = 0;
+    mStartupHistoryPosted = XPR_FALSE;
+    ::SetProp(m_hWnd, kStartupLayoutFirstContentProperty, (HANDLE)(INT_PTR)0);
+    ::SetProp(m_hWnd, kStartupLayoutReadyProperty, (HANDLE)(INT_PTR)0);
     ::SetProp(m_hWnd, kStartupLayoutSkeletonProperty, (HANDLE)(INT_PTR)1);
     xpr_sint_t sRowCount    = gOpt->mMain.mViewSplitRowCount;
     xpr_sint_t sColumnCount = gOpt->mMain.mViewSplitColumnCount;
@@ -434,8 +454,10 @@ xpr_bool_t MainFrame::OnCreateClient(LPCREATESTRUCT aCreateStruct, CCreateContex
     if (PostMessage(WM_DEFERRED_STARTUP_VIEWS, 0, 0) == XPR_FALSE)
         OnDeferredStartupViews(0, 0);
 
+    // Record the initial active pane now, but do not try to focus its hidden
+    // child.  The final list focus is committed after the panes and saved
+    // history have been published atomically.
     mSplitter.setActivePane(0, 0);
-    mSplitter.setFocus();
     TraceStartup(XPR_STRING_LITERAL("MainFrame.OnCreateClient.end"));
 
     return XPR_TRUE;
@@ -449,16 +471,12 @@ LRESULT MainFrame::OnDeferredStartupViews(WPARAM wParam, LPARAM lParam)
     mStartupViewBatchPending = XPR_FALSE;
     TraceStartup(XPR_STRING_LITERAL("MainFrame.startup_view_batch.begin"));
 
-    xpr_sint_t sReadyViewCount = 0;
     const xpr_sint_t sViewCount = getViewCount();
     for (xpr_sint_t i = 0; i < sViewCount; ++i)
     {
         ExplorerView *sExplorerView = getExplorerView(i);
-        if (XPR_IS_NOT_NULL(sExplorerView) &&
-            sExplorerView->completeDeferredStartupInit() >= 0)
-        {
-            ++sReadyViewCount;
-        }
+        if (XPR_IS_NOT_NULL(sExplorerView))
+            sExplorerView->completeDeferredStartupInit();
     }
 
     // Do not return to the message loop between pane shows. A single recursive
@@ -466,22 +484,16 @@ LRESULT MainFrame::OnDeferredStartupViews(WPARAM wParam, LPARAM lParam)
     mStartupLayoutPublished = XPR_TRUE;
     mSplitter.showPane(XPR_TRUE);
     recalcLayout();
-    mSplitter.setFocus();
     RedrawWindow(XPR_NULL, XPR_NULL,
                  RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE |
                  RDW_INTERNALPAINT | RDW_ALLCHILDREN);
 
-    // Readiness jumps directly from zero to the complete count. Existing
-    // smoke/shortcut tools still verify the same final visible state, while
-    // all pane timestamps now represent one atomic publication.
+    // Skeleton publication is not content readiness.  ExplorerCtrl advances
+    // the first-content and completed-enumeration properties independently.
     ::SetProp(m_hWnd,
               kStartupLayoutSkeletonProperty,
               (HANDLE)(INT_PTR)1);
-    ::SetProp(m_hWnd,
-              kStartupLayoutReadyProperty,
-              (HANDLE)(INT_PTR)sReadyViewCount);
 
-    PostMessage(WM_DEFERRED_STARTUP_HISTORY, 0, 0);
     TraceStartup(XPR_STRING_LITERAL("MainFrame.startup_view_batch.end"));
     return 0;
 }
@@ -492,19 +504,154 @@ void MainFrame::completeDeferredStartupViews(void)
         OnDeferredStartupViews(0, 0);
 }
 
+void MainFrame::notifyStartupExplorerViewFirstContent(xpr_sint_t aViewIndex)
+{
+    if (!XPR_IS_RANGE(0, aViewIndex, getViewCount() - 1))
+        return;
+
+    mStartupFirstContentViewMask |= (1U << aViewIndex);
+    xpr_sint_t sCount = 0;
+    for (xpr_sint_t i = 0; i < getViewCount(); ++i)
+    {
+        if ((mStartupFirstContentViewMask & (1U << i)) != 0)
+            ++sCount;
+    }
+    ::SetProp(m_hWnd, kStartupLayoutFirstContentProperty,
+              (HANDLE)(INT_PTR)sCount);
+}
+
+void MainFrame::notifyStartupExplorerViewReady(xpr_sint_t aViewIndex)
+{
+    if (!XPR_IS_RANGE(0, aViewIndex, getViewCount() - 1))
+        return;
+
+    mStartupReadyViewMask |= (1U << aViewIndex);
+    xpr_sint_t sCount = 0;
+    for (xpr_sint_t i = 0; i < getViewCount(); ++i)
+    {
+        if ((mStartupReadyViewMask & (1U << i)) != 0)
+            ++sCount;
+    }
+    ::SetProp(m_hWnd, kStartupLayoutReadyProperty,
+              (HANDLE)(INT_PTR)sCount);
+
+    // Saved navigation histories are not required to paint the current
+    // folders. Starting their PIDL conversion earlier can occupy the UI
+    // thread while directory batches wait in the queue, producing a long
+    // parent-row-only screen. Publish and paint all completed current lists
+    // first, then restore history pane-by-pane.
+    if (sCount == getViewCount() &&
+        XPR_IS_FALSE(mStartupHistoryPosted))
+    {
+        mStartupHistoryPosted = XPR_TRUE;
+        RedrawWindow(XPR_NULL, XPR_NULL,
+                     RDW_INVALIDATE | RDW_UPDATENOW |
+                     RDW_INTERNALPAINT | RDW_ALLCHILDREN);
+
+        // Current folders are now complete and interactive.  History is a
+        // secondary convenience feature, so it must not hold the initial
+        // keyboard focus hostage while old paths are converted to PIDLs.
+        mStartupKeyboardFocusReady = XPR_TRUE;
+        requestStartupKeyboardFocus();
+
+        // A one-shot timer yields to already queued keyboard/mouse input.
+        // Posting all history steps back-to-back gives posted messages
+        // priority over input and can make a painted frame feel frozen.
+        if (SetTimer(TM_ID_DEFERRED_STARTUP_HISTORY,
+                     kInitialStartupHistoryDelayMilliseconds,
+                     XPR_NULL) == 0 &&
+            PostMessage(WM_DEFERRED_STARTUP_HISTORY, 0, 0) == XPR_FALSE)
+        {
+            OnDeferredStartupHistory(0, 0);
+        }
+    }
+}
+
+void MainFrame::requestStartupKeyboardFocus(void)
+{
+    if (XPR_IS_TRUE(mStartupKeyboardFocusPending) &&
+        XPR_IS_TRUE(mStartupKeyboardFocusReady) &&
+        XPR_IS_TRUE(mStartupLayoutPublished) &&
+        ::IsWindow(m_hWnd))
+    {
+        PostMessage(WM_DEFERRED_STARTUP_KEYBOARD_FOCUS, 0, 0);
+    }
+}
+
 LRESULT MainFrame::OnDeferredStartupHistory(WPARAM wParam, LPARAM lParam)
 {
-    TraceStartup(XPR_STRING_LITERAL("MainFrame.startup_history.begin"));
-
+    if (mStartupHistoryViewIndex == 0)
+        TraceStartup(XPR_STRING_LITERAL("MainFrame.startup_history.begin"));
     const xpr_sint_t sViewCount = getViewCount();
-    for (xpr_sint_t i = 0; i < sViewCount; ++i)
+    if (mStartupHistoryViewIndex < sViewCount)
     {
-        ExplorerView *sExplorerView = getExplorerView(i);
+        ExplorerView *sExplorerView =
+            getExplorerView(mStartupHistoryViewIndex);
         if (XPR_IS_NOT_NULL(sExplorerView))
             sExplorerView->completeDeferredStartupHistory();
+        ++mStartupHistoryViewIndex;
+
+        // Use a one-shot timer after each pane.  Input messages have priority
+        // over WM_TIMER, unlike a chain of posted application messages.
+        if (mStartupHistoryViewIndex < sViewCount)
+        {
+            if (SetTimer(TM_ID_DEFERRED_STARTUP_HISTORY,
+                         kNextStartupHistoryDelayMilliseconds,
+                         XPR_NULL) == 0 &&
+                PostMessage(WM_DEFERRED_STARTUP_HISTORY, 0, 0) == XPR_FALSE)
+            {
+                return OnDeferredStartupHistory(0, 0);
+            }
+            return 0;
+        }
     }
 
+    // Idempotent fallback for compatibility paths which invoke history
+    // restoration without the normal all-current-lists-ready gate.
+    mStartupKeyboardFocusReady = XPR_TRUE;
+    requestStartupKeyboardFocus();
+
     TraceStartup(XPR_STRING_LITERAL("MainFrame.startup_history.end"));
+    return 0;
+}
+
+LRESULT MainFrame::OnDeferredStartupKeyboardFocus(WPARAM wParam, LPARAM lParam)
+{
+    if (XPR_IS_FALSE(mStartupKeyboardFocusPending) ||
+        XPR_IS_FALSE(mStartupLayoutPublished) ||
+        XPR_IS_FALSE(mStartupKeyboardFocusReady) ||
+        ::IsWindowVisible(m_hWnd) == XPR_FALSE)
+    {
+        return 0;
+    }
+
+    // A startup message must never steal focus from another application.  If
+    // Windows has not activated FxFile yet, OnActivateApp/ActivateFrame posts
+    // this same one-shot request again when activation is real.
+    HWND sForegroundWnd = ::GetForegroundWindow();
+    if (sForegroundWnd != m_hWnd && ::IsChild(m_hWnd, sForegroundWnd) == XPR_FALSE)
+        return 0;
+
+    ExplorerView *sExplorerView = getExplorerView();
+    ExplorerCtrl *sExplorerCtrl = getExplorerCtrl();
+    if (XPR_IS_NULL(sExplorerView) || XPR_IS_NULL(sExplorerCtrl) ||
+        ::IsWindow(sExplorerCtrl->GetSafeHwnd()) == XPR_FALSE ||
+        sExplorerCtrl->IsWindowVisible() == XPR_FALSE ||
+        sExplorerCtrl->IsWindowEnabled() == XPR_FALSE)
+    {
+        return 0;
+    }
+
+    SetActiveView(sExplorerView);
+    sExplorerCtrl->SetFocus();
+    sExplorerCtrl->focusParentFolderRow();
+
+    if (::GetFocus() == sExplorerCtrl->GetSafeHwnd())
+    {
+        mStartupKeyboardFocusPending = XPR_FALSE;
+        TraceStartup(XPR_STRING_LITERAL("MainFrame.startup_keyboard_focus.ready"));
+    }
+
     return 0;
 }
 
@@ -627,6 +774,7 @@ void MainFrame::onSplitterActivedPane(Splitter &aSplitter, xpr_sint_t aRow, xpr_
 
 void MainFrame::OnDestroy(void)
 {
+    KillTimer(TM_ID_DEFERRED_STARTUP_HISTORY);
     destroy();
 
     super::OnDestroy();
@@ -1423,9 +1571,8 @@ void MainFrame::exitTrayApp(void)
 
 void MainFrame::OnSetFocus(CWnd *aOldWnd)
 {
-    mSplitter.setFocus();
-
     super::OnSetFocus(aOldWnd);
+    mSplitter.setFocus();
 }
 
 void MainFrame::OnSysCommand(xpr_uint_t aId, LPARAM lParam)
@@ -4302,6 +4449,8 @@ void MainFrame::ActivateFrame(xpr_sint_t aCmdShow)
 {
     //aCmdShow = SW_SHOW;
     super::ActivateFrame(aCmdShow);
+
+    requestStartupKeyboardFocus();
 }
 
 LRESULT MainFrame::OnSingleProcess(WPARAM wParam, LPARAM lParam)
@@ -4364,8 +4513,6 @@ void MainFrame::moveFocus(xpr_sint_t aCurWnd)
 
 void MainFrame::moveFocus(xpr_sint_t aCurWnd, xpr_bool_t aShiftKey, xpr_bool_t aCtrlKey)
 {
-    aCtrlKey = XPR_FALSE;
-
     // aCurWnd
     // 0 - ExplroerCtrl
     // 1 - AddressBar
@@ -4429,13 +4576,39 @@ void MainFrame::moveFocus(xpr_sint_t aCurWnd, xpr_bool_t aShiftKey, xpr_bool_t a
         if (getViewIndexFromViewSplit(sRowCount, sColumnCount, sRow, sColumn, sViewIndex) == XPR_FALSE)
             sViewIndex = 0;
 
-        ++sViewIndex;
-        if (sViewIndex >= (sRowCount * sColumnCount))
-            sViewIndex = 0;
+        const xpr_sint_t sViewCount = sRowCount * sColumnCount;
+        if (XPR_IS_TRUE(aShiftKey))
+        {
+            --sViewIndex;
+            if (sViewIndex < 0)
+                sViewIndex = sViewCount - 1;
+        }
+        else
+        {
+            ++sViewIndex;
+            if (sViewIndex >= sViewCount)
+                sViewIndex = 0;
+        }
 
         getViewSplitFromViewIndex(sViewIndex, sRowCount, sColumnCount, sRow, sColumn);
 
         mSplitter.setActivePane(sRow, sColumn);
+
+        // SetActiveView alone changes MFC's command-routing view but does not
+        // guarantee that the destination list owns the Win32 keyboard focus.
+        // Commit focus to the newly active pane's final ExplorerCtrl so Tab,
+        // arrows and Enter continue without a mouse activation step.
+        ExplorerView *sExplorerView = getExplorerView(sViewIndex);
+        ExplorerCtrl *sExplorerCtrl = getExplorerCtrl(sViewIndex);
+        if (XPR_IS_NOT_NULL(sExplorerView) && XPR_IS_NOT_NULL(sExplorerCtrl) &&
+            ::IsWindow(sExplorerCtrl->GetSafeHwnd()) == XPR_TRUE &&
+            sExplorerCtrl->IsWindowVisible() == XPR_TRUE &&
+            sExplorerCtrl->IsWindowEnabled() == XPR_TRUE)
+        {
+            SetActiveView(sExplorerView);
+            sExplorerCtrl->SetFocus();
+            sExplorerCtrl->focusParentFolderRow();
+        }
     }
 }
 
@@ -4547,6 +4720,13 @@ void MainFrame::OnGetMinMaxInfo(MINMAXINFO *aMinMaxInfo)
 
 void MainFrame::OnTimer(UINT_PTR aIdEvent)
 {
+    if (aIdEvent == TM_ID_DEFERRED_STARTUP_HISTORY)
+    {
+        KillTimer(TM_ID_DEFERRED_STARTUP_HISTORY);
+        if (PostMessage(WM_DEFERRED_STARTUP_HISTORY, 0, 0) == XPR_FALSE)
+            OnDeferredStartupHistory(0, 0);
+        return;
+    }
 
     super::OnTimer(aIdEvent);
 }
@@ -4614,6 +4794,9 @@ void MainFrame::setMainTitle(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aPidl)
 void MainFrame::OnActivateApp(xpr_bool_t aActive, DWORD aThreadId) 
 {
     super::OnActivateApp(aActive, aThreadId);
+
+    if (XPR_IS_TRUE(aActive))
+        requestStartupKeyboardFocus();
 }
 
 void MainFrame::goInitFolder(xpr_sint_t aIndex)
@@ -5234,7 +5417,10 @@ void MainFrame::onMoveFocus(FolderView &aFolderView, xpr_sint_t aCurWnd)
 
 void MainFrame::onMoveFocus(ExplorerView &aExplorerView, xpr_sint_t aCurWnd)
 {
-    moveFocus(aCurWnd);
+    // File-pane Tab navigation is pane-oriented.  Address/path and folder-tree
+    // controls remain mouse/shortcut accessible, but must not become hidden
+    // intermediate Tab stops between ExplorerCtrl instances.
+    moveFocus(aCurWnd, GetAsyncKeyState(VK_SHIFT) < 0, XPR_TRUE);
 }
 
 void MainFrame::OnSetPreviewMode(xpr_bool_t aPreview, CPrintPreviewState *aState)

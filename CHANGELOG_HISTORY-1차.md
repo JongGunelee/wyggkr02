@@ -1,11 +1,17 @@
 # 📁 Windows 10/11 최적화 fxfile 소스 코드 및 기술 이력 가이드
 
-> **Task 115 후속 정정:** 상세 목록의 최종 선택 행 합성은 헤더 좌표를 ListView 좌표로 변환한 뒤 현재 가로 스크롤 오프셋을 적용한다. 외부 생성·이름 변경·삭제 이벤트는 고급 watcher의 비동기 등록/재무장 실패와 Shell PIDL 일시 지연을 복구하며, 시작 패널은 처음부터 숨김으로 생성해 전체 준비 후 한 번에 공개한다. Task 114의 모든 live-selected 행 색 정책은 그대로 보존한다. 검증 범위와 배포 결과는 문서 끝 Task 115를 우선 참조한다.
+> **Task 121 후속 정정:** 비동기 폴더 전환에서 `[..] 상위 폴더로`를 worker 완료 전에 선게시한 Task 119 경로는 완료 단계의 로컬 `sAddedParentItem`이 `False`여서 기본 선택·포커스를 생략했다. 또한 `OnSetFocus()`는 선택이 없을 때 `LVIS_FOCUSED`만 설정하고 `LVIS_SELECTED`/SelectionMark/내부 캐시를 확정하지 않아 사용자가 ↓를 눌러야 선택행이 보였다. Task 121은 탐색 착지를 `commitNavigationSelection()` 한 곳으로 통합하고, 비동기 선게시·열거 완료·포커스 진입 모두 선택/포커스/SelectionMark/캐시를 원자적으로 맞춘다. 동일 폴더 새로고침의 기존 다중 선택 복원은 우선권을 유지한다. 세 배포본에서 폴더 진입과 상위 복귀 직후 방향키 0회 native 선택·포커스를 직접 검증했다. 상세 원인·증거는 문서 끝 Task 121을 우선 참조한다.
+
+> **Task 120 후속 정정:** Task 119의 “여섯 ListView 첫 행/0.923초”는 실제 파일·폴더가 아니라 비-Desktop pane의 합성 `[..] 상위 폴더로` 1행을 성공으로 인정한 잘못된 계측이었다. Task 120은 각 pane의 native item count가 실제로 증가해야 first-content가 되도록 고치고, 현재 비어 있지 않은 6개 저장 폴더에서는 `count > 1`을 실제 행의 엄격한 증거로 사용한다. 저장 history PIDL 복원은 현재 폴더 열거·동기 redraw·키보드 준비 뒤의 유휴 타이머 작업으로 내렸으며, 숨김 `desktop.ini` 등이 첫 batch를 소비해도 다음 실제 행이 즉시 진행되도록 초기 8개를 1개씩 게시한다. 최종 직접 실기에서 실제 행은 설치 x64 2.942초, run_x64 1.803초, run_x32 2.880초였고 parent-only 구간은 각각 65/98/106ms였다. 절대시간은 현재 PC 표본이며 다른 cold/provider 환경의 상한 보장은 아니다. 상세 정정·실패·증거는 문서 끝 Task 120을 우선 참조한다.
+
+> **Task 119 후속 정정:** Task 118의 `ReadyViewCount`는 당시 비동기 열거 시작을 완료로 잘못 계측하여 실제 파일 목록 공개보다 먼저 참이 될 수 있었다. 이제 `frame/skeleton`, pane별 `first-content`, 실제 열거 `ready`를 분리하고, 비-Desktop pane의 `[..] 상위 폴더로` 행을 worker 대기 전에 게시한다. 첫 실제 항목은 1개 즉시 batch, 이후 128개 제한 batch를 사용하며 여섯 pane 과거 기록 복원은 pane별 메시지로 양보한다. 설치 x64의 관측된 전체 목록 공백은 수정 전 최악 6.134초에서 최종 0.923초로 줄었고, x64/x32 직접 Tab 회귀도 통과했다. 상세 증거·실패·한계는 문서 끝 Task 119를 우선 참조한다.
+
+> **Task 118 후속 정정:** FxFile 프로세스가 없는 상태의 첫 프로그램 실행과 정상 종료 후 재실행을 Windows 부팅 시간과 분리해 측정한다. 시작 완료 직후 활성 pane의 `SysListView32`와 `[..] 상위 폴더로` 행을 확정하고, Explorer pane 안의 상세 경로/주소·폴더 트리를 Tab 순환 대상에서 제외하여 Tab/Shift+Tab 한 번마다 pane #1~#6의 파일 목록 row 0으로 직접 이동한다. Task 117 이하의 비동기 열거·갱신·파일 작업·선택행·포터블 설정 계약은 그대로 보존한다. 단, 당시 ready 시간 해석은 Task 119가 후속 정정한다.
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 문서·정리 운영 기준: 2026-09-10 — Task 115 후속 정정 (가로 스크롤 좌표계, 외부 변경 watcher 실패 복구, 6-pane 실제 동적 갱신, 시작 원자 공개 및 잠금 분할 smoke 기대값을 보증하고 작업 종료 정리는 0.7/114.6 절차를 적용)_
-_현재 기능/배포 기준: Task 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
+_현재 문서·정리 운영 기준: 2026-09-13 — Task 121 후속 정정 (폴더 전환 착지의 native 선택·포커스·SelectionMark·내부 캐시를 원자적으로 확정하고, 동일 폴더 새로고침 상태 복원은 보존하며 작업 종료 정리는 0.7/114.6 절차를 적용)_
+_현재 기능/배포 기준: Task 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
 _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절대경로는 당시 증거로 보존하며, 현재 실행 명령으로 복사하지 않는다._
 
@@ -62,14 +68,14 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | INI 없는 로컬 설정, AppData 간섭, 포터블 이식 | 031~035, 042 | `fxfile.ini`, `.fxfile`, `conf_home`, `CanonicalConfig`, `local pair`, `AppData` |
 | 레이아웃·북마크·도구 모음·메뉴 복원 | 036~038, 043~048 | `saveAllOptions`, `bookmark`, `coolbar`, `toolbar`, `window.position`, `lock` |
 | 도구 메뉴의 시계 보이기·위치 잠금·가변 창 폭 | 095, 045~046 | `main.clock.show`, `ClockCtrl`, `updateClockLayout`, `WS_VISIBLE`, `rebar`, `zero-height`, `시계 보이기` |
-| 시작 클릭 후 창/2×2 표시 지연·흰 화면 | 039~041, 049~050 | `SkeletonSeconds`, `ReadySeconds`, `atomic`, `ExplorerView`, `WM_SETREDRAW` |
+| FxFile 프로세스 첫 실행·닫고 재실행의 체감 지연, Windows 부팅과 분리한 측정·`[..]`만 남는 pane/흰 화면·합성 상위 행과 실제 파일·폴더 행 공개·전체 열거 완료 | 120, 119, 118, 117, 039~041, 049~050 | `AllListsRealItemMilliseconds`, `ParentOnlyWindowMilliseconds`, `RunDirect`, `StartupLayoutFirstContentViewCount`, `StartupLayoutReadyViewCount`, `sItemCountBefore`, `initial burst`, `deferred history`, `SkeletonSeconds`, `ReadySeconds`, `atomic`, `ExplorerView`, `WM_SETREDRAW` |
 | 설정 파일 위치 옵션 3개 | 042 | `%AppData%`, `프로그램 설치 폴더`, `사용자 정의`, `ConfDir::save` |
 | 파일 크기 바이트 표시 | 043~044 | `size_unit`, `KB`, `byte`, `file list` |
 | Snap·마지막 창 위치·크기·영구 잠금 | 043, 045~046 | `GetWindowPlacement`, `IsWindowArranged`, `position_locked`, `Snap` |
 | 계산기·도구 모음 버튼 | 046~047 | `calculator`, `계산기`, `toolbar`, `검색 아이콘` |
 | 패널 경로/분할 잠금·FIM | 048 | `layout lock`, `path lock`, `SHA-256`, `File integrity monitoring` |
-| 복사·이동 속도와 자동 엔진 선택·대량 폴더 Robocopy | 051~052, 067~068 | `AdaptiveFileOperation`, `IFileOperation`, `CopyFile2`, `Robocopy`, `selectRobocopy`, `/MT`, `/J`, `seek penalty`, `cloud` |
-| 복사 실패 후 응답 없음·종료 불가·삭제/이동 잔상 | 069, 060, 067, 051~052 | `AdvFileChangeWatcher`, `CancelIoEx`, `IOCP`, `ResultNotApplicable`, `rollbackTargets`, `reconcileOperationResult`, `SHCNE_DELETE`, `SHCNE_RENAMEITEM`, `FileOpThread` |
+| 복사·이동 속도와 자동 엔진 선택·대량 폴더 Robocopy | 117, 116, 051~052, 067~068 | `AdaptiveFileOperation`, `buildPlan`, `planning progress`, `same-volume preflight`, `IFileOperation`, `CopyFile2`, `Robocopy`, `selectRobocopy`, `/MT`, `/J`, `seek penalty`, `cloud` |
+| 복사 실패 후 응답 없음·종료 불가·삭제/이동 잔상·외부 변경 지연 | 117, 116, 115, 069, 060, 067, 051~052 | `ModernShellFileOperation`, `per-item result`, `AdvFileChangeWatcher`, `TM_ID_NOTIFY_RECONCILE`, `TM_ID_NOTIFY_SORT`, `CancelIoEx`, `IOCP`, `ResultNotApplicable`, `rollbackTargets`, `reconcileOperationResult`, `SHCNE_DELETE`, `SHCNE_RENAMEITEM`, `FileOpThread` |
 | 삭제·휴지통·Shift+Delete·부분 실패 | 052.1~52.6 | `FOFX_RECYCLEONDELETE`, `permanent delete`, `WRP`, `remaining count` |
 | 파일·폴더 작업 잠금·Windows 보안·호버 설명 | 052.5, 053 | `FileOperationLockStore`, `Restart Manager`, `SHObjectProperties`, `ToolTip` |
 | 종료 Access Violation·오류 보고서 | 077, 069, 030, 035.8 | `Access Violation`, `crash`, `error report`, `FolderCtrl`, `updateShcnTvItemData`, `shell notification` |
@@ -77,7 +83,8 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | OBJ·더미 시험 파일·C:/D: 용량·작업공간 정리·삭제 명령 정책 차단 | 114.5~114.6, 101, 054~055, 061 | `blocked by policy`, `file-backed cleanup`, `PowerShell 7`, `UTF-8`, `stray artifact`, `/Fo`, `RESULTS.md`, `synthetic fixture`, `staging`, `FreeGiB`, `TeraBox`, `cleanup`, `retention` |
 | 파일/폴더 선택 시 열 단위·행 전체 포커스 전환, `[..] 상위 폴더로` 포함 선택 항목 화이트 플래시(White Flash), 장시간 창 #1~#6 전환·새로고침 후 재발, GDI/USER·아이콘 누적, 선택 글자만 흰색으로 남거나 환경 설정 포커스 색이 보이지 않는 현상, 상위 폴더 행 선택 표시 소실, 다른 행 선택 후 상위 폴더 행에 남는 유령 선택색, 마우스 호버(Hover/InfoTip) 시 흰색 소실, 다중 창·과도 상태 찰나의 플래시 방지, 창별 색상, Ctrl/Shift 다중 선택, 모든 분할 pane·콘텐츠/타일/상세 보기 일관성 | 113, 112, 111, 110, 109, 108, 107, 106, 105, 099, 098, 097, 092, 091, 090, 089, 088, 087, 086, 083, 077, 076, 075 | `drawFinalReportSelection`, `CDDS_ITEMPOSTPAINT`, `fillReportSelectionBackground`, `PathBar::setPath`, `GetItemIcon`, `DESTROY_ICON`, `GetGuiResources`, `GDI`, `USER`, `generation`, `CDRF_NOTIFYITEMDRAW`, `CDRF_NOTIFYPOSTPAINT`, `CDRF_SKIPDEFAULT`, `LVS_EX_DOUBLEBUFFER`, `live ListView selection`, `화이트 플래시`, `White Flash`, `호버 소실`, `CDIS_HOT`, `InfoTip`, `LVIS_SELECTED`, `LVIS_FOCUSED`, `redrawFocusItemChange`, `CDIS_SELECTED`, `Shift`, `SelectionMark`, `row_focus_color`, `full_row_select`, `isReportView`, `VIEW_STYLE_CONTENT`, `LVS_REPORT`, `OnCustomdraw`, `ExplorerPane`, `ExplorerCtrl` |
 | 일괄 이름 변경·열 말줄임·수동 열폭·창/분할 폭 연동·썸네일 캐시·간헐 무응답 | 072, 069, 056, 058~059 | `BatchRename`, `Repeat=0`, `column_ellipsis`, `OnHdnItemChanged`, `manual width`, `responsive`, `OnSize`, `viewport`, `thumbnail`, `IOCP`, `응답 없음` |
-| 자동 갱신·갱신 시 자동 정렬·외부 다운로드/복사/이동이 pane #1~#6에 늦게 보임·watcher 등록/재무장 실패 복구 | 115, 071, 070, 069 | `config.refresh.no`, `config.refresh.sort`, `EventWatchFailed`, `ReadDirectoryChangesW`, `scheduleDirectoryRefresh`, `파일 변경 즉시 화면 갱신`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
+| 자동 갱신·갱신 시 자동 정렬·외부 다운로드/복사/이동이 pane #1~#6에 늦게 보임·watcher 등록/재무장 실패 복구 | 117, 116, 115, 071, 070, 069 | `DirectoryEnumerationWorker`, `generation`, `first batch`, `dirty reconcile`, `config.refresh.no`, `config.refresh.sort`, `EventWatchFailed`, `ReadDirectoryChangesW`, `scheduleDirectoryRefresh`, `파일 변경 즉시 화면 갱신`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
+| 최초 활성화·폴더 진입·`[..]` 상위 복귀 직후 ↓ 없이 선택행 표시, 마우스 없이 Tab·Shift+Tab으로 pane #1~#6 직접 전환, 주소 표시줄 우회와 row 0 착지 | 121, 118, 117, 050 | `commitNavigationSelection`, `focusParentFolderRow`, `mDirectoryEnumerationParentPublished`, `sRestoredRefreshState`, `LVIS_SELECTED`, `LVIS_FOCUSED`, `SelectionMark`, `moveFocus`, `requestStartupKeyboardFocus`, `VK_TAB`, `ShiftTab`, `SysListView32` |
 | 좁은 창의 선택 행을 가로 스크롤할 때 크기 이후 문자가 밀림·헤더와 선택행 열 불일치·시작 pane 부분 공개 | 115, 114, 113, 050 | `drawFinalReportSelection`, `HeaderCtrl`, `ClientToScreen`, `ScreenToClient`, `horizontal scroll`, `atomic layout publication`, `locked split`, `PartialVisibleViewCounts` |
 | 대형/특수 폴더(`00 월마감`/`0000 FxFile`) 응답 없음·폴더 아이콘 깨짐·전 파일 비동기 아이콘 | 064~066 | `CSparseImageList`, `ForceImagePresent`, `SHDefExtractIconW`, `COleMessageFilter`, `FileIconInit`, `GetFileExtIconIndex`, `TypeIconIndex`, `dummy` |
 | '폴더 비교하기(R)' 현대화·비교 총괄 보고서·통계 대시보드·단일/다중 창(Pane 1~6) 스마트 비교 감지·마크다운 리포트·UI 전면 한글화 및 한글 인코딩 오류 재발 방지 | 100 (100.1~100.7) | `ID_WINDOW_COMPARE`, `FolderCompareSetupDlg`, `FolderCompareReportDlg`, `SyncDirs`, `compareWindow`, `Markdown 리포트`, `클립보드 복사`, `폴더 비교 총괄 보고서`, `벤치마킹`, `실기 런타임 자동화`, `한글화 5대 원칙`, `RC 템플릿`, `UTF-8 BOM`, `인코딩 오류 재발 방지`, `치환 앵커링`, `PowerShell UTF-8` |
@@ -10306,3 +10313,363 @@ fxfile_working        238.05      2349  (순수 소스 및 필수 라이브러�
 - 최종 `Build-Deploy-Verify.ps1 -Mode VerifyOnly` Exit 0이다. 세 패키지 필수 설정 10개 정본 일치, 설치본 x64/run_x64 동일 해시, x32 아키텍처 해시, 루트 `fxfile.ini`/`.fxfile` 부재를 재확인했다. 세 패키지의 `.obj/.tmp/.bak/.log/.dmp/.ilk/.pdb/.exp/.lib` 잔류 0, 빌드 cache 0, 관련 프로세스 0이다. 종료 시 C: 68.96GiB/29.77%, D: 2,041.56GiB/54.79%였다.
 
 **-- 선택 행 가로 스크롤 좌표계·외부 변경 이벤트 유실·watcher false-success·시작 부분 공개·잠금 2×3 smoke 기대값 근본 수정, 6-pane 동적 갱신 및 세 패키지 배포 완료 (Task 115, 2026-09-10) --**
+
+## Task 116 — 편집·갱신 병목의 측정 기반 무결성 리팩터링 (2026-09-10)
+
+### 116.1 요청과 최종 판정
+
+- 사용자는 앞서 수립한 폴더 비교 전문 도구 벤치마킹 계획을 실제 구현으로 전환하되, 구현 도중 발견되는 잠재 오류·버그·안정성·성능 문제도 즉시 수정하도록 요청했다.
+- 현재 코드를 다시 감사한 결과 FxFile은 이미 `CopyFile2`, `IFileOperation`, HDD/SSD 회전 특성 기반 병렬도, 사용자 확인형 대량 폴더 Robocopy를 보유한다. 따라서 검증되지 않은 새 복사 라이브러리로 전면 교체하지 않고, 현재 경로에서 입증된 네 가지 병목인 **외부 변경 복구 timer 기아, Shell PIDL 일시 지연 시 이름 변경 누락, 이벤트마다 반복 정렬, 동일 볼륨 폴더 이동 전 전체 트리 열거**를 제거했다.
+- Beyond Compare 5.2.5 build 32528(2026-08-03), WinMerge 2.16.58.2(2026-08-27), Total Commander 11.58의 공개 기능·최신 배포 정보를 검토했다. 이 도구들의 공통 원칙인 작업 유형별 경로 선택, 취소/오류의 명시적 상태, UI 갱신 병합은 설계 참고로만 사용했다. 동일 PC·동일 데이터로 이 제품들과 새 FxFile을 직접 실행한 head-to-head 수치는 없으므로 경쟁 제품보다 빠르다고 주장하지 않는다.
+- Task 051의 같은 PC 역사적 기준은 1,500개×16KiB 복사에서 구 `SHFileOperation` 112.659초, `CopyFile2` 직렬 12.319초, 4-worker 5.122초, Robocopy `/MT:8` 6.321초, 제품 x64 2.926초/x86 4.263초였다. 이 증거는 현대 엔진을 유지하고 선택·사전 열거·UI 후처리 병목만 줄인 결정의 근거이며, 이번 바이너리의 새 처리량 측정값으로 재표현하지 않는다.
+
+### 116.2 직접 원인과 구현
+
+#### 116.2.1 외부 변경 복구 기아와 이름 변경 누락
+
+- `ExplorerCtrl::scheduleDirectoryRefresh()`는 같은 경로의 후속 실패 이벤트마다 기존 `TM_ID_NOTIFY_RECONCILE`을 죽이고 250ms timer를 다시 시작했다. 브라우저 다운로드·클라우드 provider·백신처럼 짧은 이벤트가 계속 오는 동안 복구 시점이 무기한 뒤로 밀릴 수 있었다.
+- 같은 경로의 복구가 이미 대기 중이면 timer를 재시작하지 않는다. 최초 `SetTimer` 실패는 조용히 유실하지 않고 즉시 reconcile을 호출한다. 복구 실패는 250/500/1000/2000ms의 증가 지연으로 최대 4회만 재시도하고, 성공·경로 전환·자동 갱신 해제·파괴 시 path/retry 소유권을 모두 해제한다. 무조건 주기 polling은 추가하지 않았다.
+- `SHCNE_RENAMEITEM`에서 새 PIDL이 일시적으로 없으면 기존 코드는 구 행 삭제 성공만으로 처리를 끝낼 수 있어 새 이름 행이 재진입 전까지 누락될 수 있었다. 이제 구 행의 세밀 삭제 결과와 무관하게 같은 경로 전체 reconcile을 예약한다.
+
+#### 116.2.2 이벤트 폭주 시 반복 정렬
+
+- 기존 `endShcn()`은 exact shell 이벤트 한 건마다 `resortItems()`를 호출했다. 다량 생성·이름 변경·삭제에서는 같은 ListView를 반복 정렬해 UI thread와 선택/스크롤 복원 비용을 증폭시켰다.
+- `TM_ID_NOTIFY_SORT`와 `mDeferredRefreshSort`를 추가하여 첫 이벤트부터 100ms의 **고정 병합 창**에 한 번만 정렬한다. 후속 이벤트가 기한을 계속 연장하지 않으며, 실행 시점에 `refresh.sort`를 다시 확인한다. inline rename edit control이 활성화된 동안에는 기존 `mRenameResorting` 계약으로 편집을 깨지 않고 연기한다.
+- 경로 전환과 파괴 시 reconcile/sort timer를 함께 취소하므로 이전 pane 경로의 지연 작업이 새 경로를 건드리지 않는다. 여섯 pane는 공용 `ExplorerCtrl` 구현을 각각 보유하여 상태를 공유하지 않는다.
+
+#### 116.2.3 동일 볼륨 폴더 이동의 불필요한 전체 열거
+
+- `AdaptiveFileOperation::buildPlan()`은 FO_MOVE도 먼저 모든 하위 파일·폴더를 재귀 열거한 뒤, 동일 볼륨 항목이 있으면 고속 copy/delete 계획을 버리고 `IFileOperation`으로 폴백했다. 대형 폴더 이동은 NTFS 메타데이터 rename으로 빠르게 끝날 수 있는데도 실행 전에 전체 트리를 읽는 역전된 비용이었다.
+- 대상 볼륨과 최상위 소스들의 볼륨만 먼저 비교한다. 하나라도 동일 볼륨이면 재귀 `enumerateDirectory()` 전에 즉시 `ResultNotApplicable`로 반환하여 기존 최신 Shell `IFileOperation` 경로가 처리한다. 서로 다른 볼륨 이동만 기존 계획·CopyFile2·검증·원본 삭제 경계를 유지한다.
+- Robocopy는 여전히 사용자가 확인한 대량 폴더 복제에만 적용한다. 소량/낱개/클라우드 placeholder/보호 경계에 무조건 Robocopy를 강제하지 않았고, 삭제·휴지통·이름 변경의 복구성과 오류 의미도 바꾸지 않았다.
+
+#### 116.2.4 빌드에서 발견한 실제 형식 잠재 오류
+
+- `win_app.cpp`의 언어팩 실패 진단은 `getLanguageCount()`의 `size_t` 값을 varargs `%d`로 출력했다. x64에서는 폭이 다른 인수 해석과 진단값 손상 가능성이 있어 MSVC `size_t` 형식 `%Iu`로 수정했다.
+- crash 보조 모듈에서 종전 C4828/C4005/C5033/LNK4098 및 레거시 포인터/format 경고가 계속 보인다. 이번에 변경한 주 실행 파일의 실질 format mismatch는 제거했지만, 제3자·레거시 crash 모듈 전체를 근거 없이 넓게 고쳐 새 ABI 위험을 만들지는 않았다. 따라서 이번 빌드를 “경고 0”이라고 기록하지 않는다.
+
+### 116.3 계약·동적 시험·빌드·배포
+
+- `tools\test_task116_refresh_batching_and_recovery_contracts.ps1`을 추가했다. 같은 경로 timer 기아 방지, 제한 retry/backoff, 성공·stale cleanup, timer 생성 실패, rename PIDL 복구, 정렬 병합, inline rename 보호, 탐색/파괴 취소, 비-polling, 동일 볼륨 이동의 열거 전 판정, `size_t` 진단 형식의 **11/11 계약이 PASS**다.
+- Task 070은 즉시 정렬을 기대하던 과거 검사를 새 병합 계약으로 정정했다. 최종 `tools\test_task*.ps1`은 **34개 스크립트 전부 PASS, 실패 0**이다. 첫 수정 과정에서 Task070 검사에 `$timer` body 변수를 누락해 검사 자체가 실패했으며, 제품 결함으로 오인하지 않고 검사기를 고친 뒤 전수를 처음부터 다시 실행했다.
+- 최종 run_x64를 별도 Task 폴더에 복제하여 `Test-Task070AutoRefreshSortRuntime.ps1 -Mode Sorted -PaneCount 6`을 실행했다. 여섯 pane 모두 외부 생성 `a_new.txt`, 이름 변경 `z_anchor.txt -> b_renamed.txt`, 삭제 `a_new.txt`가 폴더 재진입 없이 정렬된 기대 목록으로 반영됐다. `ForcedTermination=false`, 시험 데이터 제거 성공이며 증거는 `__BUILD_TEMP_BACKUP__\task116_refresh_runtime_20260910_115035_550\six_pane_refresh.json`이다.
+- 작업 전 전체 소스·세 설정 스냅샷은 `__BUILD_TEMP_BACKUP__\task116_before_20260910_110104_301`에 보존했다(2,347파일, 249,100,775바이트). 최종 PASS preflight는 `__BUILD_TEMP_BACKUP__\preflight_20260910_114256_922\preflight_report.json`이며 Git 비저장소만 비차단 경고다.
+- 동일 소스 Release x64/x32 빌드, 설치본 x64·run_x64·run_x32 원자 배포와 no-INI smoke가 성공했다. 최종 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260910_114521_063\deployment_manifest.json`이다.
+  - 설치본 x64/run_x64 SHA-256: `A7250210349A097FB1AD0D738EA55814F2BE5CA0A7F3BAB55AFF3BD48A6DA225`.
+  - run_x32 SHA-256: `314A2B23880CE877DA1C603C410BB0324102412F9A899B11E7BED2906FBF8E46`.
+  - 설정 10개 정본 일치 `True`, 세 루트 `fxfile.ini`/`.fxfile` 부재.
+  - x64 skeleton 7.12초/ready 15.93초, x32 skeleton 17.64초/ready 43.12초, 모두 저장된 6/6 pane 준비 및 Exit 0이다. x32 시간이 x64보다 길었지만 timeout 내 성공이며, 이번 Task가 시작 화면 성능 개선 완료라고 과장하지 않는다.
+
+### 116.4 실패 사례·정리·재발 방지
+
+- 첫 정리 요청은 대상 계산·감사·`Remove-Item -Recurse`를 긴 인라인 명령 하나에 넣어 실행 전에 `blocked by policy`로 거절됐다. 프로세스/Exit Code가 없어 실제 삭제는 0건이었다. 같은 명령을 반복하지 않고 §0.7.3에 따라 `apply_patch`로 절대경로를 고정한 PowerShell 7 Audit/Delete 정리기를 만들었다.
+- Audit에서 workspace containment, 최소 깊이, reparse 0, FxFile/빌드 관련 프로세스 0, 최신 preflight/manifest/소스 백업/bin/세 패키지 보호를 먼저 통과시켰다. 그 뒤 구 preflight 2세대, 구 배포 2세대, 최신 완료 smoke, 이전·최종 동적 stage, `build_cmake`/`build_cmake_x32`/`obj`의 **10개 대상·2,575파일**을 영구 삭제했다. 삭제 직전 cache만 약 712.05MiB였고, 종료 감사에서 D: 여유는 2,032.178GiB에서 2,033.190GiB로 약 1.012GiB 증가했다. 배경 I/O 변동이 포함될 수 있으므로 이 차이를 정확한 삭제 바이트로 주장하지 않는다.
+- 일회용 정리기는 `apply_patch`로 제거했다. 30초 이상 경과 후 삭제 대상 재생성 0, 보호 대상 존재, 세 패키지 금지 확장자와 루트 INI/.fxfile 0, 관련 프로세스 0을 확인했다. 삭제는 휴지통을 거치지 않았으며 최신 성공 배포 rollback 1세대와 Task116 전체 소스 백업으로 복구 경계를 유지한다.
+- 최종 `build_deploy_all.bat -Mode VerifyOnly` Exit 0이다. 설치본 x64/run_x64 동일 해시, 대응 x32 해시, 세 패키지 설정 10개 정본 일치 `True`를 재확인했다. 종료 시 C: 67.870GiB/29.30%, D: 2,033.190GiB/54.57%다.
+- 재발 방지 기준은 다음과 같다: (1) event 복구 timer는 반복 이벤트가 deadline을 재설정하지 못하게 한다, (2) 실패 retry는 횟수·backoff·stale 취소를 함께 둔다, (3) UI 정렬은 고정 창으로 병합하되 inline edit를 보호한다, (4) 동일 볼륨 이동 eligibility는 재귀 열거 전에 판정한다, (5) 동적 시험 실행 파일은 최종 manifest 해시와 먼저 일치시킨다, (6) 정리 차단은 권한 문제로 오진하지 않고 파일 기반 Audit/Delete로 범위를 검토한다.
+
+### 116.5 보증 경계
+
+- 이번 동적 인수는 현재 Windows 11, 로컬 D:의 격리 폴더, 최종 x64, 여섯 pane, 외부 생성/rename/delete와 자동 정렬 범위다. x32는 동일 소스 Release 빌드와 실제 6-pane no-INI smoke로 확인했다.
+- 동일 볼륨 이동의 사전 열거 제거는 소스 순서 계약과 x64/x32 실제 컴파일로 확인했다. 이번 Task에서 사용자 대형 실제 폴더를 이동해 파괴적 시간 비교를 수행하지 않았으므로 모든 저장장치·백신·클라우드 상황의 절대 처리 시간을 보증하지 않는다.
+- 외부 프로그램이 파일시스템 통지를 전혀 내지 않거나 네트워크/cloud provider가 파일을 아직 materialize하지 않은 시간은 FxFile이 앞당길 수 없다. 다만 받은 exact 이벤트의 PIDL 일시 실패, watcher 실패, 복구 timer 기아 때문에 영구 누락되는 현재 코드 경로는 제한 재시도와 전체 reconcile로 폐쇄했다.
+
+**-- 외부 변경 복구 timer 기아·rename PIDL 누락·반복 정렬·동일 볼륨 이동 사전 전체 열거를 제거하고, 34/34 계약·최종 x64 6-pane 동적 갱신·x64/x32 빌드 및 세 패키지 배포·VerifyOnly 완료 (Task 116, 2026-09-10) --**
+
+## Task 117 — 비동기 폴더 진입·항목별 파일 작업 결과·최초 키보드 포커스 무결성 리팩터링 (2026-09-13)
+
+### 117.1 요청과 최종 판정
+
+- Task 116의 측정 기반 계획을 빠짐없이 실제 구현하고, 구현 완료 뒤 한 번만 Release x64/x32 빌드·설치본 x64 + run_x64 + run_x32 동기화·정리·문서 갱신을 수행하라는 요청을 이어받았다. 추가 요구인 **FxFile 최초 활성화 순간부터 마우스 없이 방향키·Tab·Shift+Tab으로 모든 pane를 운용**하는 조건도 같은 통합 범위에 포함했다.
+- 최종 구현은 기존 포터블 설정 10개, no-INI, 1~6 pane 가변 레이아웃, 자동 갱신·정렬, 선택행 렌더링, Robocopy 사용자 선택, CopyFile2와 최신 Shell 폴백의 복구 경계를 보존한다. 폴더 진입의 UI thread 열거, 계획 중 취소 불가 구간, Shell 부분 성공의 전역 성공 오인, 시작 시 포커스 공백을 각각 독립 상태기계와 실제 항목 결과로 정정했다.
+- 최종 동적 검증은 합성 로컬 D: 데이터에서 x64/x32, 6-pane, 키보드 전환, 외부 create/rename/delete, 120초 장시간 선택·전환, 복사/이동/삭제 및 계획 취소를 통과했다. 이는 검증한 경계의 회귀 방지를 뜻하며 모든 장치·백신·클라우드·네트워크에서 절대 무오류나 고정 처리 시간을 보증한다는 뜻은 아니다.
+
+### 117.2 근본 원인과 구현
+
+#### 117.2.1 폴더 진입과 최초 공개
+
+- 기존 일반 폴더 진입은 Shell 열거와 행 생성 준비가 UI thread에 길게 결속될 수 있었다. 파일 수가 많거나 Shell/백신/provider 응답이 늦으면 메시지 pump가 지연되어 창이 `응답 없음`으로 보이고, pane별 준비 시점 차이가 흰 영역 또는 순차 공개로 보일 수 있었다.
+- `src\fxfile\directory_enumeration_worker.h/.cpp`의 STA worker를 추가했다. 일반 로컬 고정 드라이브의 비-reparse 디렉터리만 비동기로 열거하고, 네트워크·클라우드·특수 Shell namespace·reparse 등 의미가 다른 대상은 기존 검증 경로에 남긴다.
+- 한 batch는 128개, UI가 아직 소비하지 않은 batch는 semaphore로 최대 4개로 제한한다. pane와 탐색 세대마다 generation을 부여하여 이전 경로 결과를 새 경로에 섞지 않고, 경로 전환·취소·파괴 시 worker와 게시 메시지를 회수한다. worker registry와 종료 순서를 명시하여 HWND 파괴 뒤 callback이 접근하지 못하게 했다.
+- watcher는 열거 전에 무장한다. 첫 batch부터 준비된 pane에 원자적으로 게시하되, 열거 중 변경이 관측되면 completion 뒤 전체 reconcile을 실행한다. 선택·스크롤·정렬·상위 폴더 행 상태는 batch 적용 전후에 복원하며, 빈 폴더 completion도 준비 완료로 처리한다. 이로써 시작 속도를 위해 외부 변경 정확성을 희생하지 않는다.
+
+#### 117.2.2 적응형 복사·이동·삭제 계획과 결과
+
+- `AdaptiveFileOperation`의 재귀 계획 단계가 긴 동안 진행률과 취소 응답이 부족했고, 동시 작업 판단은 최상위 단일 조건에 치우칠 수 있었다. 계획 진행률·취소 검사를 추가하고, 모든 관련 볼륨의 저장장치 특성을 보수적으로 합성해 병렬도와 엔진 eligibility를 판정한다. 대기 작업과 메모리는 제한하며 클라우드 placeholder, 보호·변경 중인 파일은 고속 경로에서 제외한다.
+- `ModernShellFileOperation`은 전체 HRESULT만으로 성공을 추론하지 않고 `IFileOperationProgressSink`의 항목별 결과와 canonical `IUnknown` identity를 결합한다. 복사/이동의 실제 새 항목과 삭제 항목을 기록하고, 취소·부분 실패·사용자 건너뛰기 항목을 성공 목록에 넣지 않는다.
+- `FileOpThread`는 작업 요청 시점의 항목 snapshot을 보존하고 성공한 항목에만 exact Shell change 통지를 보낸다. 실패 또는 취소 결과는 성공처럼 원본 행을 제거하지 않으며, 불확실한 경계는 부모 디렉터리 reconcile로 수렴시킨다. 진단 trace는 64개로 제한해 장시간 사용 시 무한 누적을 막았다.
+- `rename_helper.cpp`의 rename 경계와 모든 pane의 후처리 경로도 함께 감사했다. 이동/삭제 직후 잔상은 실제 성공 항목만 세밀 갱신하고, 모호하거나 외부 상태가 바뀐 경우 부모 재열거로 회복한다.
+
+#### 117.2.3 최초 활성화의 키보드 전용 운용
+
+- 저장 레이아웃의 pane가 비동기로 만들어지는 동안 main frame이 먼저 활성화되면 포커스 대상 ListView가 아직 없거나 숨겨져 있어, 사용자가 한 번 클릭하기 전 방향키와 Tab이 pane 전환을 시작하지 못할 수 있었다.
+- main frame의 지연 시작 완료, 창 활성화, 첫 batch, 빈 폴더 completion에서 공통 포커스 재요청을 수행한다. 현재 활성 pane의 유효한 `SysListView32`에만 포커스를 주고, 사용자가 이미 메뉴·편집기·대화상자에 포커스를 둔 경우 이를 빼앗지 않는다.
+- Tab은 여섯 pane를 순방향, Shift+Tab은 역방향으로 순환하며 첫 방향키가 실제 행 selection을 이동한다. 1×1, 1×2, 2×2, 2×3 등 현재 생성된 pane 수를 사용하므로 6개 고정 가정으로 기존 가변성을 훼손하지 않는다.
+
+### 117.3 구현 중 발견한 실패와 즉시 정정
+
+- 첫 통합 빌드는 `file_op_thread.cpp`에서 wide string을 `xpr::string`에 직접 넘긴 형식 오류로 x64 컴파일 단계에서 중단됐다. 배포 단계에는 진입하지 않았고 세 운영본은 변경되지 않았다. `.c_str()` 경계를 명시한 뒤 x64/x32 전부 다시 빌드했다.
+- Task 067 과거 정적 검사는 Shell 결과 callback의 종전 인자 형태만 허용했고, Task 070은 즉시 refresh 호출만 허용했다. 제품을 과거 구현으로 되돌리지 않고 항목별 결과와 비동기 예약 계약을 검사하도록 각각 정정한 뒤 전체 검사를 처음부터 재실행했다.
+- 신규 C++ probe는 처음에 소스 인코딩 옵션이 없어 CP949 컴파일이 실패했고, 다음에는 keyboard API 링크용 `User32.lib` 누락으로 실패했다. `/utf-8`과 `User32.lib`를 명시하고 중복 `UNICODE` define은 제거했다. keyboard probe가 PowerShell 7의 `System.Drawing.Rectangle`에 의존해 실패한 문제는 native `RECT`로 바꾸어 설치 환경 의존성을 제거했다.
+- 가이드의 저용량 C: 예외 비상 하한은 1GiB인데 `Assert-BuildStorage.ps1`과 통합/환경 시험 도구 일부가 100MB 또는 200MiB를 사용한 모순을 발견했다. 세 도구의 실제 하한과 진단 문구를 모두 `1,073,741,824`바이트로 통일했다. 낮은 C:에서 D: TEMP를 쓰더라도 이 하한 아래에서는 빌드를 시작하지 않는다.
+
+### 117.4 정적·동적 검증
+
+- Windows PowerShell 5.1에서 `tools\test_task*.ps1` **35개 스크립트 전부 PASS, 실패 0**이다. 신규 `test_task117_async_navigation_and_operation_contracts.ps1`은 **26/26 PASS**로 STA worker, generation/cancel, 128×4 backpressure, watcher 선무장, dirty reconcile, 항목별 Shell 결과, trace 상한, 시작 포커스, probe의 UTF-8/User32/비-System.Drawing, 1GiB 비상 하한을 검사한다.
+- `Build-Task117OperationProbes.ps1`의 x64/x32 native probe 빌드와 실행이 모두 PASS다. `Test-Task117FileOperationBenchmark.ps1`의 합성 데이터 결과는 다음과 같다.
+  - 1,500개 다중 파일: adaptive 17.224578초, Robocopy 4.414792초(이 실행에서 74.37% 단축).
+  - 10,000개 tiny 파일: adaptive 112.183825초, Robocopy 28.555247초(이 실행에서 74.55% 단축).
+  - 단일 파일 0.401388초, 중첩 폴더 0.391337초, 실제 256MiB 파일 0.590136초, 혼합 10개 0.467423초.
+  - 모든 완료 표본은 상대경로·빈 폴더·SHA-256이 일치했다. 계획 중 취소는 목적지 0개로 실패 상태를 정확히 반환했고, 검증 전 원본 변경 시험은 원본을 보존하고 후보 목적지를 롤백했다.
+- 최신 Shell standalone x64/x32의 copy/move/delete와 adaptive 영구 삭제를 합성 파일로 실행했다. copy/move 해시 일치, move 원본과 delete 대상 소멸, 두 아키텍처 정상 결과를 확인했다.
+- 최초 키보드 시험은 마우스 입력 없이 수행했다. x64는 6 pane 준비까지 8.971초, x32는 12.754초였고 두 실행 모두 초기 포커스가 `SysListView32`, 첫 Down이 row 1, Tab으로 여섯 pane 순환, Shift+Tab 역순환, 정상 종료였다.
+- 최종 x64 6-pane 외부 갱신 시험에서 create/rename/delete가 폴더 재진입 없이 여섯 pane 모두에 정렬 반영됐다. 120초 soak는 140회 pane 전환, 각 pane 폴더 선택 12회, 파일 선택 11~12회를 수행했고 모든 sample이 responding/목록 6개였다. GDI 347→349, USER 263→265, 최종 handle 601, thread 14, 강제 종료 0이다. 이 제한 시간·표본에서 누적 폭증은 관측되지 않았다.
+- 위 벤치마크 수치는 같은 실행의 합성 로컬 D: 비교 증거이지 모든 PC에서 유지되는 보편 성능 약속이 아니다. 제품의 일반 완료 검증은 존재·크기·시간·원본 상태를 활용하고 모든 파일을 항상 SHA-256 처리하지 않는다. 성능 시험에서는 별도로 전체 SHA-256을 비교했다.
+
+### 117.5 빌드·배포·설정 무결성
+
+- 최종 PASS 프리플라이트는 `__BUILD_TEMP_BACKUP__\preflight_20260913_033830_502\preflight_report.json`이다. 필수 실패 0, Git 비저장소 1건만 비차단 경고이며 저용량 예외 비상 하한은 1GiB로 기록됐다.
+- 동일 소스의 Release x64/x32 빌드와 설치본 x64·run_x64·run_x32 원자 배포가 성공했다. 최종 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_031049_723\deployment_manifest.json`이다.
+  - 설치본 x64/run_x64 SHA-256: `ADF70DF4A1309A8C26FC7FA5AD4FED89E1AC1162D5611947F7D8C584FD94AF42`.
+  - run_x32 SHA-256: `7DCB617CEBB06AF0DC687E0B68C7E976DADA39127E2B73E8998D5583DB486340`.
+  - 세 패키지 필수 설정 10개가 설치본 정본과 일치하고 언어 파일·아키텍처가 정상이다. 세 루트의 `fxfile.ini`/`.fxfile`은 없으며 `.obj` 잔류도 0이다.
+  - 통합 no-INI smoke는 x64 skeleton 1.606초/6 pane ready 11.274초, x32 skeleton 2.128초/6 pane ready 16.088초, 모두 원자 공개·정상 종료다.
+- 빌드에는 레거시 C4828/C4005/C5033/LNK4098 계열 경고가 남아 있으므로 경고 0이라고 기록하지 않는다. 두 아키텍처 빌드·링크·동적 검증·배포는 성공했다.
+
+### 117.6 정리·증거 보존·최종 재검증
+
+- 0.7/114.6의 파일 기반 Audit→Delete 원칙으로 workspace containment, 절대경로, 최소 깊이, reparse 0, 관련 프로세스 0, 보호 대상 존재를 먼저 확인했다. 그 뒤 build cache/obj, 구 preflight, 구·실패 배포, 완료 smoke 복제, Task115/116 구 백업, 대형 benchmark·probe·keyboard·refresh·soak stage 등 **24개 대상·41,962파일·2,296,934,395바이트(약 2.14GiB)**를 영구 삭제했다.
+- 최신 Task117 작업 전 소스 백업, 최신 PASS preflight, 최신 성공 배포/rollback 1세대, `bin`, 세 운영 패키지는 보호했다. 정리 manifest는 최신 배포 폴더의 `cleanup_task117_manifest.json`이다.
+- 재현에 필요한 작은 결과만 `__BUILD_TEMP_BACKUP__\task117_results_20260913_075600_000`에 보존했다. `RESULTS.md`, benchmark/probe build, x64/x32 keyboard, 6-pane refresh/sort, 120초 soak JSON을 포함한다. 대형 합성 표본과 중복 실행 파일은 보존하지 않는다.
+- 정리 후 삭제한 `build_cmake`, `build_cmake_x32`, `obj`, `test_runtime`은 재생성되지 않았고 FxFile 관련 프로세스는 0개다. 종료 측정 C: 여유 87.19GiB, D: 여유 2,171.74GiB다.
+- 정리 후 `build_deploy_all.bat -Mode VerifyOnly`를 다시 실행하여 Exit 0을 확인했다. 설치본 x64/run_x64 동일 해시, run_x32 대응 해시, 세 패키지 설정 10개 정본 일치 `True`다.
+
+### 117.7 재발 방지와 보증 경계
+
+1. UI thread에서 대규모 재귀 열거를 다시 수행하지 않는다. 비동기 결과에는 항상 pane generation·취소·파괴 경계와 유한 backpressure를 함께 둔다.
+2. watcher를 열거 뒤에 늦게 설치하지 않는다. 선무장과 열거 중 dirty 최종 reconcile을 한 계약으로 유지한다.
+3. 전체 HRESULT를 항목 전체 성공으로 확대 해석하지 않는다. 실제 성공 항목만 UI/Shell 통지에 반영하고 불확실성은 부모 refresh로 수렴시킨다.
+4. 시작 포커스는 창 생성 한 지점에만 의존하지 않는다. 활성화·첫 batch·빈 completion에서 재요청하되 사용자의 기존 편집/메뉴 포커스는 침범하지 않는다.
+5. 저용량 C: 예외는 명시 승인, D: 로컬 비-reparse TEMP, C: 1GiB 비상 하한을 모두 만족해야 한다. 문서와 자동화 숫자가 다르면 작업을 시작하기 전에 자동화를 문서 계약과 대조한다.
+6. 빌드 실패 시 배포하지 않으며, 동적 시험 실행 파일 해시를 최신 운영본/manifest와 먼저 대조한다. 최종 정리 뒤 `VerifyOnly`와 프로세스 0을 다시 확인한다.
+
+**-- 비동기 STA 폴더 열거·유한 batch·watcher 선무장/dirty reconcile, 항목별 최신 Shell 결과·계획 취소, 최초 마우스 없는 6-pane 키보드 운용을 구현하고 35/35 정적 검사·x64/x32 동적 probe·6-pane 갱신/120초 soak·통합 빌드 및 세 패키지 배포·2.14GiB 정리·최종 VerifyOnly 완료 (Task 117, 2026-09-13) --**
+
+## Task 118 — 프로그램 첫 실행/재실행 측정 정정과 pane 직접 Tab 순환 (2026-09-13)
+
+### 118.1 요청과 최종 판정
+
+- 사용자가 말한 “처음 부팅”은 Windows 재부팅이 아니라 **FxFile 프로세스가 없는 상태에서 `fxfile.exe`를 실제 처음 실행하는 경우**이며, “재실행”은 FxFile을 정상 종료한 뒤 같은 실행 파일을 다시 여는 경우다. 이 범위를 Windows 로그온·재부팅·물리 디스크 cold-cache와 분리했다.
+- 실제 설치본 `D:\00 소프트웨어\04 Fxfile\fxfile.exe` 3회 측정에서 첫 프로세스 실행은 frame 989ms, layout skeleton 995ms, 저장된 6개 pane 전체 준비 1,813ms였다. 정상 종료 후 재실행 2회는 각각 1,542ms와 1,295ms, 중앙값 1,418.5ms였다. 첫 실행은 재실행 중앙값보다 394.5ms 느렸지만 세 번 모두 준비 시점 `Responding=True`였고 수분 단위 지연이나 응답 없음은 재현되지 않았다. 동일 격리 사본 3회도 첫 실행 1,860ms, 재실행 1,293/1,234ms로 같은 방향을 교차 확인했다.
+- Task 117은 첫 활성 pane에 키보드 포커스를 주었지만, 기존 `MainFrame::moveFocus()`가 한 pane 안에서 `ExplorerCtrl → AddressBar → FolderCtrl → 다음 pane` 순서로 순환했다. 따라서 첫 Tab이 상세 경로/주소 편집기로 들어가는 사용자의 관측은 정확한 제품 결함이었다.
+- 최종 동작은 시작부터 현재 파일 목록을 키보드 대상으로 삼고, Tab/Shift+Tab 한 번마다 주소 표시줄·폴더 트리를 건너뛰어 다음/이전 pane의 `[..] 상위 폴더로` row 0에 직접 착지한다. 현재 생성된 pane 개수를 사용하므로 1×1~2×3 가변 레이아웃을 6개 고정으로 바꾸지 않는다.
+
+### 118.2 관측 증거와 직접 원인
+
+1. **수정 전 엄격 동적 재현**: 최종 Task 117 설치본을 격리 실행하고 첫 Tab 직후 포커스 HWND 클래스를 읽자 `SysListView32`가 아니라 `Edit`가 나왔다. 시험은 `Tab step 1 entered 'Edit' instead of the next file pane.`로 정확히 실패했다. 포커스 요청 자체의 부재가 아니라 기존 내부 컨트롤 순환 정책이 직접 원인이다.
+2. **시작 시간 보고의 과거 측정 오류**: Task 117의 키보드 도구는 stopwatch를 여섯 pane Tab 순환과 Shift+Tab 시험까지 모두 끝낸 뒤 읽었다. 문서의 x64 8.971초/x32 12.754초는 실제 “준비 완료 시점”이 아니라 키보드 시험 지연까지 섞인 값이므로 시작 속도 근거로 사용하지 않는다. Task 118 도구는 6개 목록과 초기 포커스가 준비된 즉시 `StartupReadyMilliseconds`를 먼저 고정하고, 그 뒤 별도의 `TotalTestMilliseconds`로 키 입력 시험 시간을 기록한다.
+3. **프로그램 첫 실행과 재실행 차이**: 실제 설치 경로에서 동일 프로세스가 없고 같은 Windows 세션이 유지된 조건으로 첫 실행 1.813초, 재실행 중앙값 1.4185초로 약 0.395초 차이가 관측됐다. 첫 프로세스는 EXE/DLL image, MFC/COM/Shell 초기화와 D: HDD·V3 실시간 검사 경로를 처음 통과하고 재실행은 Windows 파일·이미지·Shell 캐시의 도움을 받을 수 있다. 이 차이는 현재 표본의 설명이며 특정 캐시 하나를 유일 원인으로 단정하지 않는다.
+4. 통합 배포 smoke의 x64 8.515초/x32 12.171초와 반복 측정의 x64 1.860초는 실행 시점의 OS cache·디스크/백신 부하와 격리 환경이 다르므로 서로 대체하지 않는다. 전자는 빌드 직후 no-INI 원자 공개·정상 종료 합격 기준이고, 후자는 같은 사본의 첫 프로그램 실행과 닫고 재실행 간 차이를 보는 비교 시험이다. 현 측정으로 “항상 1.860초”라고 보장하지 않는다.
+
+### 118.3 구현/해결 방법
+
+- `ExplorerCtrl::focusParentFolderRow()`를 추가했다. 상위 폴더 행이 표시되고 항목이 있을 때 기존 선택·포커스를 지우고 row 0에 `LVIS_SELECTED|LVIS_FOCUSED`, selection mark, `EnsureVisible`을 한 번에 확정한다. 일반 선택/Shift anchor를 paint 코드에서 변조하지 않으며 pane 전환 경계에서만 호출한다.
+- 시작 포커스가 실제 목록에 커밋된 직후와 `moveFocus()`가 목적 pane의 목록에 `SetFocus()`한 직후 위 helper를 호출한다. 따라서 비동기 첫 batch 완료 뒤에도 방향키·Tab 입력의 시각적·논리적 시작 행이 일치한다.
+- `ExplorerView`에서 들어온 Tab만 `moveFocus(..., shift, direct-pane=true)`로 전달한다. direct-pane 모드는 같은 pane의 AddressBar/FolderCtrl 단계를 생략하고 다음 또는 이전 pane의 파일 목록으로 이동한다. FolderView 등 다른 컨트롤에서 시작된 기존 포커스 의미는 유지해 변경 범위를 제한했다.
+- `Test-Task117KeyboardStartup.ps1`을 정정하여 시작 준비 시각을 키 입력 전에 기록하고, Tab 한 번마다 반드시 서로 다른 `SysListView32`와 row 0인지, Shift+Tab 한 번도 이전 목록 row 0인지 엄격히 검사한다. `Test-Task118FirstLaunchRelaunch.ps1`은 패키지를 한 번만 격리 복사한 뒤 동일 EXE/설정/경로를 정상 종료하며 3회 실행해 frame/skeleton/전체 pane 준비 시간을 분리한다.
+
+### 118.4 실패 사례와 복구 과정
+
+- 수정 전 시험이 첫 Tab의 `Edit` 진입을 실패로 잡은 것은 의도한 red 증거다. 이를 pane 전환 성공으로 완화하지 않고 실제 제품 코드를 정정한 뒤 동일 엄격 조건으로 재시험했다.
+- 첫 실행/재실행 시험 스크립트 작성 중 `Set-Content` 줄 연속 표시에 PowerShell 문법이 아닌 역슬래시가 들어갔다. 제품을 실행하기 전 `[scriptblock]::Create()` parser 검증에서 확인할 수 있도록 하고, backtick으로 고쳐 parser 통과 뒤 시험했다. 이 실패는 제품 실행 결과에 포함하지 않는다.
+- 마지막 계약 검사와 `VerifyOnly`를 한 셸 줄로 묶은 첫 wrapper는 자체적으로 exit code를 설정하지 않는 정적 `.ps1` 뒤의 오래된 `$LASTEXITCODE`를 읽어 계약 7/7 PASS 출력 후에도 잘못 중단됐다. 제품/계약 실패가 아니며, 출력 판정과 외부 프로세스 exit 판정을 분리해 `VerifyOnly`를 독립 재실행하여 Exit 0을 확인했다.
+- 시작 성능을 개선한다는 이유로 Task 117의 비동기 worker 수·watcher·원자 공개를 다시 바꾸지 않았다. 현재 직접 측정은 수분 지연이나 hang을 재현하지 않았고, 이번 기능 변경은 포커스 경로와 시험 계측뿐이다. 증거 없이 HDD 병렬도나 Shell 열거 정책을 바꾸면 갱신 정확성과 안정성을 훼손할 수 있다.
+
+### 118.5 정적·동적 검증 및 최종 해시/manifest
+
+- `tools\test_task118_direct_pane_tab_and_startup_timing_contracts.ps1`의 7/7 계약이 PASS다. helper/row 0 상태, ExplorerView direct-pane 인자, 시작과 전환의 row 0 착지, 시작 준비와 시험 총시간 분리, 1키 Tab/Shift+Tab을 고정한다.
+- 최종 `tools\test_task*.ps1` **36개 스크립트 전부 PASS, 실패 0**이다. Task 117의 비동기 열거·파일 작업 계약 26/26과 Task 118의 포커스 계약 7/7을 함께 통과했다.
+- 실제 GUI x64: 시작 준비 6.861초, 초기 포커스 `SysListView32`, Down row 1, Tab 한 번씩으로 서로 다른 6개 파일 목록을 모두 방문하고 각 목적 pane row 0, Shift+Tab 한 번으로 이전 pane row 0, 강제 종료 없이 PASS다.
+- 실제 GUI x32: 시작 준비 10.886초이며 나머지 직접 Tab/Shift+Tab 조건은 x64와 동일하게 PASS다. 두 시험 모두 마우스 입력을 주입하지 않았다. 이 수치는 키보드 시험용 별도 격리 실행의 준비 시간이며 아래 동일 x64 반복 측정과 목적이 다르다.
+- 실제 설치본 x64 첫 실행/재실행 비교: frame/skeleton/all-pane-ready가 989/995/1,813ms, 재실행은 670/670/1,542ms 및 545/545/1,295ms다. 세 표본 모두 ready pane 6, responding true, 실행 파일 해시는 최종 x64와 일치한다. 동일 격리 사본의 972/977/1,860ms와 재실행 1,293/1,234ms도 교차 증거로 보존했다.
+- 실제 설치본 시험의 정상 종료가 `fxfile-main.conf`를 다시 저장해 내용 해시 1개를 바꾼 것을 실행 전후 비교로 감지했다. 시험 전 `VerifyOnly`에서 세 패키지가 같았으므로 변경되지 않은 run_x64 정본 SHA-256 `895440C8A3F126834F8D7B0B11E82C371A9F7D91119FC66A2290F8C2B8D9B514`를 설치본 한 파일에 원복하고 최종 `VerifyOnly`로 설정 10개 일치를 다시 확인했다. 시험에 따른 사용자 환경 변동을 배포본으로 확산하지 않았다.
+- 최종 PASS 프리플라이트는 `__BUILD_TEMP_BACKUP__\preflight_20260913_082658_397\preflight_report.json`이다. 필수 실패 0, Git 비저장소만 비차단 경고이며 C: 87.183GiB, D: 2,171.487GiB 이상 조건에서 x64/x32 configure를 통과했다.
+- 통합 성공 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_083653_585\deployment_manifest.json`이다. x64 skeleton 1.577초/6 pane ready 8.515초, x32 skeleton 1.485초/6 pane ready 12.171초, 모두 원자 공개·정상 종료·루트 INI 미생성이다.
+- 설치본 x64와 run_x64 SHA-256은 `6E2C49AE4C93BD5AE56BE84F30EBD43ADC15E0B836F4B242B40F933FF260B4C3`, run_x32는 `EEAD9A389B0DA6C7E7ADA097E8D42ABF335EE942946C6A1A234E4921384824F3`이다. 설정 10개 정본 일치 `True`, 언어/아키텍처 정상, 세 루트 `fxfile.ini`/`.fxfile` 부재이며 마지막 `VerifyOnly` Exit 0이다.
+- 레거시 C4828/C4005/C5033/LNK4098 계열 경고는 남아 있어 경고 0이라고 기록하지 않는다. 두 아키텍처 Release 빌드·링크·동적 실행·배포는 성공했다.
+
+### 118.6 교훈과 재발 방지
+
+1. “처음 실행”을 Windows 부팅, 사용자 로그온, 첫 프로세스 실행, 새 복사본 실행, 단순 재실행 중 어느 뜻인지 시험 보고서의 `Scope`에 반드시 명시한다.
+2. 시작 stopwatch는 기능 입력을 주입하기 전에 readiness 시점에서 고정한다. 탐색 시험까지 섞은 총시간을 startup으로 명명하지 않는다.
+3. 파일 pane 간 키보드 이동 계약은 “결국 다음 pane에 도달”이 아니라 **키 한 번, 목적 클래스 `SysListView32`, 목적 row 0, 서로 다른 HWND**로 검증한다. 주소 표시줄을 두 번 경유한 성공을 합격시키지 않는다.
+4. 시작 체감은 frame visible, skeleton painted, all panes ready를 분리한다. 첫 화면은 빠르지만 목록 준비가 늦은 경우와 창 자체가 늦은 경우를 같은 원인으로 처리하지 않는다.
+5. 반복 실행이 빨라지는 관측은 OS/Shell/백신 cache 효과와 제품 초기화 비용이 섞일 수 있다. 재부팅 cold-cache를 요청하지 않은 시험에서 재부팅 결과를 추론하지 않는다.
+
+### 118.7 정리와 보장 범위
+
+- 재현 가능한 작은 증거는 `__BUILD_TEMP_BACKUP__\task118_results_20260913_090000_000`의 `RESULTS.md`, x64/x32 키보드 JSON, 첫 실행/재실행 x64 JSON으로 축약 보존한다. 대형 격리 패키지와 수정 전 중복 실행 파일은 보존하지 않는다.
+- §0.7.3의 파일 기반 Audit→Delete로 관련 프로세스 0, workspace containment, 최소 경로 깊이, reparse 0, 최신 PASS preflight·최신 성공 deploy·Task118 전체 소스 복구본·축약 결과·`bin`·세 운영 패키지 보호를 먼저 검증했다. 구 Task111/116/117 증거·구 preflight/배포, Task118 수정 전·키보드·반복 실행의 중복 package stage, 최신 deploy의 완료 smoke, `build_cmake`·`build_cmake_x32`·`obj` 등 **25개 대상·4,760파일·1,381,328,099바이트(약 1,317.34MiB)**를 휴지통 없이 영구 삭제했다. 최신 배포의 `cleanup_task118_manifest.json`과 실제 설치본 후속 측정 stage용 `cleanup_task118_followup_manifest.json`에 대상별 수치와 `Removed=True`를 보존했고 일회용 정리기는 `apply_patch`로 제거했다.
+- 정리 30초 이후 재감사에서 build/obj 재생성 0, 관련 프로세스 0, 세 패키지 금지 확장자 0, 루트 `fxfile.ini`/`.fxfile` 0, 일회용 정리기 잔류 0이었다. 최종 `VerifyOnly`도 다시 Exit 0으로 세 실행 파일 해시와 설정 10개 정본 일치를 확인했다.
+- 이번 첫 실행 비교는 현재 Windows 11 세션, 현재 D: HDD, 현재 V3 상태, 동일한 격리 x64 사본과 설정에서 수행했다. Windows 재부팅/로그온, 물리 디스크 cache 완전 제거, 다른 PC·백신·Shell extension의 절대 시간은 범위 밖이다.
+- 현 표본에서는 수분 지연·응답 없음·6-pane 부분 공개를 재현하지 못했다. 사용 중 다시 장시간 지연이 발생하면 `fxfile.exe` 클릭 시각, frame 표시 시각, 6-pane 준비 시각과 당시 D: active time, V3 검사, Shell extension 지연을 같은 타임라인으로 수집해야 하며 “사용자 착각”으로 단정하지 않는다.
+
+**-- FxFile 첫 프로세스 실행과 닫고 재실행을 Windows 부팅과 분리 측정하고, 주소 표시줄을 건너뛰는 1키 pane Tab/Shift+Tab 및 `[..]` row 0 착지를 구현하여 36/36 정적 검사·x64/x32 실제 GUI·x64 반복 실행·통합 빌드/세 패키지 배포·최종 VerifyOnly 완료 (Task 118, 2026-09-13) --**
+
+## Task 119 — 여섯 pane 첫 내용 공개 지연과 false-ready 계측 정정 (2026-09-13)
+
+### 119.1 요청과 최종 판정
+
+- 사용자가 말한 지연은 Windows 부팅이나 창 자체의 생성이 아니라, `fxfile.exe` 실행 뒤 메뉴·도구 모음·2×3 pane의 경로/열/상태 틀은 보이지만 **여섯 파일 목록 내부가 1~3초가량 비어 있는 중간 상태**다. 첨부 화면과 같은 상태를 별도 계측 대상으로 고정했다.
+- 수정 전 설치 x64 실측은 frame 1,324ms, 첫 pane 항목 2,411ms, 여섯 pane 모두 첫 항목 7,458ms로, 마지막 pane 기준 보이는 공백이 6,134ms였다. 종전 ready property는 2,339ms에 먼저 참이 되어 `ReadyPropertyBeforeVisibleContent=True`였다. 따라서 Task 118의 1.813초 “전체 pane 준비”는 실제 내용 완료가 아니라 비동기 시작 성공을 완료로 잘못 해석한 값이며 이 Task가 후속 정정한다.
+- 최종 설치 x64는 frame 945ms, 여섯 pane 모두 첫 행 1,868ms, 공백 923ms다. run_x32는 1,050ms/2,283ms/1,233ms다. 현재 x64 표본은 사용자가 말한 1~3초 구간보다 짧아졌고, 하나의 느린 pane 때문에 수 초간 빈 상태가 지속되는 경로는 폐쇄했다.
+
+### 119.2 관측 증거와 직접 원인
+
+1. `DirectoryEnumerationWorker`의 기존 batch는 항상 128개였다. 항목이 128개 미만인 폴더도 Shell 열거가 끝날 때까지 첫 batch를 보내지 않아, 작은 폴더가 오히려 느린 Shell provider·백신·메타데이터 응답 전체를 기다리며 비어 보였다.
+2. `MainFrame::OnDeferredStartupViews()`는 `completeDeferredStartupInit()`가 비동기 작업을 시작했다는 반환만으로 ready 수를 올렸다. 실제 ListView row 삽입·빈 폴더 completion·정렬 완료와 무관했으므로 skeleton/first-content/ready의 의미가 섞였다.
+3. 비-Desktop 폴더의 `[..] 상위 폴더로`는 실제 디렉터리 항목 열거와 무관한 결정적 UI 행인데도 `postEnumeration()`까지 생성하지 않았다. 따라서 사용자는 정상적인 비동기 처리 중에도 내용이 전혀 없는 화면만 보았다.
+4. `FXFILE_STARTUP_TRACE=1`의 읽기 전용 추적에서 핵심 설정은 약 0.1초, frame show는 약 0.297초였지만 여섯 `ExplorerView` 컨트롤·주소/상태 표시줄·저장 경로 연결을 UI thread에서 순차 준비하는 구간은 약 0.297~1.172초였다. 이어 모든 pane의 과거 경로를 한 posted handler에서 PIDL로 복원하는 구간이 약 1.328~6.438초 동안 UI를 점유했다. 제품 핵심 설정 파일이나 Windows 부팅이 직접 원인이 아니었다.
+
+### 119.3 구현/해결 방법
+
+- worker의 첫 batch는 **완전히 해석된 항목 1개**가 생기면 즉시 게시하고, 이후에는 기존 128개 batch와 UI 미소비 최대 4개 backpressure를 그대로 유지한다. generation·cancel·owner token·watcher 선무장·dirty reconcile 계약은 바꾸지 않았다.
+- 비-Desktop 비동기 pane은 `preEnumeration()` 직후 splitter가 아직 원자 공개되기 전에 `[..]` 행을 먼저 삽입하고, 실제 항목 insertion index를 그 다음으로 이동한다. completion은 `mDirectoryEnumerationParentPublished`를 확인해 상위 행을 중복 삽입하지 않는다. Desktop/가상 namespace의 의미는 종전 호환 경로를 유지한다.
+- main frame에 `FxFile.StartupLayoutFirstContentViewCount`와 실제 completion 소유의 `FxFile.StartupLayoutReadyViewCount`를 분리했다. 첫 행이 없는 빈 폴더는 completion을 first-content와 ready 둘 다로 기록한다. 시험기는 frame·skeleton·first-content·실제 각 ListView item count·ready를 독립 기록하며 false-ready를 실패로 판정한다.
+- 과거 기록 복원은 여섯 pane 전체를 한 handler에서 연속 처리하지 않고 pane 하나마다 같은 deferred message를 다시 게시해 메시지 pump에 양보한다. 그 사이 첫 batch·paint·입력 메시지를 처리할 수 있다. 키보드 ready는 마지막 history pane까지 끝난 뒤에만 확정하여 긴 PIDL 변환 뒤에 Tab이 갇히는 경합을 막는다.
+
+### 119.4 실패 사례와 복구 과정
+
+- 첫 수정은 1개 첫 batch만 추가했다. 다섯 pane는 일찍 보였지만 한 pane가 8,948ms까지 비었고, first-content property는 2,435ms에 이미 여섯 개라고 보고했다. batch 수만 줄여서는 상위 행의 completion 결속과 실제 ListView 공개 의미를 해결하지 못했으므로 합격시키지 않았다.
+- 상위 행 선게시 뒤 과거 기록 완료를 기다리지 않고 키보드 ready를 조기에 설정한 중간본은 x64 동적 시험에서 `Tab step 1 did not advance to a distinct file pane`로 실패했다. history PIDL 변환이 UI thread를 점유하는 동안 Tab 메시지가 뒤에 대기한 것이 원인이었다. pane별 양보는 유지하되 ready/focus 확정만 전체 history 완료 뒤로 돌린 뒤 같은 엄격 시험을 재통과했다.
+- 위 두 중간본은 최종본으로 기록하거나 보존하지 않았다. 매 수정 뒤 x64/x32를 같은 소스에서 다시 빌드·원자 배포했고, 최종 manifest와 해시만 정본으로 남겼다.
+
+### 119.5 정적·동적 검증 및 최종 해시/manifest
+
+- `tools\test_task119_startup_content_publication_contracts.ps1`의 14/14가 PASS다. 첫 1개/후속 128개 batch, first-content와 ready 분리, 상위 행 선게시·중복 방지·insertion index, pane별 history 양보, history 완료 뒤 키보드 ready, 빈 폴더 completion, false-ready 계측을 고정한다.
+- 최종 `tools\test_task*.ps1`은 **37개 스크립트 전부 PASS, 실패 0**이다. Task 117 비동기 열거/파일 작업과 Task 118 direct-pane 키보드 계약도 함께 통과했다.
+- `Test-Task119StartupListPublication.ps1` 최종 결과:
+  - 설치 x64: frame 945ms, skeleton 951ms, first-content property 1,912ms, 여섯 ListView 첫 행 1,868ms, frame 이후 공백 923ms, 실제 ready 6,210ms, false-ready 없음.
+  - run_x32: frame 1,050ms, skeleton 1,057ms, first-content property 2,315ms, 여섯 ListView 첫 행 2,283ms, frame 이후 공백 1,233ms, 실제 ready 2,483ms, false-ready 없음.
+- 키보드 회귀는 x64/x32 모두 초기 `SysListView32`, 서로 다른 pane 6개, Tab 한 번당 다음 pane row 0, Shift+Tab 한 번당 이전 pane row 0, 마우스 입력 0으로 PASS다. 중간 경합 실패를 완화하지 않고 같은 조건으로 재시험했다.
+- 최종 PASS 프리플라이트는 `__BUILD_TEMP_BACKUP__\preflight_20260913_132415_405\preflight_report.json`이다. 필수 실패 0, Git 비저장소만 비차단 경고이며 C: 86.79GiB, D: 2,133.08GiB 수준에서 x64/x32 configure와 D: Task TEMP probe를 통과했다.
+- 최종 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_133747_568\deployment_manifest.json`이다. 설치 x64/run_x64 SHA-256은 `EF9132570417A01BA46FB50067A074271130BF90A4B92ECC4CA4AD0BCFAE91C7`, run_x32는 `8A427C57A6407A41B0CB486F5CBDB3EE453082D29F080237A8A150A6B576E9F3`이다. 설정 10개 정본 일치 `True`, 세 루트 INI/.fxfile 부재, 아키텍처 정상, no-INI smoke와 마지막 `VerifyOnly` Exit 0이다.
+- 레거시 `folder_view.cpp` C4828 등 기존 경고는 남아 있으므로 경고 0이라고 기록하지 않는다. 두 아키텍처 Release 빌드·링크·세 패키지 배포·실제 GUI 시험은 성공했다.
+
+### 119.6 정리·교훈·재발 방지
+
+- 재현 가능한 작은 JSON과 요약은 `__BUILD_TEMP_BACKUP__\task119_results_20260913_134100_000`에, 최종 전체 소스 복구본은 `task119_source_final_20260913_132301_853`에 보존했다. 최신 PASS preflight·최신 성공 배포/rollback·`bin`·세 운영본도 보호했다.
+- §0.7.3의 파일 기반 Audit→Delete로 구 preflight/배포, Task118/119 구 소스 세대, 중간·실패·최종 동적 시험의 중복 package, 최신 완료 smoke, `build_cmake`/`build_cmake_x32`/`obj` 등 **22개 대상·8,358파일·2,139,801,866바이트(약 1.99GiB)**를 휴지통 없이 영구 삭제했다. 일회용 정리기는 `apply_patch`로 제거했다.
+- 재발 방지 기준은 다음과 같다: (1) 비동기 작업 “시작 성공”을 “화면 내용 준비”로 명명하지 않는다, (2) frame/skeleton/첫 실제 행/전체 열거 완료를 별도 시각으로 기록한다, (3) 작은 폴더 첫 공개를 큰 고정 batch completion에 묶지 않는다, (4) 디렉터리 열거와 무관한 상위 탐색 행은 원자 공개 전에 준비한다, (5) 긴 history 복원은 pane마다 메시지 pump에 양보하되 키보드 ready는 실제 입력이 지연되지 않는 완료 경계에서만 올린다, (6) 성능 수정 뒤 direct Tab·watcher·generation·설정/No-INI 계약을 반드시 함께 재시험한다.
+
+### 119.7 보장 범위와 남은 한계
+
+- 이번 수치는 현재 Windows 11, 현재 D: 저장장치·V3/Shell 상태, 저장된 6-pane 경로의 한 실행 표본이다. 다른 PC·백신·클라우드 provider·네트워크·물리 디스크 cold cache의 절대 시간을 보장하지 않는다.
+- 최종 설치 x64의 **보이는 빈 목록 구간은 0이 아니라 0.923초**였다. 이는 여섯 pane의 실제 child control·주소/상태 표시줄·저장 PIDL 연결을 UI thread에서 생성하는 잔여 비용이다. 그 비용을 숨기기 위해 가짜 파일 행을 만들거나 부분 pane를 순차 공개하지 않았으며, 실제 내용 무결성과 6-pane 원자 배치를 우선했다.
+- `ready`는 실제 전체 열거·후처리 완료이므로 첫 화면보다 늦을 수 있다. 사용자는 상위 행과 먼저 도착한 파일을 사용할 수 있고, worker는 나머지를 제한 batch로 계속 채운다. 느린 provider가 실제 첫 PIDL 자체를 늦게 주는 시간은 FxFile이 제거할 수 없지만 UI thread 장기 독점과 false-ready는 제거했다.
+
+**-- 메뉴/분할 틀만 보이고 여섯 목록이 비는 시작 구간을 별도 계측하여 128개 첫 batch·false-ready·상위 행 completion 결속·단일 history handler를 정정하고, 설치 x64 공백 6.134초→0.923초, 37/37 정적 검사·x64/x32 GUI/키보드·통합 빌드/세 배포본·1.99GiB 정리·최종 VerifyOnly 완료 (Task 119, 2026-09-13) --**
+
+---
+
+## Task 120 — `[..]` 합성 행 오판 정정, 실제 파일·폴더 우선 공개 및 세 배포본 직접 실기 (2026-09-13)
+
+### 120.1 요청과 최종 판정
+
+- 사용자가 설치 운영본 실행 시 여섯 pane에 `[..] 상위 폴더로`만 약 10초 남는 실제 화면을 제시했고, Task 119의 실기가 정확했는지와 설치본/run_x64/run_x32 모두의 해결 여부를 다시 요구했다.
+- **Task 119의 0.923초 완료 주장은 계측 기준이 잘못되어 철회·정정한다.** 당시 시험은 item count `>= 1`을 콘텐츠로 보았으나, 현재 여섯 시작 위치는 비-Desktop 폴더이므로 첫 1행은 모두 합성 상위 탐색 행이다. 실제 파일·폴더 공개를 검증한 값이 아니었다.
+- Task 120 최종본은 실제 세 패키지를 그 자리에서 직접 실행하고, 현재 비어 있지 않은 저장 폴더 여섯 곳 모두에서 native ListView count `> 1`을 요구했다. 세 곳 모두 실제 행 공개·ready 순서·키보드 회귀·설정/No-INI 무결성을 통과했다.
+
+### 120.2 관측 증거와 직접 원인
+
+1. 수정 전 Task 119 설치본을 새 엄격 시험으로 직접 실행한 결과 frame 659ms, 합성 상위 행 여섯 개 1,771ms, 첫 실제 행 1,856ms, 모든 pane 실제 행 2,649ms, frame 이후 실제 콘텐츠 공백 1,990ms, parent-only 구간 878ms였다. 이 warm 실행은 사용자의 10초를 그대로 재현하지는 못했지만 종전 시험의 false positive를 재현했다.
+2. worker의 첫 1개 batch가 숨김+시스템 `desktop.ini`처럼 UI 옵션상 표시하지 않는 항목이면 `insertPidlItem()`은 해당 PIDL을 정상 소비해도 native ListView count는 늘지 않는다. 종전 코드는 처리 성공만으로 first-content를 올려 이후 실제 항목이 최종 batch까지 기다릴 수 있었다.
+3. main frame은 현재 폴더 worker와 동시에 저장된 backward/forward/history 문자열을 `Path2Pidl()`로 복원했다. 오래되거나 Shell 처리가 느린 경로의 PIDL 변환이 UI thread를 점유하면 worker가 이미 게시한 실제 항목 메시지도 처리되지 못해 `[..]`만 보이는 cold/provider 의존 지연이 생길 수 있었다.
+4. 최종 후보 1차 실기에서 실제 행 공개는 2.4~2.9초로 개선됐지만, history 완료 뒤에만 키보드를 준비하는 정책 때문에 키보드 ready가 x64 8.158초, x32 12.872초였다. 화면만 채우고 입력이 늦는 상태도 시작 완료로 볼 수 없어 추가 보완했다.
+
+### 120.3 구현/해결 방법
+
+- `DirectoryEnumerationWorker`는 최초 **8개 항목을 1개씩** 유한 burst로 게시한 뒤 종전 128개 steady batch로 전환한다. 미소비 batch 최대 4개 backpressure, generation/cancel/owner token, STA COM, watcher dirty reconcile은 그대로 유지하므로 메시지·메모리가 무제한 증가하지 않는다.
+- `ExplorerCtrl::OnDirectoryEnumeration()`은 batch 처리 전후의 native `GetItemCount()`를 비교하고 실제 row 수가 증가했을 때만 first-content를 확정한다. 합성 `[..]` 선게시는 탐색 기능과 insertion index만 준비하며 실제 콘텐츠로 보고하지 않는다. 표시 옵션으로 걸러진 첫 Shell 항목도 first-content 상태를 소모하지 않는다.
+- 여섯 현재 폴더가 실제 열거·정렬을 완료하면 main frame이 모든 child를 `RDW_UPDATENOW`로 동기 게시하고 키보드 포커스를 먼저 준비한다. 그 뒤 history는 최초 250ms, pane 간 25ms의 one-shot `WM_TIMER`로 복원한다. 입력보다 우선순위가 높은 application posted-message 연쇄를 제거하여 Tab/닫기/마우스 입력이 여섯 history 변환 전체 뒤에 굶지 않게 했다.
+- 종료 시 history timer를 취소하고, timer 생성 실패 시에만 기존 posted-message/직접 호출의 안전 fallback을 사용한다. 저장 history 기능 자체나 설정 파일 형식은 제거·변경하지 않았다.
+- `Test-Task119StartupListPublication.ps1`에 `-RunDirect`, `FirstAnyRealItemMilliseconds`, `AllListsRealItemMilliseconds`, `ParentOnlyWindowMilliseconds`를 추가했다. 현재 fixture가 비어 있지 않은 비-Desktop 폴더라는 전제 아래 count `> 1`을 모든 pane에 요구하며 count `1`만으로는 PASS하지 않는다.
+
+### 120.4 실패 사례와 복구 과정
+
+- 가장 큰 실패는 제품 코드보다 검증 정의였다. 합성 상위 행을 “첫 콘텐츠”로 명명해 실제 사용자 화면과 모순되는 성공 수치를 냈다. Task 119 기록은 삭제하지 않고 문서 맨 위와 본 Task에서 명시적으로 후속 정정했다.
+- 첫 Task 120 후보는 history를 전체 현재 폴더 완료 뒤로 미뤘지만 키보드 ready도 history 뒤에 남겼다. 실제 콘텐츠 실기는 PASS했어도 x32 입력 준비가 12.872초였으므로 최종 배포 판정에서 제외하고, current-list ready와 secondary-history ready를 분리했다.
+- 통합 smoke의 `ReadySeconds`는 전체 저장 view redraw/열거 기준이고 실제 첫 파일·폴더 공개 시간이 아니다. 따라서 smoke 숫자만으로 사용자가 지적한 화면을 해결했다고 주장하지 않고 세 실제 패키지의 native ListView를 직접 측정했다.
+
+### 120.5 정적·동적 검증 및 최종 해시/manifest
+
+- `tools\test_task119_startup_content_publication_contracts.ps1` 15/15, 신규 `tools\test_task120_real_content_startup_contracts.ps1` 10/10, 전체 `tools\test_task*.ps1` **38개 스크립트 전부 PASS/실패 0**이다.
+- 최종 직접 실제 행 실기:
+  - 설치 운영본 x64: frame 1,818ms, 여섯 실제 행 2,942ms, frame 이후 공백 1,124ms, parent-only 65ms, ready-before-real `False`.
+  - run_x64: frame 637ms, 여섯 실제 행 1,803ms, frame 이후 공백 1,166ms, parent-only 98ms, ready-before-real `False`.
+  - run_x32: frame 1,562ms, 여섯 실제 행 2,880ms, frame 이후 공백 1,318ms, parent-only 106ms, ready-before-real `False`.
+- 최종 키보드 실기: x64 ready 3,221ms, x32 ready 3,159ms. 두 아키텍처 모두 초기 `SysListView32`, Down 유효, Tab 한 번당 서로 다른 여섯 pane, Shift+Tab 이전 pane, 마우스 입력 0으로 PASS했다.
+- 최종 PASS 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260913_141050_767\preflight_report.json`; 필수 실패 0, Git 비저장소만 비차단 경고다.
+- 최종 manifest: `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_141146_701\deployment_manifest.json`. 설치 x64/run_x64 SHA-256 `262D267D73A942D9B607219885E55083C8CCE5F82A7705F7EA5ADCAE04124F24`, run_x32 `C68FAE6F3795BDF9B2AC2A909A4EA68B953AB9B91A0EF05CC863CC332FAB1852`; 설정 10개 모두 canonical 일치 `True`, 마지막 `VerifyOnly` Exit 0이다.
+- compact 증거: `__BUILD_TEMP_BACKUP__\task120_results_20260913_141500_000`. 수정 전 엄격 결과, 세 패키지 최종 실제 행 결과, x64/x32 키보드 결과와 요약을 보존한다.
+
+### 120.6 정리·교훈·재발 방지
+
+- 시작 성능 시험은 `frame`, `skeleton`, `합성 탐색 행`, `첫 실제 파일·폴더`, `모든 pane 실제 행`, `전체 열거`, `키보드 준비`를 별도 필드로 기록한다. UI에 행이 있다는 이유만으로 업무 콘텐츠라고 추정하지 않는다.
+- 현재 fixture에 빈 폴더가 생기면 count `> 1` 시험은 의도적으로 실패한다. 그 경우 실제 row 텍스트/fixture 메타데이터를 명시한 별도 empty-folder 기대값을 사용해야 하며, 조건을 느슨하게 `>=1`로 되돌리지 않는다.
+- history·최근 경로·Shell PIDL 같은 2차 편의 데이터는 현재 폴더의 실제 표시와 첫 입력보다 앞서 UI thread를 장기 점유할 수 없다. timer 실패 fallback과 종료 취소를 정적 계약으로 고정한다.
+- §0.7.3의 파일 기반 Audit→Delete로 구 Task 119 전체 소스 세대, 구 preflight/deploy, 중간·최종 raw GUI package, 최신 완료 smoke, `build_cmake`/`build_cmake_x32`/`obj` 등 정확한 20개 대상·5,076파일·1,408,737,288바이트(약 1.312GiB)를 휴지통 없이 제거했다. 최신 PASS preflight 1세대, 최신 성공 deploy 1세대, Task 120 사전 복구본, compact 결과와 `bin`은 보호했다.
+
+### 120.7 보장 범위와 남은 한계
+
+- 현재 Windows 11, 현재 D:/C: 경로, 저장된 여섯 비-Desktop/비어 있지 않은 폴더의 직접 실행 결과다. 백신 cold scan, cloud/network namespace, 느린 HDD, 다른 PC의 절대 상한을 보장하지 않으며 사용자가 관측한 10초를 이 warm run에서 그대로 재현했다고 기록하지 않는다.
+- 설치본 최종 직접 실행에서도 frame부터 모든 실제 행까지 1.124초가 남았다. “즉시/0초”라고 주장하지 않는다. 다만 Task 119와 달리 그 수치는 합성 상위 행이 아닌 실제 파일·폴더의 native row 증가로 측정했다.
+- 한 history pane의 `Path2Pidl()` 자체는 여전히 UI thread 호출이다. current-list 표시와 키보드를 앞세우고 pane 사이 입력 기회를 보장했지만, 특정 단일 과거 경로의 Shell provider가 비정상 지연되면 그 한 단계 동안 순간 응답 지연은 가능하다. 이를 완전히 제거하려면 PIDL history의 별도 STA worker/수명·취소 설계를 독립 Task로 다뤄야 한다.
+
+**-- Task 119의 합성 `[..]` 1행 false positive를 정정하고, 실제 native row 증가·초기 8개 단건 burst·현재 목록 우선 paint/keyboard·history 유휴 timer를 적용하여 세 실제 패키지의 여섯 실제 행 1.803~2.942초, parent-only 65~106ms, 키보드 약 3.2초, 38/38 정적 검사·x64/x32 빌드·세 배포·VerifyOnly 완료 (Task 120, 2026-09-13) --**
+
+---
+
+## Task 121 — 폴더 진입·상위 복귀 직후 선택행/키보드 포커스 원자 확정 (2026-09-13)
+
+### 121.1 요청과 판정
+
+- 사용자는 `[..] 상위 폴더로` 및 일반 폴더 진입 직후 선택 행 포커스가 보이지 않고 ↓ 키를 눌러야 나타나는 현상을 보고하고, 가이드 준수와 기존 기능을 보존하는 무결성 보증 리팩토링을 요구했다.
+- **버그로 확인하고 해결했다.** 설정 이해 부족이나 Windows 11 자체 문제가 아니며, Task 119의 비동기 parent-row 선게시와 Task 118의 키보드 착지 규약 사이에 생긴 선택 상태 소유권 불일치였다.
+
+### 121.2 근본 원인
+
+1. 비동기 로컬 폴더 열거는 `exploreItem()`에서 `[..]` 행을 먼저 추가하고 `mDirectoryEnumerationParentPublished=True`로 표시한다. 그러나 `postEnumeration()`의 기본 선택은 그 함수가 직접 행을 추가해 로컬 `sAddedParentItem=True`가 된 경우에만 실행됐다. 선게시 경로에서는 목록이 정상 표시돼도 selected/focused row가 없는 상태로 끝났다.
+2. `OnSetFocus()` fallback은 selection mark가 없을 때 row 0에 `LVIS_FOCUSED`만 주었다. `LVIS_SELECTED`, `SetSelectionMark()`, `mFocusedItemIndex`가 동기화되지 않아 선택행 색의 실제 입력인 native selection이 없었고, ↓ 입력이 최초 완전 선택 전환을 대신했다.
+3. 기존 `focusParentFolderRow()`는 옵션과 item count만 보고 row 0을 parent라고 가정했다. Desktop/가상 목록 또는 비정상 삽입 상황에서 실제 `IDT_PARENT` 확인 없이 상태를 바꿀 수 있는 잠재 경계도 함께 제거했다.
+
+### 121.3 구현과 보존 계약
+
+- `ExplorerCtrl::commitNavigationSelection(index)`를 추가해 범위 검사 후 기존 selected/focused 상태 해제, 대상의 `LVIS_SELECTED|LVIS_FOCUSED`, selection mark, `EnsureVisible`, `mFocusedItemIndex`, 구/신 focus row의 비동기 invalidation을 한 경로에서 확정한다. 강제 `UpdateWindow()`나 전체 동기 repaint는 추가하지 않아 Task 111~114의 장시간 렌더링·화이트 플래시 방지 계약을 보존한다.
+- `focusParentFolderRow()`는 row 0의 `LVITEMDATA::mItemType == IDT_PARENT`를 확인한 뒤 공통 commit을 호출한다.
+- 비동기 선게시 시 실제 폴더 전환이면 `SetRedraw()/ShowWindow()` 전에 parent row를 선택한다. 동일 폴더 reconciliation이면 임시 선택을 만들지 않고 기존 `capture/restoreRefreshViewState()`가 다중 선택·포커스·스크롤을 단독 복원한다.
+- 완료 단계는 parent 행을 어느 단계가 삽입했는지와 무관하게 동작한다. 상위 이동의 `mSubFolder`를 찾으면 그 자식 행으로 착지하고, 찾지 못하면 parent 행, parent가 없는 Desktop/가상 목록이면 첫 실제 행으로 안전하게 fallback한다.
+- 컨트롤 자체가 포커스를 처음 얻었는데 selection mark가 없을 때도 동일 commit을 사용한다. 구현은 pane별 복제가 아니라 공통 `ExplorerCtrl` 한 곳이므로 1~6 pane 모든 분할에 동일 적용된다.
+
+### 121.4 검증과 발견된 시험 도구 경합
+
+- 신규 `tools\test_task121_navigation_selection_contracts.ps1` 14/14 PASS, 전체 `tools\test_*.ps1` **45개 스크립트 PASS/실패 0**이다. Shift 범위 선택, 선택행 색, 자동 갱신, 비동기 열거, 파일 작업, 시작 실제 행, Tab 직접 순환 계약을 함께 통과했다.
+- 신규 `tools\Test-Task121NavigationSelection.ps1`가 세 실제 패키지 복제본에서 native `LVM_GETNEXTITEM`으로 방향키 없는 선택/포커스를 읽었다. 설치 x64/run_x64/run_x32 모두 시작 row 0/0, 폴더 진입 0/0, 상위 복귀 1/1(selected/focused)로 PASS했다. `DirectionKeyAfterNavigationInjected=False`이며 각각 약 3.016/3.071/3.456초 안에 전체 시나리오를 마쳤다.
+- 추가 Tab 회귀의 첫 실행은 Shift+Tab이 row 1로 돌아가 실패했다. 제품의 역방향 이동이 아니라 시험 도구가 `keybd_event(VK_SHIFT)` 직후 지연 없이 Tab을 보내 `GetAsyncKeyState(VK_SHIFT)`가 간헐적으로 forward Tab으로 읽은 경합이었다. modifier down 뒤/해제 전에 각각 20ms 경계를 둔 뒤 설치 x64와 run_x32 모두 서로 다른 6 pane, forward 1키/pane, reverse row 0, 마우스 0으로 반복 PASS했다. 실패 기록을 삭제해 성공으로 바꾸지 않고 원인과 최종 증거를 함께 보존한다.
+
+### 121.5 빌드·배포·증거
+
+- 필수 PASS 프리플라이트: `__BUILD_TEMP_BACKUP__\preflight_20260913_182451_655\preflight_report.json`; 필수 실패 0, Git 비저장소만 비차단 경고다.
+- 통합 x64/x32 Release 빌드와 설치 x64/run_x64/run_x32 배포 성공 manifest: `__BUILD_TEMP_BACKUP__\unified_deploy_20260913_183203_361\deployment_manifest.json`.
+- 설치 x64/run_x64 SHA-256 `1F1337C3DEBA6826475855AEE488B7F2356BD97DD4AE34CC1B0B8BDBFF7B9857`, run_x32 SHA-256 `DBF0656AE85AA33C68C8AF5DDCC9DD82BC0A4A3B47A75BD6E5A682E852017C79`; 세 패키지 canonical 설정 10개 일치 `True`, no-INI x64/x32 smoke PASS다.
+- 사전 복구본: `__BUILD_TEMP_BACKUP__\task121_before_20260913_182542_377`; 결과: `__BUILD_TEMP_BACKUP__\task121_results_20260913_183136_182`. 결과 폴더에는 45개 최종 정적 요약, 세 패키지 탐색 선택 보고서와 최종 키보드 보고서를 보존한다. 실패·재시도 경위는 121.4에 보존하고 중복 실행 패키지는 정리했다.
+- §0.7.3 파일 기반 Audit→Delete로 구 preflight/deploy/Task120 전체 소스 백업, 최신 완료 smoke, 실패·중복 실행 패키지, `build_cmake`/`build_cmake_x32`/`obj` 등 정확한 **21개 대상·4,793파일·1,407,869,227바이트(1,342.65MiB)**를 휴지통 없이 제거했다. `cleanup_task121_manifest.json`에 대상별 결과를 기록했고 Task121 복구본·최신 preflight/manifest·작은 JSON/정적 결과·`bin`·세 운영 패키지는 보호했다.
+- 정리 30초 뒤 재생성 대상 0, 일회용 정리기 0, 관련 프로세스 0, 세 패키지 금지 산출물 및 루트 `fxfile.ini`/`.fxfile` 0을 확인했다. 최종 `build_deploy_all.bat -Mode VerifyOnly`도 Exit 0으로 위 실행 파일 해시와 설정 10개 일치를 재확인했다. 종료 시 C: 여유 약 85.31GiB, D: 약 2,120.66GiB다.
+
+### 121.6 재발 방지와 한계
+
+- 행이 화면에 보이는 것, 키보드 포커스 HWND가 ListView인 것, 선택행이 실제로 존재하는 것은 서로 다른 조건이다. 탐색 완료 검증은 최소 `LVNI_SELECTED >= 0`과 `LVNI_FOCUSED >= 0`을 방향키 주입 전에 함께 요구한다.
+- 선게시/부분 게시를 추가할 때 완료 단계가 “내가 방금 삽입했는가”라는 로컬 변수에 상태 복원을 묶지 않는다. 현재 native 목록에 존재하는 항목과 refresh-state 소유자를 기준으로 결정한다.
+- 현재 실기는 저장된 첫 활성 pane에서 실제 폴더 진입/상위 복귀를 수행했고, 6 pane 전체 적용은 공통 클래스 단일 구현·정적 계약·Tab 여섯 pane 실기로 검증했다. 모든 가능한 Shell 가상 namespace/provider의 절대 응답시간을 보장하지는 않는다.
+
+**-- 비동기 parent-row 선게시와 완료 선택 조건의 불일치를 제거하고 선택/포커스/SelectionMark/캐시를 원자 확정하여 세 배포본 폴더 진입·상위 복귀 직후 방향키 0회 PASS, 45/45 회귀·x64/x32 빌드·세 배포·no-INI 완료 (Task 121, 2026-09-13) --**

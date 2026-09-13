@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "explorer_ctrl.h"
+#include "directory_enumeration_worker.h"
 #include "startup_trace.h"
 #include "explorer_ctrl_observer.h"
 
@@ -56,6 +57,8 @@ namespace fxfile
 {
 namespace
 {
+volatile LONG gDirectoryEnumerationOwnerToken = 0;
+
 //
 // user defined timer
 //
@@ -74,7 +77,32 @@ enum
     TM_ID_CLICK_RENAME = 42, // internal rename timer id (label click)
     TM_ID_AUTO_COLUMN_REFLOW = 43,
     TM_ID_NOTIFY_RECONCILE = 44,
+    TM_ID_NOTIFY_SORT = 45,
 };
+
+const xpr_uint_t kDirectoryRefreshRetryLimit = 4;
+const xpr_uint_t kDirectoryRefreshRetryDelay[] = {250, 500, 1000, 2000};
+const xpr_uint_t kRefreshSortDelay = 100;
+
+xpr_bool_t isAsyncLocalDirectoryEligible(const xpr_tchar_t *aPath)
+{
+    if (XPR_IS_NULL(aPath) || *aPath == XPR_STRING_LITERAL('\0') ||
+        ::PathIsUNC(aPath))
+        return XPR_FALSE;
+
+    const DWORD sAttributes = ::GetFileAttributes(aPath);
+    if (sAttributes == INVALID_FILE_ATTRIBUTES ||
+        !XPR_TEST_BITS(sAttributes, FILE_ATTRIBUTE_DIRECTORY) ||
+        XPR_TEST_BITS(sAttributes, FILE_ATTRIBUTE_REPARSE_POINT |
+                                   FILE_ATTRIBUTE_OFFLINE))
+        return XPR_FALSE;
+
+    xpr_tchar_t sRoot[XPR_MAX_PATH + 1] = {0};
+    _tcsncpy_s(sRoot, _countof(sRoot), aPath, _TRUNCATE);
+    if (!::PathStripToRoot(sRoot))
+        return XPR_FALSE;
+    return (::GetDriveType(sRoot) == DRIVE_FIXED) ? XPR_TRUE : XPR_FALSE;
+}
 
 //
 // item data type
@@ -123,6 +151,7 @@ enum
     WM_SHELL_CHANGE_NOTIFY       = WM_USER + 1500,
     WM_FILE_CHANGE_NOTIFY        = WM_USER + 1501,
     WM_ADV_FILE_CHANGE_NOTIFY    = WM_USER + 1502,
+    WM_DIRECTORY_ENUMERATION     = WM_USER + 1503,
 };
 } // namespace anonymous
 
@@ -211,10 +240,45 @@ ExplorerCtrl::ExplorerCtrl(void)
     mAdvWatchId         = AdvFileChangeWatcher::InvalidAdvWatchId;
     mDestroying         = XPR_FALSE;
     mDeferredDirectoryRefresh = XPR_FALSE;
+    mDeferredDirectoryRefreshRetryCount = 0;
+    mDeferredDirectoryRefreshGeneration = 0;
+    mDeferredRefreshSort = XPR_FALSE;
+    mDirectoryStateGeneration = 0;
+    mDirectoryEnumerationGeneration = 0;
+    mDirectoryEnumerationOwnerToken = static_cast<xpr_uint_t>(
+        ::InterlockedIncrement(&gDirectoryEnumerationOwnerToken));
+    if (mDirectoryEnumerationOwnerToken == 0)
+        mDirectoryEnumerationOwnerToken = static_cast<xpr_uint_t>(
+            ::InterlockedIncrement(&gDirectoryEnumerationOwnerToken));
+    mDirectoryEnumerationCancelEvent = XPR_NULL;
+    mDirectoryEnumerationShellFolder = XPR_NULL;
+    mDirectoryEnumerationInsertIndex = 0;
+    mDirectoryEnumerationPending = XPR_FALSE;
+    mDirectoryEnumerationFirstBatch = XPR_FALSE;
+    mDirectoryEnumerationParentPublished = XPR_FALSE;
+    mDirectoryEnumerationUpdateBuddy = XPR_FALSE;
+    mDirectoryEnumerationStartedTick = 0;
+    mDirectoryEnumerationFirstBatchTick = 0;
+    mDirectoryEnumerationDirty = XPR_FALSE;
+    mDirectoryEnumerationWatcherArmed = XPR_FALSE;
+    mRefreshViewStatePending = XPR_FALSE;
+    mRefreshSkipSort = XPR_FALSE;
+    mRefreshSelectedParent = XPR_FALSE;
+    mRefreshFocusedParent = XPR_FALSE;
+    mRefreshTopParent = XPR_FALSE;
+    mRefreshHorizontalScroll = 0;
 }
 
 ExplorerCtrl::~ExplorerCtrl(void)
 {
+    if (XPR_IS_NOT_NULL(mDirectoryEnumerationCancelEvent))
+    {
+        ::SetEvent(mDirectoryEnumerationCancelEvent);
+        CLOSE_HANDLE(mDirectoryEnumerationCancelEvent);
+    }
+    COM_RELEASE(mDirectoryEnumerationShellFolder);
+    DirectoryEnumerationWorker::cleanupOwnerBatches(
+        mDirectoryEnumerationOwnerToken);
     mRefCount--;
 
     COM_FREE(mCopyFullPidl);
@@ -314,6 +378,7 @@ BEGIN_MESSAGE_MAP(ExplorerCtrl, super)
     ON_MESSAGE(WM_SHELL_ASYNC_ICON,          OnShellAsyncIcon)
     ON_MESSAGE(WM_SHELL_COLUMN_PROC,         OnShellColumnProc)
     ON_MESSAGE(WM_PASTE_SELITEM,             OnPasteSelItem)
+    ON_MESSAGE(WM_DIRECTORY_ENUMERATION,     OnDirectoryEnumeration)
 END_MESSAGE_MAP()
 
 void ExplorerCtrl::setObserver(ExplorerCtrlObserver *aObserver)
@@ -529,9 +594,28 @@ void ExplorerCtrl::OnDestroy(void)
     {
         ::KillTimer(sHwnd, TM_ID_AUTO_COLUMN_REFLOW);
         ::KillTimer(sHwnd, TM_ID_NOTIFY_RECONCILE);
+        ::KillTimer(sHwnd, TM_ID_NOTIFY_SORT);
     }
     mDeferredDirectoryRefresh = XPR_FALSE;
     mDeferredDirectoryRefreshPath.clear();
+    mDeferredDirectoryRefreshRetryCount = 0;
+    mDeferredDirectoryRefreshGeneration = 0;
+    mDeferredRefreshSort = XPR_FALSE;
+
+    cancelDirectoryEnumeration();
+    MSG sPendingEnumeration = {0};
+    while (::PeekMessage(&sPendingEnumeration, sHwnd,
+                         WM_DIRECTORY_ENUMERATION,
+                         WM_DIRECTORY_ENUMERATION, PM_REMOVE))
+    {
+        DirectoryEnumerationWorker::Batch *sBatch =
+            DirectoryEnumerationWorker::claimBatch(
+                reinterpret_cast<DirectoryEnumerationWorker::Batch *>(
+                    sPendingEnumeration.wParam));
+        DirectoryEnumerationWorker::destroyBatch(sBatch);
+    }
+    DirectoryEnumerationWorker::cleanupOwnerBatches(
+        mDirectoryEnumerationOwnerToken);
 
     Thumbnail::instance().cancelAsyncImage(sHwnd, WM_THUMBNAIL_PROC);
     ShellColumnManager::instance().cancelOwner(sHwnd,
@@ -2192,6 +2276,44 @@ void ExplorerCtrl::OnKeyDown(xpr_uint_t aChar, xpr_uint_t aRepCnt, xpr_uint_t aF
     super::OnKeyDown(aChar, aRepCnt, aFlags);
 }
 
+xpr_bool_t ExplorerCtrl::commitNavigationSelection(xpr_sint_t aItemIndex)
+{
+    if (aItemIndex < 0 || aItemIndex >= GetItemCount())
+        return XPR_FALSE;
+
+    // A navigation landing is a complete native ListView state transition,
+    // not merely a focus rectangle.  Keeping selection, focus, selection mark
+    // and FxFile's cached focus index in one transaction prevents the first
+    // Down key from being required to make the landing row visible.
+    const xpr_sint_t sOldFocusedItem = GetNextItem(-1, LVNI_FOCUSED);
+    SetItemState(-1, 0, LVIS_SELECTED | LVIS_FOCUSED);
+    SetItemState(aItemIndex, LVIS_SELECTED | LVIS_FOCUSED,
+                 LVIS_SELECTED | LVIS_FOCUSED);
+    SetSelectionMark(aItemIndex);
+    EnsureVisible(aItemIndex, XPR_FALSE);
+    mFocusedItemIndex = aItemIndex;
+    redrawFocusItemChange(sOldFocusedItem, aItemIndex);
+    return XPR_TRUE;
+}
+
+xpr_bool_t ExplorerCtrl::focusParentFolderRow(void)
+{
+    // Pane-to-pane keyboard navigation has an explicit landing contract: the
+    // visible [..] row is the first actionable item.  Do not guess that item
+    // zero is a parent row when the option is disabled (for example at a
+    // virtual Shell root), and never leave a stale multi-selection looking
+    // active in the destination pane.
+    if (XPR_IS_FALSE(mOption.mParentFolder) || GetItemCount() <= 0)
+        return XPR_FALSE;
+
+    LPLVITEMDATA sLvItemData =
+        reinterpret_cast<LPLVITEMDATA>(GetItemData(0));
+    if (XPR_IS_NULL(sLvItemData) || sLvItemData->mItemType != IDT_PARENT)
+        return XPR_FALSE;
+
+    return commitNavigationSelection(0);
+}
+
 xpr_sint_t ExplorerCtrl::addColumn(ColumnId *aColumnId, xpr_sint_t aInsert)
 {
     if (XPR_IS_NULL(aColumnId))
@@ -3736,11 +3858,58 @@ xpr_bool_t ExplorerCtrl::exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aUpdateB
     if (XPR_IS_TRUE(mOption.mShowHiddenAttribute)) sEnumAttributes |= base::ShellEnumerator::AttributeHidden;
     if (XPR_IS_TRUE(mOption.mShowSystemAttribute)) sEnumAttributes |= base::ShellEnumerator::AttributeSystem;
 
+    // Filesystem folder enumeration can block in Shell extensions, cloud
+    // providers or anti-virus filters.  The worker owns its own COM apartment
+    // and only transfers relative PIDL memory in bounded batches.  Virtual
+    // folders keep the compatibility path below because their namespace
+    // providers may require the UI apartment.
+    xpr_tchar_t sFilesystemPath[XPR_MAX_PATH + 1] = {0};
+    if (::SHGetPathFromIDList(aFullPidl, sFilesystemPath) &&
+        sFilesystemPath[0] != XPR_STRING_LITERAL('\0') &&
+        XPR_IS_TRUE(isAsyncLocalDirectoryEligible(sFilesystemPath)) &&
+        XPR_IS_TRUE(startDirectoryEnumeration(
+            aFullPidl, sShellFolder, sEnumListType, sEnumAttributes,
+            aUpdateBuddy)))
+    {
+        preEnumeration(sNewTvItemData);
+        // Publish the deterministic parent-navigation row while the splitter
+        // is still hidden. The panes are then revealed atomically with useful
+        // content instead of empty lists waiting for Shell metadata, cloud
+        // filters or anti-virus inspection. Real directory items continue to
+        // arrive through the bounded worker.
+        if (XPR_IS_TRUE(mOption.mParentFolder) &&
+            XPR_IS_FALSE(base::Pidl::isDesktopFolder(
+                mTvItemData->mFullPidl)))
+        {
+            addParentItem();
+            mDirectoryEnumerationParentPublished = XPR_TRUE;
+            mDirectoryEnumerationInsertIndex = GetItemCount();
+            // A genuine folder transition must publish an actionable landing
+            // row with the first visible batch.  Same-folder reconciliation
+            // instead restores its captured multi-selection at completion.
+            if (XPR_IS_FALSE(mRefreshViewStatePending))
+                focusParentFolderRow();
+            SetRedraw();
+            if (XPR_IS_TRUE(mVisible))
+                ShowWindow(SW_SHOW);
+            Invalidate(XPR_FALSE);
+        }
+        // Arm the watcher before enumeration finishes.  Events arriving in
+        // this interval are marked dirty and reconciled once after publish;
+        // applying them into a partial list would create duplicates.
+        watchFileChange();
+        mDirectoryEnumerationWatcherArmed = XPR_TRUE;
+        COM_RELEASE(sShellFolder);
+        TraceStartup(XPR_STRING_LITERAL("ExplorerCtrl.explore.async_started"));
+        return XPR_TRUE;
+    }
+
     base::ShellEnumerator sShellEnumerator;
 
     if (sShellEnumerator.enumerate(m_hWnd, sShellFolder, sEnumListType, sEnumAttributes) == XPR_TRUE)
     {
         TraceStartup(XPR_STRING_LITERAL("ExplorerCtrl.explore.enumerator_ready"));
+        cancelDirectoryEnumeration();
         preEnumeration(sNewTvItemData);
 
         while (sShellEnumerator.next(&sEnumPidl) == XPR_TRUE)
@@ -3755,6 +3924,11 @@ xpr_bool_t ExplorerCtrl::exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aUpdateB
         TraceStartup(XPR_STRING_LITERAL("ExplorerCtrl.explore.items_inserted"));
 
         postEnumeration(aUpdateBuddy);
+        if (XPR_IS_NOT_NULL(gFrame))
+        {
+            gFrame->notifyStartupExplorerViewFirstContent(mViewIndex);
+            gFrame->notifyStartupExplorerViewReady(mViewIndex);
+        }
         TraceStartup(XPR_STRING_LITERAL("ExplorerCtrl.explore.post_enumeration"));
 
         sResult = XPR_TRUE;
@@ -3778,15 +3952,250 @@ xpr_bool_t ExplorerCtrl::exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aUpdateB
     return sResult;
 }
 
+void ExplorerCtrl::cancelDirectoryEnumeration(void)
+{
+    if (XPR_IS_NOT_NULL(mDirectoryEnumerationCancelEvent))
+    {
+        ::SetEvent(mDirectoryEnumerationCancelEvent);
+        CLOSE_HANDLE(mDirectoryEnumerationCancelEvent);
+    }
+    COM_RELEASE(mDirectoryEnumerationShellFolder);
+    mDirectoryEnumerationPending = XPR_FALSE;
+    mDirectoryEnumerationFirstBatch = XPR_FALSE;
+    mDirectoryEnumerationParentPublished = XPR_FALSE;
+    mDirectoryEnumerationInsertIndex = 0;
+    mDirectoryEnumerationWatcherArmed = XPR_FALSE;
+    ++mDirectoryEnumerationGeneration;
+    if (mDirectoryEnumerationGeneration == 0)
+        ++mDirectoryEnumerationGeneration;
+}
+
+xpr_bool_t ExplorerCtrl::startDirectoryEnumeration(
+    LPITEMIDLIST aFullPidl,
+    LPSHELLFOLDER aShellFolder,
+    xpr_sint_t aListType,
+    xpr_sint_t aAttributes,
+    xpr_bool_t aUpdateBuddy)
+{
+    if (XPR_IS_NULL(aFullPidl) || XPR_IS_NULL(aShellFolder) ||
+        XPR_IS_TRUE(mDestroying))
+        return XPR_FALSE;
+
+    cancelDirectoryEnumeration();
+    mDirectoryEnumerationCancelEvent =
+        ::CreateEvent(XPR_NULL, TRUE, FALSE, XPR_NULL);
+    if (XPR_IS_NULL(mDirectoryEnumerationCancelEvent))
+        return XPR_FALSE;
+
+    aShellFolder->AddRef();
+    mDirectoryEnumerationShellFolder = aShellFolder;
+    mDirectoryEnumerationInsertIndex = 0;
+    mDirectoryEnumerationFirstBatch = XPR_TRUE;
+    mDirectoryEnumerationParentPublished = XPR_FALSE;
+    mDirectoryEnumerationUpdateBuddy = aUpdateBuddy;
+    mDirectoryEnumerationStartedTick = ::GetTickCount64();
+    mDirectoryEnumerationFirstBatchTick = 0;
+    mDirectoryEnumerationDirty = XPR_FALSE;
+    mDirectoryEnumerationWatcherArmed = XPR_FALSE;
+
+    if (XPR_IS_FALSE(DirectoryEnumerationWorker::start(
+            m_hWnd, WM_DIRECTORY_ENUMERATION, aFullPidl, aListType,
+            aAttributes, mDirectoryEnumerationGeneration,
+            mDirectoryEnumerationOwnerToken,
+            mDirectoryEnumerationCancelEvent)))
+    {
+        CLOSE_HANDLE(mDirectoryEnumerationCancelEvent);
+        COM_RELEASE(mDirectoryEnumerationShellFolder);
+        mDirectoryEnumerationFirstBatch = XPR_FALSE;
+        mDirectoryEnumerationParentPublished = XPR_FALSE;
+        return XPR_FALSE;
+    }
+
+    mDirectoryEnumerationPending = XPR_TRUE;
+    return XPR_TRUE;
+}
+
+LRESULT ExplorerCtrl::OnDirectoryEnumeration(WPARAM wParam, LPARAM lParam)
+{
+    DirectoryEnumerationWorker::Batch *sBatch =
+        DirectoryEnumerationWorker::claimBatch(
+            reinterpret_cast<DirectoryEnumerationWorker::Batch *>(wParam));
+    if (XPR_IS_NULL(sBatch))
+        return 0;
+
+    if (XPR_IS_TRUE(mDestroying) ||
+        XPR_IS_FALSE(mDirectoryEnumerationPending) ||
+        sBatch->mGeneration != mDirectoryEnumerationGeneration ||
+        sBatch->mOwnerToken != mDirectoryEnumerationOwnerToken ||
+        XPR_IS_NULL(mDirectoryEnumerationShellFolder))
+    {
+        DirectoryEnumerationWorker::destroyBatch(sBatch);
+        return 0;
+    }
+
+    const xpr_bool_t sWasFirstBatch = mDirectoryEnumerationFirstBatch;
+    if (XPR_IS_FALSE(sBatch->mItems.empty()))
+    {
+        const xpr_sint_t sItemCountBefore = GetItemCount();
+        if (XPR_IS_FALSE(sWasFirstBatch))
+            SetRedraw(XPR_FALSE);
+
+        for (std::vector<DirectoryEnumerationWorker::Item>::iterator sIt =
+                 sBatch->mItems.begin();
+             sIt != sBatch->mItems.end(); ++sIt)
+        {
+            if (XPR_IS_NULL(sIt->mPidl))
+                continue;
+            if (XPR_IS_TRUE(insertPidlItem(mDirectoryEnumerationShellFolder,
+                                          sIt->mPidl,
+                                          mDirectoryEnumerationInsertIndex,
+                                          sIt->mName.c_str(),
+                                          sIt->mShellAttributes,
+                                          sIt->mFileAttributes,
+                                          sIt->mHasKnownMetadata)))
+            {
+                sIt->mPidl = XPR_NULL;
+                ++mDirectoryEnumerationInsertIndex;
+            }
+        }
+
+        SetRedraw();
+        // A processed batch is not necessarily visible: insertPidlItem()
+        // intentionally consumes hidden+system rows when that option is off.
+        // Advance first-content only after the native ListView count grows.
+        if (XPR_IS_TRUE(sWasFirstBatch) &&
+            GetItemCount() > sItemCountBefore)
+        {
+            mDirectoryEnumerationFirstBatch = XPR_FALSE;
+            mDirectoryEnumerationFirstBatchTick = ::GetTickCount64();
+            if (XPR_IS_TRUE(mVisible))
+                ShowWindow(SW_SHOW);
+            if (XPR_IS_NOT_NULL(gFrame))
+                gFrame->notifyStartupExplorerViewFirstContent(mViewIndex);
+
+            // The frame's first focus request can legitimately arrive while
+            // this asynchronously populated list is still hidden.  Re-arm
+            // that one-shot request at the exact publication boundary rather
+            // than requiring a mouse click or polling timer.
+            if (XPR_IS_NOT_NULL(gFrame))
+                gFrame->requestStartupKeyboardFocus();
+
+            // Startup may have already committed keyboard focus while the
+            // worker was still resolving the first batch.  Give that focused
+            // list a native focus row as soon as data exists, so arrows and
+            // Enter are immediately meaningful without a mouse click.
+            if (::GetFocus() == m_hWnd && GetItemCount() > 0 &&
+                GetNextItem(-1, LVNI_FOCUSED) < 0)
+            {
+                SetItemState(0, LVIS_FOCUSED, LVIS_FOCUSED);
+                SetSelectionMark(0);
+            }
+        }
+        Invalidate(XPR_FALSE);
+    }
+
+    const xpr_bool_t sComplete = sBatch->mComplete;
+    const xpr_bool_t sSucceeded = sBatch->mSucceeded;
+    const xpr_uint64_t sEnumerationMilliseconds =
+        sBatch->mEnumerationMilliseconds;
+    DirectoryEnumerationWorker::destroyBatch(sBatch);
+
+    if (XPR_IS_FALSE(sComplete))
+        return 0;
+
+    mDirectoryEnumerationPending = XPR_FALSE;
+    CLOSE_HANDLE(mDirectoryEnumerationCancelEvent);
+    COM_RELEASE(mDirectoryEnumerationShellFolder);
+
+    const xpr_uint64_t sFinalizeStarted = ::GetTickCount64();
+    postEnumeration(mDirectoryEnumerationUpdateBuddy);
+    if (XPR_IS_NOT_NULL(gFrame))
+    {
+        // Empty folders have no item batch; completion is both their first
+        // publish point and their final readiness point.
+        if (XPR_IS_TRUE(sWasFirstBatch))
+            gFrame->notifyStartupExplorerViewFirstContent(mViewIndex);
+        gFrame->notifyStartupExplorerViewReady(mViewIndex);
+    }
+    // Empty folders have no first item batch, so their list becomes visible
+    // only during finalization.  They must receive the same keyboard-startup
+    // retry as a non-empty folder.
+    if (XPR_IS_NOT_NULL(gFrame))
+        gFrame->requestStartupKeyboardFocus();
+    if (XPR_IS_TRUE(mDirectoryEnumerationDirty))
+        scheduleDirectoryRefresh();
+    const xpr_uint64_t sFinished = ::GetTickCount64();
+    const xpr_uint64_t sFirstBatchMilliseconds =
+        mDirectoryEnumerationFirstBatchTick >= mDirectoryEnumerationStartedTick ?
+        mDirectoryEnumerationFirstBatchTick - mDirectoryEnumerationStartedTick :
+        sFinished - mDirectoryEnumerationStartedTick;
+    xpr_tchar_t sTrace[384] = {0};
+    _stprintf_s(sTrace, _countof(sTrace),
+        XPR_STRING_LITERAL("FxFile.DirectoryEnumeration pane=%d generation=%u items=%d enumerate_ms=%I64u first_batch_ms=%I64u finalize_sort_ms=%I64u total_ms=%I64u icon=deferred result=%s\n"),
+        mViewIndex + 1, mDirectoryEnumerationGeneration,
+        mDirectoryEnumerationInsertIndex, sEnumerationMilliseconds,
+        sFirstBatchMilliseconds, sFinished - sFinalizeStarted,
+        sFinished - mDirectoryEnumerationStartedTick,
+        XPR_IS_TRUE(sSucceeded) ? XPR_STRING_LITERAL("success") :
+                                  XPR_STRING_LITERAL("failed"));
+    ::OutputDebugString(sTrace);
+
+    if (XPR_IS_FALSE(sSucceeded) && XPR_IS_FALSE(mDestroying))
+    {
+        const xpr_sint_t sChoice = ::MessageBox(
+            m_hWnd,
+            XPR_STRING_LITERAL("폴더 목록을 불러오지 못했습니다.\n\n현재 위치를 다시 불러오시겠습니까?"),
+            XPR_STRING_LITERAL("FxFile 폴더 갱신 실패"),
+            MB_RETRYCANCEL | MB_ICONWARNING | MB_TASKMODAL);
+        if (sChoice == IDRETRY && XPR_IS_NOT_NULL(mTvItemData) &&
+            XPR_IS_NOT_NULL(mTvItemData->mFullPidl))
+        {
+            LPITEMIDLIST sRetryPidl =
+                base::Pidl::clone(mTvItemData->mFullPidl);
+            if (XPR_IS_NOT_NULL(sRetryPidl))
+                explore(sRetryPidl, mDirectoryEnumerationUpdateBuddy);
+        }
+    }
+
+    return 0;
+}
+
 void ExplorerCtrl::preEnumeration(LPTVITEMDATA aNewTvItemData)
 {
     XPR_ASSERT(aNewTvItemData != XPR_NULL);
+
+    ++mDirectoryStateGeneration;
+    if (mDirectoryStateGeneration == 0)
+        ++mDirectoryStateGeneration;
 
     // check to equal old folder
     xpr_bool_t sEqualFolder = XPR_FALSE;
     if (XPR_IS_NOT_NULL(mTvItemData))
     {
         sEqualFolder = (fxfile::base::Pidl::compare(aNewTvItemData->mFullPidl, mTvItemData->mFullPidl) == 0) ? XPR_TRUE : XPR_FALSE;
+    }
+
+    if (XPR_IS_TRUE(sEqualFolder))
+    {
+        captureRefreshViewState();
+        // A full reconciliation repairs missed watcher events.  It must not
+        // silently turn the user's "refresh without automatic sorting"
+        // choice into an unconditional sort merely because the list was
+        // rebuilt asynchronously.
+        mRefreshSkipSort = (mOption.mRefreshSort != XPR_TRUE) ?
+                           XPR_TRUE : XPR_FALSE;
+    }
+    else
+    {
+        mRefreshViewStatePending = XPR_FALSE;
+        mRefreshSkipSort = XPR_FALSE;
+        mRefreshSelectedParent = XPR_FALSE;
+        mRefreshFocusedParent = XPR_FALSE;
+        mRefreshTopParent = XPR_FALSE;
+        mRefreshHorizontalScroll = 0;
+        mRefreshSelectedPaths.clear();
+        mRefreshFocusedPath.clear();
+        mRefreshTopPath.clear();
     }
 
     // save folder layout
@@ -3865,7 +4274,16 @@ void ExplorerCtrl::preEnumeration(LPTVITEMDATA aNewTvItemData)
     }
 
     // hide window and lock to redraw to insert a lot of items to list view
-    mVisible = IsWindowVisible();
+    // IsWindowVisible() also inspects hidden ancestors.  During atomic startup
+    // publication the splitter is intentionally hidden, but this list still
+    // owns WS_VISIBLE and must become visible with its parent.  Preserve the
+    // control's intended style instead of the transient ancestor state.
+    // WS_VISIBLE is cleared by our own transient ShowWindow(SW_HIDE).  A
+    // second navigation can begin before the first worker completes; never
+    // overwrite the previously captured intended visibility with that
+    // temporary hidden state, or the replacement list can remain invisible.
+    if (XPR_TEST_BITS(GetStyle(), WS_VISIBLE))
+        mVisible = XPR_TRUE;
     ShowWindow(SW_HIDE);
 
     SetRedraw(XPR_FALSE);
@@ -3882,14 +4300,168 @@ void ExplorerCtrl::preEnumeration(LPTVITEMDATA aNewTvItemData)
     mFirstExplore = XPR_FALSE;
 }
 
-xpr_bool_t ExplorerCtrl::insertPidlItem(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aPidl, xpr_sint_t aIndex)
+xpr_bool_t ExplorerCtrl::getRefreshItemPath(
+    xpr_sint_t aItemIndex, xpr::string &aPath) const
+{
+    aPath.clear();
+    if (aItemIndex < 0 || aItemIndex >= GetItemCount())
+        return XPR_FALSE;
+
+    LPLVITEMDATA sLvItemData =
+        reinterpret_cast<LPLVITEMDATA>(GetItemData(aItemIndex));
+    if (XPR_IS_NULL(sLvItemData) || sLvItemData->mItemType != IDT_SHELL)
+        return XPR_FALSE;
+
+    return SUCCEEDED(GetName(sLvItemData->mShellFolder,
+                             sLvItemData->mPidl,
+                             SHGDN_FORPARSING, aPath)) ?
+           XPR_TRUE : XPR_FALSE;
+}
+
+void ExplorerCtrl::captureRefreshViewState(void)
+{
+    mRefreshViewStatePending = XPR_TRUE;
+    mRefreshSelectedParent = XPR_FALSE;
+    mRefreshFocusedParent = XPR_FALSE;
+    mRefreshTopParent = XPR_FALSE;
+    mRefreshHorizontalScroll = GetScrollPos(SB_HORZ);
+    mRefreshSelectedPaths.clear();
+    mRefreshFocusedPath.clear();
+    mRefreshTopPath.clear();
+
+    POSITION sPosition = GetFirstSelectedItemPosition();
+    while (XPR_IS_NOT_NULL(sPosition))
+    {
+        const xpr_sint_t sItemIndex = GetNextSelectedItem(sPosition);
+        xpr::string sPath;
+        if (XPR_IS_TRUE(getRefreshItemPath(sItemIndex, sPath)))
+            mRefreshSelectedPaths.push_back(sPath);
+        else
+        {
+            LPLVITEMDATA sItemData = reinterpret_cast<LPLVITEMDATA>(
+                GetItemData(sItemIndex));
+            if (XPR_IS_NOT_NULL(sItemData) &&
+                sItemData->mItemType == IDT_PARENT)
+                mRefreshSelectedParent = XPR_TRUE;
+        }
+    }
+
+    const xpr_sint_t sFocusedIndex = GetNextItem(-1, LVNI_FOCUSED);
+    if (sFocusedIndex >= 0 &&
+        XPR_IS_FALSE(getRefreshItemPath(sFocusedIndex,
+                                        mRefreshFocusedPath)))
+    {
+        LPLVITEMDATA sItemData = reinterpret_cast<LPLVITEMDATA>(
+            GetItemData(sFocusedIndex));
+        mRefreshFocusedParent = XPR_IS_NOT_NULL(sItemData) &&
+            sItemData->mItemType == IDT_PARENT;
+    }
+
+    const xpr_sint_t sTopIndex = GetTopIndex();
+    if (sTopIndex >= 0 &&
+        XPR_IS_FALSE(getRefreshItemPath(sTopIndex, mRefreshTopPath)))
+    {
+        LPLVITEMDATA sItemData = reinterpret_cast<LPLVITEMDATA>(
+            GetItemData(sTopIndex));
+        mRefreshTopParent = XPR_IS_NOT_NULL(sItemData) &&
+            sItemData->mItemType == IDT_PARENT;
+    }
+}
+
+xpr_bool_t ExplorerCtrl::restoreRefreshViewState(void)
+{
+    if (XPR_IS_FALSE(mRefreshViewStatePending))
+        return XPR_FALSE;
+
+    SetRedraw(XPR_FALSE);
+    for (std::vector<xpr::string>::const_iterator sIt =
+             mRefreshSelectedPaths.begin();
+         sIt != mRefreshSelectedPaths.end(); ++sIt)
+    {
+        const xpr_sint_t sIndex = findItemPath(sIt->c_str());
+        if (sIndex >= 0)
+            SetItemState(sIndex, LVIS_SELECTED, LVIS_SELECTED);
+    }
+    if (XPR_IS_TRUE(mRefreshSelectedParent) && GetItemCount() > 0)
+    {
+        LPLVITEMDATA sItemData = reinterpret_cast<LPLVITEMDATA>(GetItemData(0));
+        if (XPR_IS_NOT_NULL(sItemData) && sItemData->mItemType == IDT_PARENT)
+            SetItemState(0, LVIS_SELECTED, LVIS_SELECTED);
+    }
+
+    xpr_sint_t sFocusedIndex = -1;
+    if (!mRefreshFocusedPath.empty())
+        sFocusedIndex = findItemPath(mRefreshFocusedPath.c_str());
+    else if (XPR_IS_TRUE(mRefreshFocusedParent) && GetItemCount() > 0)
+    {
+        LPLVITEMDATA sItemData = reinterpret_cast<LPLVITEMDATA>(GetItemData(0));
+        if (XPR_IS_NOT_NULL(sItemData) && sItemData->mItemType == IDT_PARENT)
+            sFocusedIndex = 0;
+    }
+    if (sFocusedIndex >= 0)
+    {
+        SetItemState(sFocusedIndex, LVIS_FOCUSED, LVIS_FOCUSED);
+        SetSelectionMark(sFocusedIndex);
+    }
+
+    xpr_sint_t sTopIndex = -1;
+    if (!mRefreshTopPath.empty())
+        sTopIndex = findItemPath(mRefreshTopPath.c_str());
+    else if (XPR_IS_TRUE(mRefreshTopParent) && GetItemCount() > 0)
+        sTopIndex = 0;
+    if (sTopIndex >= 0)
+    {
+        EnsureVisible(sTopIndex, XPR_FALSE);
+        const xpr_sint_t sCurrentTopIndex = GetTopIndex();
+        CRect sCurrentTopRect;
+        CRect sDesiredTopRect;
+        if (sCurrentTopIndex >= 0 &&
+            GetItemRect(sCurrentTopIndex, &sCurrentTopRect, LVIR_BOUNDS) &&
+            GetItemRect(sTopIndex, &sDesiredTopRect, LVIR_BOUNDS))
+        {
+            const xpr_sint_t sVerticalDelta =
+                sDesiredTopRect.top - sCurrentTopRect.top;
+            if (sVerticalDelta != 0)
+                SendMessage(LVM_SCROLL, 0, sVerticalDelta);
+        }
+    }
+
+    const xpr_sint_t sCurrentHorizontalScroll = GetScrollPos(SB_HORZ);
+    if (mRefreshHorizontalScroll != sCurrentHorizontalScroll)
+        SendMessage(LVM_SCROLL,
+                    mRefreshHorizontalScroll - sCurrentHorizontalScroll, 0);
+
+    SetRedraw();
+    Invalidate(XPR_FALSE);
+
+    mRefreshViewStatePending = XPR_FALSE;
+    mRefreshSelectedParent = XPR_FALSE;
+    mRefreshFocusedParent = XPR_FALSE;
+    mRefreshTopParent = XPR_FALSE;
+    mRefreshHorizontalScroll = 0;
+    mRefreshSelectedPaths.clear();
+    mRefreshFocusedPath.clear();
+    mRefreshTopPath.clear();
+    return XPR_TRUE;
+}
+
+xpr_bool_t ExplorerCtrl::insertPidlItem(
+    LPSHELLFOLDER aShellFolder, LPITEMIDLIST aPidl, xpr_sint_t aIndex,
+    const xpr_tchar_t *aKnownName, xpr_ulong_t aKnownShellAttributes,
+    DWORD aKnownFileAttributes, xpr_bool_t aHasKnownMetadata)
 {
     xpr_ulong_t  sShellAttributes = 0;
     DWORD        sFileAttributes  = 0;
     LPLVITEMDATA sLvItemData;
 
     // get shell item attributes
-    getItemAttributes(aShellFolder, aPidl, sShellAttributes, sFileAttributes);
+    if (XPR_IS_TRUE(aHasKnownMetadata))
+    {
+        sShellAttributes = aKnownShellAttributes;
+        sFileAttributes = aKnownFileAttributes;
+    }
+    else
+        getItemAttributes(aShellFolder, aPidl, sShellAttributes, sFileAttributes);
 
     if (mOption.mShowSystemAttribute == XPR_FALSE)
     {
@@ -3919,7 +4491,14 @@ xpr_bool_t ExplorerCtrl::insertPidlItem(LPSHELLFOLDER aShellFolder, LPITEMIDLIST
     aShellFolder->AddRef();
 
     // name hashing to find faster item by name
-    insertNameHash(sLvItemData);
+    if (XPR_IS_NOT_NULL(aKnownName) &&
+        *aKnownName != XPR_STRING_LITERAL('\0'))
+    {
+        sLvItemData->mName = aKnownName;
+        mNameMap.insert(NameMap::value_type(sLvItemData->mName, sLvItemData));
+    }
+    else
+        insertNameHash(sLvItemData);
 
     // insert to list view
     static LVITEM sLvItem = {0};
@@ -3931,25 +4510,39 @@ xpr_bool_t ExplorerCtrl::insertPidlItem(LPSHELLFOLDER aShellFolder, LPITEMIDLIST
     sLvItem.cchTextMax = XPR_MAX_PATH;
     sLvItem.lParam     = (LPARAM)sLvItemData;
 
-    InsertItem(&sLvItem);
+    const xpr_sint_t sInsertedIndex = InsertItem(&sLvItem);
+    if (sInsertedIndex < 0)
+    {
+        // The caller still owns aPidl until insertion succeeds.  Undo every
+        // ownership/index side effect so a low-memory common-control failure
+        // cannot leak a Shell folder reference or leave a dangling name-map
+        // entry that masquerades as a visible row.
+        eraseNameHash(sLvItemData);
+        COM_RELEASE(sLvItemData->mShellFolder);
+        sLvItemData->mPidl = XPR_NULL;
+        XPR_SAFE_DELETE(sLvItemData);
+        return XPR_FALSE;
+    }
 
     return XPR_TRUE;
 }
 
 void ExplorerCtrl::postEnumeration(xpr_bool_t aUpdateBuddy)
 {
-    xpr_bool_t sAddedParentItem = XPR_FALSE;
-
-    // watch file change
-    watchFileChange();
+    // Async enumeration arms this watcher before scanning so changes cannot
+    // fall into an unobserved gap.  Do not replace that live registration at
+    // publish time, because queued notifications carry its identity.
+    if (XPR_IS_FALSE(mDirectoryEnumerationWatcherArmed))
+        watchFileChange();
+    mDirectoryEnumerationWatcherArmed = XPR_FALSE;
 
     // [..] parent folder
-    if (XPR_IS_TRUE(mOption.mParentFolder))
+    if (XPR_IS_TRUE(mOption.mParentFolder) &&
+        XPR_IS_FALSE(mDirectoryEnumerationParentPublished))
     {
         if (XPR_IS_FALSE(base::Pidl::isDesktopFolder(mTvItemData->mFullPidl)))
         {
             addParentItem();
-            sAddedParentItem = XPR_TRUE;
         }
     }
 
@@ -3971,13 +4564,18 @@ void ExplorerCtrl::postEnumeration(xpr_bool_t aUpdateBuddy)
 
     //waitCursor.Restore();
 
-    // sortItems
-    resortItems();
+    // Initial navigation is sorted normally.  A same-folder recovery rebuild
+    // respects the independent refresh-sort option instead of forcing a sort.
+    if (XPR_IS_FALSE(mRefreshSkipSort))
+        resortItems();
+    mRefreshSkipSort = XPR_FALSE;
     mSorted = XPR_TRUE;
     mUpdated = XPR_TRUE;
 
     // adjust automatic column widths selected as AutoFull
     adjustAutomaticColumnWidths();
+
+    const xpr_bool_t sRestoredRefreshState = restoreRefreshViewState();
 
     // update notify message
     if (XPR_IS_NOT_NULL(mObserver))
@@ -3989,14 +4587,30 @@ void ExplorerCtrl::postEnumeration(xpr_bool_t aUpdateBuddy)
     // update status
     updateStatus();
 
-    // select parent folder, if go up.
-    if (XPR_IS_TRUE(sAddedParentItem))
+    // Complete every genuine navigation with one selected and focused landing
+    // row.  The parent row may have been published before the worker finished,
+    // so selection must not depend on whether this function inserted it.  A
+    // same-folder refresh is excluded because its exact prior state was
+    // restored above.
+    if (XPR_IS_FALSE(sRestoredRefreshState))
     {
-        if (XPR_IS_TRUE(mSubFolder.empty()))
+        xpr_bool_t sCommittedSelection = XPR_FALSE;
+        if (XPR_IS_FALSE(mSubFolder.empty()))
         {
-            selectItem(0);
+            LVFINDINFO sLvFindInfo = {0};
+            sLvFindInfo.flags = LVFI_STRING;
+            sLvFindInfo.psz   = mSubFolder.c_str();
+            const xpr_sint_t sFind = FindItem(&sLvFindInfo);
+            if (sFind >= 0)
+                sCommittedSelection = commitNavigationSelection(sFind);
         }
+
+        if (XPR_IS_FALSE(sCommittedSelection) &&
+            XPR_IS_FALSE(focusParentFolderRow()) && GetItemCount() > 0)
+            commitNavigationSelection(0);
     }
+    mSubFolder.clear();
+    mDirectoryEnumerationParentPublished = XPR_FALSE;
 }
 
 void ExplorerCtrl::getItemAttributes(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aPidl, xpr_ulong_t &aShellAttributes, DWORD &aFileAttributes)
@@ -4053,8 +4667,12 @@ void ExplorerCtrl::getItemAttributes(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aP
 void ExplorerCtrl::watchFileChange(void)
 {
     KillTimer(TM_ID_NOTIFY_RECONCILE);
+    KillTimer(TM_ID_NOTIFY_SORT);
     mDeferredDirectoryRefresh = XPR_FALSE;
     mDeferredDirectoryRefreshPath.clear();
+    mDeferredDirectoryRefreshRetryCount = 0;
+    mDeferredDirectoryRefreshGeneration = 0;
+    mDeferredRefreshSort = XPR_FALSE;
 
     if (XPR_IS_NULL(mTvItemData))
         return;
@@ -4152,10 +4770,27 @@ void ExplorerCtrl::scheduleDirectoryRefresh(void)
     // a browser, cloud provider or antivirus still owns the new file.  Do not
     // discard that one-shot event.  Coalesce all failures from the same burst
     // into one short, path-bound directory reconciliation.
+    const xpr::string sCurrentPath(getCurPath());
+    if (XPR_IS_TRUE(mDeferredDirectoryRefresh) &&
+        _tcsicmp(mDeferredDirectoryRefreshPath.c_str(),
+                 sCurrentPath.c_str()) == 0)
+    {
+        // Do not restart the timer for every event in a continuous burst.
+        // Otherwise a busy downloader can postpone reconciliation forever.
+        return;
+    }
+
     mDeferredDirectoryRefresh = XPR_TRUE;
-    mDeferredDirectoryRefreshPath = getCurPath();
+    mDeferredDirectoryRefreshPath = sCurrentPath;
+    mDeferredDirectoryRefreshRetryCount = 0;
+    mDeferredDirectoryRefreshGeneration = mDirectoryStateGeneration;
     KillTimer(TM_ID_NOTIFY_RECONCILE);
-    SetTimer(TM_ID_NOTIFY_RECONCILE, 250, XPR_NULL);
+    if (SetTimer(TM_ID_NOTIFY_RECONCILE,
+                 kDirectoryRefreshRetryDelay[0], XPR_NULL) == 0)
+    {
+        // A timer-allocation failure must not silently lose the refresh.
+        reconcileDirectoryRefresh();
+    }
 }
 
 void ExplorerCtrl::reconcileDirectoryRefresh(void)
@@ -4163,30 +4798,115 @@ void ExplorerCtrl::reconcileDirectoryRefresh(void)
     if (XPR_IS_FALSE(mDeferredDirectoryRefresh))
         return;
 
-    mDeferredDirectoryRefresh = XPR_FALSE;
-
     if (XPR_IS_TRUE(mDestroying) || mOption.mNoRefresh == XPR_TRUE ||
         XPR_IS_NULL(mTvItemData) ||
+        mDeferredDirectoryRefreshGeneration != mDirectoryStateGeneration ||
         _tcsicmp(mDeferredDirectoryRefreshPath.c_str(), getCurPath()) != 0)
     {
+        mDeferredDirectoryRefresh = XPR_FALSE;
         mDeferredDirectoryRefreshPath.clear();
+        mDeferredDirectoryRefreshRetryCount = 0;
+        mDeferredDirectoryRefreshGeneration = 0;
         return;
     }
 
     LPITEMIDLIST sFullPidl = fxfile::base::Pidl::clone(mTvItemData->mFullPidl);
-    mDeferredDirectoryRefreshPath.clear();
     if (XPR_IS_NULL(sFullPidl))
+    {
+        mDeferredDirectoryRefresh = XPR_FALSE;
+        mDeferredDirectoryRefreshPath.clear();
+        mDeferredDirectoryRefreshRetryCount = 0;
+        mDeferredDirectoryRefreshGeneration = 0;
+        return;
+    }
+
+    xpr_bool_t sResult = XPR_FALSE;
+    if (XPR_IS_TRUE(isAsyncLocalDirectoryEligible(getCurPath())))
+    {
+        // A full reconciliation of a large local folder must not re-enter the
+        // legacy UI-thread Shell enumerator. explore() transfers ownership of
+        // this PIDL on success and publishes worker batches under a new pane
+        // generation; failure keeps ownership here for deterministic cleanup.
+        sResult = explore(sFullPidl, XPR_FALSE);
+        if (XPR_IS_FALSE(sResult))
+            COM_FREE(sFullPidl);
+    }
+    else
+    {
+        Shcn sShcn = {0};
+        sShcn.mEventId = SHCNE_UPDATEDIR;
+        sShcn.mPidl1   = sFullPidl;
+        sShcn.mItem1   = reinterpret_cast<uintptr_t>(sFullPidl);
+        sShcn.mHwnd    = m_hWnd;
+
+        sResult = OnShcnUpdateDir(&sShcn);
+        endShcn(SHCNE_UPDATEDIR, sResult);
+        COM_FREE(sFullPidl);
+    }
+
+    if (XPR_IS_TRUE(sResult))
+    {
+        mDeferredDirectoryRefresh = XPR_FALSE;
+        mDeferredDirectoryRefreshPath.clear();
+        mDeferredDirectoryRefreshRetryCount = 0;
+        mDeferredDirectoryRefreshGeneration = 0;
+        return;
+    }
+
+    ++mDeferredDirectoryRefreshRetryCount;
+    if (mDeferredDirectoryRefreshRetryCount >= kDirectoryRefreshRetryLimit)
+    {
+        // Keep recovery bounded: a disconnected namespace must not become
+        // an unconditional polling loop on the UI thread.
+        reportDirectoryRefreshFailure();
+        return;
+    }
+
+    if (SetTimer(TM_ID_NOTIFY_RECONCILE,
+                 kDirectoryRefreshRetryDelay[mDeferredDirectoryRefreshRetryCount],
+                 XPR_NULL) == 0)
+    {
+        reportDirectoryRefreshFailure();
+    }
+}
+
+void ExplorerCtrl::reportDirectoryRefreshFailure(void)
+{
+    mDeferredDirectoryRefresh = XPR_FALSE;
+    mDeferredDirectoryRefreshPath.clear();
+    mDeferredDirectoryRefreshRetryCount = 0;
+    mDeferredDirectoryRefreshGeneration = 0;
+
+    if (XPR_IS_TRUE(mDestroying) || !::IsWindow(m_hWnd))
         return;
 
-    Shcn sShcn = {0};
-    sShcn.mEventId = SHCNE_UPDATEDIR;
-    sShcn.mPidl1   = sFullPidl;
-    sShcn.mItem1   = reinterpret_cast<uintptr_t>(sFullPidl);
-    sShcn.mHwnd    = m_hWnd;
+    const xpr_sint_t sChoice = ::MessageBox(
+        m_hWnd,
+        XPR_STRING_LITERAL("변경된 파일 목록을 자동으로 갱신하지 못했습니다.\n\n현재 폴더를 다시 갱신하시겠습니까?"),
+        XPR_STRING_LITERAL("FxFile 자동 갱신 실패"),
+        MB_RETRYCANCEL | MB_ICONWARNING | MB_TASKMODAL);
+    if (sChoice == IDRETRY)
+        scheduleDirectoryRefresh();
+}
 
-    const xpr_bool_t sResult = OnShcnUpdateDir(&sShcn);
-    endShcn(SHCNE_UPDATEDIR, sResult);
-    COM_FREE(sFullPidl);
+void ExplorerCtrl::scheduleRefreshSort(void)
+{
+    if (XPR_IS_TRUE(mDestroying) || GetSafeHwnd() == XPR_NULL ||
+        mOption.mRefreshSort != XPR_TRUE)
+        return;
+
+    CEdit *sEdit = GetEditControl();
+    mRenameResorting = (XPR_IS_NOT_NULL(sEdit) &&
+                        XPR_IS_NOT_NULL(sEdit->m_hWnd));
+    if (XPR_IS_TRUE(mRenameResorting) || XPR_IS_TRUE(mDeferredRefreshSort))
+        return;
+
+    mDeferredRefreshSort = XPR_TRUE;
+    if (SetTimer(TM_ID_NOTIFY_SORT, kRefreshSortDelay, XPR_NULL) == 0)
+    {
+        mDeferredRefreshSort = XPR_FALSE;
+        resortItems();
+    }
 }
 
 void ExplorerCtrl::addParentItem(void)
@@ -6484,6 +7204,18 @@ void ExplorerCtrl::OnTimer(UINT_PTR aIdEvent)
         KillTimer(aIdEvent);
         reconcileDirectoryRefresh();
     }
+    else if (aIdEvent == TM_ID_NOTIFY_SORT)
+    {
+        KillTimer(aIdEvent);
+        mDeferredRefreshSort = XPR_FALSE;
+
+        CEdit *sEdit = GetEditControl();
+        mRenameResorting = (XPR_IS_NOT_NULL(sEdit) &&
+                            XPR_IS_NOT_NULL(sEdit->m_hWnd));
+        if (mOption.mRefreshSort == XPR_TRUE &&
+            XPR_IS_FALSE(mRenameResorting))
+            resortItems();
+    }
     else if (XPR_IS_RANGE(TM_ID_DRAG_SCROLL_BEGIN, aIdEvent, TM_ID_DRAG_SCROLL_END))
     {
         KillTimer(aIdEvent);
@@ -7174,8 +7906,11 @@ void ExplorerCtrl::OnSetFocus(CWnd *aOldWnd)
         mObserver->onSetFocus(*this);
     }
 
-    if (GetSelectionMark() == -1)
-        SetItemState(0, LVIS_FOCUSED, LVIS_FOCUSED);
+    if (GetSelectionMark() == -1 && GetItemCount() > 0)
+    {
+        if (XPR_IS_FALSE(focusParentFolderRow()))
+            commitNavigationSelection(0);
+    }
 
     if (XPR_IS_NOT_NULL(gFrame->mPictureViewer))
     {
@@ -8346,21 +9081,8 @@ xpr_bool_t ExplorerCtrl::goUp(void)
     fxfile::base::Pidl::removeLastItem(sParentFullPidl);
 
     xpr_bool_t sResult = explore(sParentFullPidl);
-
-    if (mOption.mGoUpSelSubFolder)
-    {
-        if (mSubFolder.empty() == XPR_FALSE)
-        {
-            LVFINDINFO sLvFindInfo = {0};
-            sLvFindInfo.flags = LVFI_STRING;
-            sLvFindInfo.psz   = mSubFolder.c_str();
-            xpr_sint_t sFind = FindItem(&sLvFindInfo);
-            if (sFind >= 0)
-                selectItem(sFind);
-        }
-    }
-
-    mSubFolder.clear();
+    if (XPR_IS_FALSE(sResult))
+        mSubFolder.clear();
 
     return sResult;
 }
@@ -8850,7 +9572,8 @@ void ExplorerCtrl::reconcileFileOperationItems(
     for (FileOperationReconcileItems::const_iterator sIt = aItems.begin();
          sIt != aItems.end(); ++sIt)
     {
-        if ((aOperation == FO_DELETE || aOperation == FO_MOVE) &&
+        if ((aOperation == FO_DELETE || aOperation == FO_MOVE ||
+             aOperation == FO_RENAME) &&
             XPR_IS_TRUE(sIt->mSourceGone))
         {
             xpr::string sParent(sIt->mSourcePath);
@@ -8867,7 +9590,8 @@ void ExplorerCtrl::reconcileFileOperationItems(
         }
 
         if (aItems.size() <= 512 &&
-            (aOperation == FO_COPY || aOperation == FO_MOVE) &&
+            (aOperation == FO_COPY || aOperation == FO_MOVE ||
+             aOperation == FO_RENAME) &&
             XPR_IS_TRUE(sIt->mTargetExists) && !sIt->mTargetPath.empty())
         {
             xpr::string sParent(sIt->mTargetPath);
@@ -8992,14 +9716,9 @@ xpr_bool_t ExplorerCtrl::beginShcn(DWORD aEventId)
 void ExplorerCtrl::endShcn(DWORD aEventId, xpr_bool_t aResult)
 {
     if (mOption.mRefreshSort == XPR_TRUE && XPR_IS_TRUE(aResult))
-    {
-        // If refresh and auto-arrange option enable and is renaming any item, auto-arrange function delay.
-        CEdit *sEdit = GetEditControl();
-        mRenameResorting = (XPR_IS_NOT_NULL(sEdit) && XPR_IS_NOT_NULL(sEdit->m_hWnd));
-
-        if (XPR_IS_FALSE(mRenameResorting))
-            resortItems();
-    }
+        // Sort once per burst. Sorting every exact event is O(events * rows)
+        // and can monopolise the UI thread during downloads or large copies.
+        scheduleRefreshSort();
 }
 
 LRESULT ExplorerCtrl::OnFileChangeNotify(WPARAM wParam, LPARAM lParam)
@@ -9010,21 +9729,17 @@ LRESULT ExplorerCtrl::OnFileChangeNotify(WPARAM wParam, LPARAM lParam)
     FileChangeWatcher::WatchId sWatchId = (FileChangeWatcher::WatchId)wParam;
     if (mWatchId != sWatchId)
         return 0;
-
-    LPITEMIDLIST sFullPidl = fxfile::base::Pidl::clone(mTvItemData->mFullPidl);
-    if (XPR_IS_NULL(sFullPidl))
+    if (XPR_IS_TRUE(mDirectoryEnumerationPending))
+    {
+        mDirectoryEnumerationDirty = XPR_TRUE;
         return 0;
+    }
 
-    Shcn sShcn = {0};
-    sShcn.mEventId = SHCNE_UPDATEDIR;
-    sShcn.mPidl1   = sFullPidl;
-    sShcn.mItem1   = (uintptr_t)sFullPidl;
-    sShcn.mHwnd    = m_hWnd;
-
-    const xpr_bool_t sResult = OnShcnUpdateDir(&sShcn);
-    endShcn(SHCNE_UPDATEDIR, sResult);
-
-    COM_FREE(sFullPidl);
+    // The legacy watcher is intentionally coarse.  Re-entering
+    // OnShcnUpdateDir here enumerated the whole folder on the UI thread and
+    // could freeze every pane behind a slow antivirus/cloud filter.  Route
+    // the recovery through the same bounded async reconciliation instead.
+    scheduleDirectoryRefresh();
 
     return 0;
 }
@@ -9060,6 +9775,13 @@ LRESULT ExplorerCtrl::OnAdvFileChangeNotify(WPARAM wParam, LPARAM lParam)
     // early for NoRefresh previously leaked every queued notification.
     if (mOption.mNoRefresh == XPR_TRUE)
     {
+        XPR_SAFE_DELETE(sNotifyInfo);
+        return 0;
+    }
+
+    if (XPR_IS_TRUE(mDirectoryEnumerationPending))
+    {
+        mDirectoryEnumerationDirty = XPR_TRUE;
         XPR_SAFE_DELETE(sNotifyInfo);
         return 0;
     }
@@ -9132,7 +9854,13 @@ LRESULT ExplorerCtrl::OnAdvFileChangeNotify(WPARAM wParam, LPARAM lParam)
             CombinePath(sOldPath, sNotifyInfo->mDir, sNotifyInfo->mOldFileName);
 
             if (XPR_IS_NULL(sFullPidl))
+            {
                 sResult = OnShcnDeleteItem(XPR_NULL, sOldPath.c_str());
+                // Deleting the old row is only half of the rename. The new
+                // Shell PIDL can appear after this notification while an AV,
+                // browser or cloud provider still owns the file.
+                scheduleDirectoryRefresh();
+            }
             else
                 sResult = OnShcnRenameItem(sOldPath.c_str(), sFullPidl);
             break;
@@ -9161,18 +9889,14 @@ LRESULT ExplorerCtrl::OnAdvFileChangeNotify(WPARAM wParam, LPARAM lParam)
     default:
         {
             sEventId = SHCNE_UPDATEDIR;
-            sFullPidl = fxfile::base::Pidl::clone(sTvItemData->mFullPidl);
-
-            Shcn sShcn = {0};
-            sShcn.mEventId = SHCNE_UPDATEDIR;
-            sShcn.mPidl1   = sFullPidl;
-            sShcn.mItem1   = reinterpret_cast<uintptr_t>(sFullPidl);
-            sShcn.mHwnd    = m_hWnd;
-
-            sResult = OnShcnUpdateDir(&sShcn);
-
-            COM_FREE(sFullPidl);
-
+            // Overflow/coarse directory events require a full comparison,
+            // but local fixed folders must never perform that enumeration in
+            // this UI message handler.
+            scheduleDirectoryRefresh();
+            // Keep false so endShcn does not sort the stale pre-refresh list.
+            // EventUpdateDir is excluded from the generic failure retry below
+            // because the async recovery has already been scheduled.
+            sResult = XPR_FALSE;
             break;
         }
     }

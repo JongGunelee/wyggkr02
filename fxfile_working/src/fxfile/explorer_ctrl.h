@@ -335,6 +335,8 @@ public:
     void        drawParentFolderIcon(LPNMLVCUSTOMDRAW aNmLvCustomDraw);
     void        redrawFocusItemChange(xpr_sint_t aOldItem, xpr_sint_t aNewItem);
     xpr_sint_t  getLastInsertIndex(void) const;
+    xpr_bool_t  commitNavigationSelection(xpr_sint_t aItemIndex);
+    xpr_bool_t  focusParentFolderRow(void);
 
     void setDragContents(xpr_bool_t aDragContents = XPR_TRUE);
 
@@ -362,13 +364,30 @@ protected:
     xpr_bool_t exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aUpdateBuddy = XPR_TRUE);
 
     void       preEnumeration(LPTVITEMDATA aNewTvItemData);
-    xpr_bool_t insertPidlItem(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aPidl, xpr_sint_t aIndex);
+    xpr_bool_t insertPidlItem(LPSHELLFOLDER aShellFolder, LPITEMIDLIST aPidl,
+                              xpr_sint_t aIndex,
+                              const xpr_tchar_t *aKnownName = XPR_NULL,
+                              xpr_ulong_t aKnownShellAttributes = 0,
+                              DWORD aKnownFileAttributes = 0,
+                              xpr_bool_t aHasKnownMetadata = XPR_FALSE);
     void       postEnumeration(xpr_bool_t aUpdateBuddy);
+    void       cancelDirectoryEnumeration(void);
+    xpr_bool_t startDirectoryEnumeration(LPITEMIDLIST aFullPidl,
+                                         LPSHELLFOLDER aShellFolder,
+                                         xpr_sint_t aListType,
+                                         xpr_sint_t aAttributes,
+                                         xpr_bool_t aUpdateBuddy);
+    void       captureRefreshViewState(void);
+    xpr_bool_t restoreRefreshViewState(void);
+    xpr_bool_t getRefreshItemPath(xpr_sint_t aItemIndex,
+                                  xpr::string &aPath) const;
 
     void watchFileChange(void);
     void watchFileChangeLegacy(void);
     void scheduleDirectoryRefresh(void);
     void reconcileDirectoryRefresh(void);
+    void reportDirectoryRefreshFailure(void);
+    void scheduleRefreshSort(void);
 
     void addParentItem(void);
     void addDriveItem(void);
@@ -533,6 +552,32 @@ protected:
     xpr_bool_t                       mDestroying;
     xpr_bool_t                       mDeferredDirectoryRefresh;
     xpr::string                      mDeferredDirectoryRefreshPath;
+    xpr_uint_t                       mDeferredDirectoryRefreshRetryCount;
+    xpr_uint_t                       mDeferredDirectoryRefreshGeneration;
+    xpr_bool_t                       mDeferredRefreshSort;
+    xpr_uint_t                       mDirectoryStateGeneration;
+    xpr_uint_t                       mDirectoryEnumerationGeneration;
+    xpr_uint_t                       mDirectoryEnumerationOwnerToken;
+    HANDLE                           mDirectoryEnumerationCancelEvent;
+    LPSHELLFOLDER                    mDirectoryEnumerationShellFolder;
+    xpr_sint_t                       mDirectoryEnumerationInsertIndex;
+    xpr_bool_t                       mDirectoryEnumerationPending;
+    xpr_bool_t                       mDirectoryEnumerationFirstBatch;
+    xpr_bool_t                       mDirectoryEnumerationParentPublished;
+    xpr_bool_t                       mDirectoryEnumerationUpdateBuddy;
+    xpr_uint64_t                     mDirectoryEnumerationStartedTick;
+    xpr_uint64_t                     mDirectoryEnumerationFirstBatchTick;
+    xpr_bool_t                       mDirectoryEnumerationDirty;
+    xpr_bool_t                       mDirectoryEnumerationWatcherArmed;
+    xpr_bool_t                       mRefreshViewStatePending;
+    xpr_bool_t                       mRefreshSkipSort;
+    xpr_bool_t                       mRefreshSelectedParent;
+    xpr_bool_t                       mRefreshFocusedParent;
+    xpr_bool_t                       mRefreshTopParent;
+    xpr_sint_t                       mRefreshHorizontalScroll;
+    std::vector<xpr::string>         mRefreshSelectedPaths;
+    xpr::string                      mRefreshFocusedPath;
+    xpr::string                      mRefreshTopPath;
 
     typedef std::tr1::unordered_multimap<xpr::string, LPLVITEMDATA> NameMap;
     typedef std::pair<NameMap::iterator, NameMap::iterator> NameMapPairIterator;
@@ -653,6 +698,7 @@ protected:
     afx_msg LRESULT OnShellAsyncIcon(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnShellColumnProc(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnPasteSelItem(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT OnDirectoryEnumeration(WPARAM wParam, LPARAM lParam);
 };
 } // namespace fxfile
 

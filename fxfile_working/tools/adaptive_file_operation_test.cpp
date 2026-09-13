@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string>
 
+#include "../src/xpr/include/xpr_types.h"
 #include "../src/fxfile/adaptive_file_operation.h"
 
 namespace
@@ -74,15 +75,23 @@ int wmain(int aArgumentCount, wchar_t **aArguments)
     ::QueryPerformanceFrequency(&sFrequency);
     ::QueryPerformanceCounter(&sBegin);
     DWORD sError = ERROR_SUCCESS;
+    fxfile::AdaptiveFileOperation::ExecutionInfo sExecutionInfo;
     const fxfile::AdaptiveFileOperation::Result sResult =
-        fxfile::AdaptiveFileOperation::tryExecute(&sOperation, &sError);
+        fxfile::AdaptiveFileOperation::tryExecute(
+            &sOperation, &sError, &sExecutionInfo);
     ::QueryPerformanceCounter(&sEnd);
     ::CoUninitialize();
 
     const double sSeconds = static_cast<double>(sEnd.QuadPart - sBegin.QuadPart) /
                             static_cast<double>(sFrequency.QuadPart);
-    wprintf(L"result=%d error=%lu seconds=%.6f\n",
-            static_cast<int>(sResult), sError, sSeconds);
+    wprintf(L"result=%d error=%lu seconds=%.6f engine=%d reason=%d files=%Iu directories=%Iu bytes=%I64u workers=%u unbuffered=%d planning_ms=%I64u\n",
+            static_cast<int>(sResult), sError, sSeconds,
+            static_cast<int>(sExecutionInfo.mEngine),
+            static_cast<int>(sExecutionInfo.mReason),
+            sExecutionInfo.mFileCount, sExecutionInfo.mDirectoryCount,
+            sExecutionInfo.mTotalBytes, sExecutionInfo.mWorkerCount,
+            sExecutionInfo.mUnbuffered ? 1 : 0,
+            sExecutionInfo.mPlanningMilliseconds);
     return (sResult == fxfile::AdaptiveFileOperation::ResultSucceeded) ? 0 :
            (sResult == fxfile::AdaptiveFileOperation::ResultNotApplicable ? 4 : 1);
 }

@@ -117,7 +117,7 @@ $projectStorage = Get-StorageRecord $ProjectRoot
 $systemStorage = Get-StorageRecord $systemRoot
 $systemHardGatePassed = $systemStorage.IsReady -and $systemStorage.FreeBytes -ge 5GB -and $systemStorage.FreePercentRaw -ge 5.0
 $lowSystemDriveOverrideActive = $lowSystemDriveOverrideRequested -and -not $systemHardGatePassed
-$systemEmergencyFloorBytes = [int64]100MB
+$systemEmergencyFloorBytes = [int64](1GB)
 $requiredProjectFreeBytes = [int64]$(if ($lowSystemDriveOverrideActive) { 20GB } else { 10GB })
 $projectCapacityPassed = $projectStorage.IsReady -and $projectStorage.DriveType -eq 'Fixed' -and
     $projectStorage.FreeBytes -ge $requiredProjectFreeBytes
@@ -161,7 +161,7 @@ if ($lowSystemDriveOverrideActive) {
         $LowSystemDriveApproval -ceq $lowSystemDriveApprovalPhrase) (
         'Authorized by explicit switch and exact acknowledgement; this is not the default path.') (
         "Pass -AllowLowSystemDriveWithDTemp -LowSystemDriveApproval '$lowSystemDriveApprovalPhrase'.")
-    Add-Check 'Capacity' 'System drive emergency floor: >= 200 MiB free' $true $systemEmergencyFloorPassed (
+    Add-Check 'Capacity' 'System drive emergency floor: >= 1 GiB free' $true $systemEmergencyFloorPassed (
         "Root=$($systemStorage.Root); Free=$($systemStorage.FreeGiB) GiB ($($systemStorage.FreePercent)%)") (
         'Stop immediately and safely recover C: above 1 GiB before continuing.')
     Add-Check 'Capacity' 'Exceptional project/TEMP volume is D:' $true $projectIsApprovedD (

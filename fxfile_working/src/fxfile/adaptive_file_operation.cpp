@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <objbase.h>
 #include <shellapi.h>
+#include "../xpr/include/xpr_types.h"
 #else
 #include "stdafx.h"
 #endif
@@ -40,6 +41,10 @@ const unsigned kMaximumWorkers = 4;
 const size_t kRobocopyManyFileThreshold = 1000;
 const size_t kRobocopyManyDirectoryThreshold = 128;
 const ULONGLONG kRobocopyLargeTreeThreshold = 2ULL * 1024ULL * 1024ULL * 1024ULL;
+// Bound the in-memory preflight inventory.  Above this limit the operation is
+// delegated to IFileOperation, whose streaming enumerator avoids unbounded
+// FxFile heap growth while preserving all Shell collision semantics.
+const size_t kMaximumInMemoryPlanItems = 100000;
 
 struct FileJob
 {
@@ -166,6 +171,97 @@ struct FileCopyContext
         , lastTransferred(0)
     {
     }
+};
+
+class PlanProgress
+{
+public:
+    PlanProgress(HWND aOwner,
+                 const wchar_t *aTitle = L"FxFile - 복사/이동 준비",
+                 const wchar_t *aLine =
+                    L"대상 파일을 안전하게 확인하고 있습니다. 아직 파일 쓰기는 시작되지 않았습니다.")
+        : mOwner(aOwner), mProgress(NULL), mStarted(false),
+          mCancelled(false), mLastUpdateTick(0), mItemCount(0),
+          mTitle(aTitle), mLine(aLine)
+    {
+    }
+
+    ~PlanProgress(void)
+    {
+        stop();
+    }
+
+    bool pulse(void)
+    {
+        ++mItemCount;
+#if defined(FXFILE_ADAPTIVE_STANDALONE)
+        wchar_t sCancelAfter[32] = {0};
+        if (::GetEnvironmentVariableW(L"FXFILE_TEST_PLAN_CANCEL_AFTER",
+                                      sCancelAfter,
+                                      _countof(sCancelAfter)) > 0)
+        {
+            const unsigned long long sLimit = _wcstoui64(sCancelAfter, NULL, 10);
+            if (sLimit > 0 && mItemCount >= sLimit)
+            {
+                mCancelled = true;
+                return false;
+            }
+        }
+#endif
+        if (!mStarted)
+        {
+            if (FAILED(::CoCreateInstance(CLSID_ProgressDialog, NULL,
+                                          CLSCTX_INPROC_SERVER,
+                                          IID_PPV_ARGS(&mProgress))) ||
+                mProgress == NULL)
+                return true;
+            mProgress->SetTitle(mTitle);
+            mProgress->SetLine(1, mLine, FALSE, NULL);
+            mProgress->StartProgressDialog(
+                mOwner, NULL,
+                PROGDLG_NORMAL | PROGDLG_NOMINIMIZE |
+                PROGDLG_MARQUEEPROGRESS, NULL);
+            mStarted = true;
+        }
+
+        const ULONGLONG sNow = ::GetTickCount64();
+        if (mProgress != NULL &&
+            (mLastUpdateTick == 0 || sNow - mLastUpdateTick >= 100))
+        {
+            wchar_t sLine[128] = {0};
+            _snwprintf_s(sLine, _countof(sLine), _TRUNCATE,
+                         L"확인한 항목: %Iu개 (전체 수량 계산 중)",
+                         mItemCount);
+            mProgress->SetLine(2, sLine, FALSE, NULL);
+            mLastUpdateTick = sNow;
+            if (mProgress->HasUserCancelled())
+                mCancelled = true;
+        }
+        return !mCancelled;
+    }
+
+    bool cancelled(void) const { return mCancelled; }
+    void stop(void)
+    {
+        if (mProgress != NULL)
+        {
+            if (mStarted)
+                mProgress->StopProgressDialog();
+            mProgress->Release();
+            mProgress = NULL;
+        }
+        mStarted = false;
+    }
+
+private:
+    HWND mOwner;
+    IProgressDialog *mProgress;
+    bool mStarted;
+    bool mCancelled;
+    ULONGLONG mLastUpdateTick;
+    size_t mItemCount;
+    const wchar_t *mTitle;
+    const wchar_t *mLine;
 };
 
 std::wstring normalizePath(const std::wstring &aPath)
@@ -404,15 +500,16 @@ bool isWindowsProtectedPath(const std::wstring &aPath)
         return true;
 
     typedef BOOL (WINAPI *SfcIsFileProtectedProc)(HANDLE, LPCWSTR);
-    HMODULE sSfc = ::LoadLibraryW(L"sfc.dll");
-    if (sSfc == NULL)
-        return false;
-    SfcIsFileProtectedProc sIsProtected =
+    // A large permanent-delete preflight can inspect tens of thousands of
+    // descendants.  Resolve the signed Windows API once per process instead
+    // of loading/unloading sfc.dll for every file.
+    static HMODULE sSfc = ::LoadLibraryW(L"sfc.dll");
+    static SfcIsFileProtectedProc sIsProtected =
+        sSfc == NULL ? NULL :
         reinterpret_cast<SfcIsFileProtectedProc>(
             ::GetProcAddress(sSfc, "SfcIsFileProtected"));
     const bool sProtected = sIsProtected != NULL &&
                             sIsProtected(NULL, aPath.c_str()) != FALSE;
-    ::FreeLibrary(sSfc);
     return sProtected;
 }
 
@@ -432,8 +529,20 @@ bool canOpenForDelete(const std::wstring &aPath, bool aDirectory)
 
 bool enumerateDeletePath(const std::wstring &aPath,
                          DeletePlan &aPlan,
+                         PlanProgress &aProgress,
                          DWORD &aError)
 {
+    if (!aProgress.pulse())
+    {
+        aError = ERROR_CANCELLED;
+        return false;
+    }
+    if (aPlan.files.size() + aPlan.directories.size() >=
+        kMaximumInMemoryPlanItems)
+    {
+        aError = ERROR_NOT_ENOUGH_MEMORY;
+        return false;
+    }
     if (!isLocalFileSystemPath(aPath) || ::PathIsRootW(aPath.c_str()) ||
         isWindowsProtectedPath(aPath))
         return false;
@@ -478,7 +587,7 @@ bool enumerateDeletePath(const std::wstring &aPath,
                 wcscmp(sData.cFileName, L"..") == 0)
                 continue;
             if (!enumerateDeletePath(joinPath(aPath, sData.cFileName),
-                                     aPlan, aError))
+                                     aPlan, aProgress, aError))
             {
                 sOk = false;
                 break;
@@ -499,21 +608,31 @@ bool enumerateDeletePath(const std::wstring &aPath,
 
 bool buildDeletePlan(const SHFILEOPSTRUCT *aOperation,
                      DeletePlan &aPlan,
-                     DWORD &aError)
+                     DWORD &aError,
+                     bool &aCancelled)
 {
+    aCancelled = false;
     if (aOperation == NULL || aOperation->wFunc != FO_DELETE ||
         aOperation->pFrom == NULL ||
         (aOperation->fFlags & FOF_ALLOWUNDO) != 0)
         return false;
 
+    PlanProgress sProgress(
+        aOperation->hwnd,
+        L"FxFile - 영구 삭제 준비",
+        L"대상의 보호·권한 상태를 확인하고 있습니다. 아직 삭제는 시작되지 않았습니다.");
     const wchar_t *sSource = aOperation->pFrom;
     while (*sSource != L'\0')
     {
         if (wcschr(sSource, L'*') != NULL || wcschr(sSource, L'?') != NULL ||
-            !enumerateDeletePath(sSource, aPlan, aError))
+            !enumerateDeletePath(sSource, aPlan, sProgress, aError))
+        {
+            aCancelled = sProgress.cancelled() || aError == ERROR_CANCELLED;
             return false;
+        }
         sSource += wcslen(sSource) + 1;
     }
+    sProgress.stop();
     return !aPlan.files.empty() || !aPlan.directories.empty();
 }
 
@@ -540,12 +659,58 @@ void deleteWorker(SharedDeleteState *aShared)
     aShared->activeWorkers.fetch_sub(1);
 }
 
+unsigned chooseDeleteWorkerCount(const DeletePlan &aPlan)
+{
+    unsigned sWorkers = 1;
+    if (aPlan.files.size() >= 32)
+        sWorkers = 4;
+    else if (aPlan.files.size() >= 8)
+        sWorkers = 2;
+
+    StorageKind sAggregateKind = StorageSolidState;
+    std::set<std::wstring> sQueriedVolumes;
+    for (size_t i = 0; i < aPlan.files.size(); ++i)
+    {
+        std::wstring sVolume;
+        if (!getVolumeName(aPlan.files[i], sVolume))
+        {
+            sAggregateKind = StorageUnknown;
+            break;
+        }
+        sVolume = normalizePath(sVolume);
+        if (!sQueriedVolumes.insert(sVolume).second)
+            continue;
+
+        const StorageKind sKind = queryStorageKind(aPlan.files[i], NULL);
+        if (sKind == StorageRotational)
+        {
+            sAggregateKind = StorageRotational;
+            break;
+        }
+        if (sKind == StorageUnknown)
+            sAggregateKind = StorageUnknown;
+    }
+    if (sAggregateKind != StorageSolidState)
+        sWorkers = (std::min)(sWorkers, 2U);
+
+    const unsigned sHardware = std::thread::hardware_concurrency();
+    if (sHardware > 0)
+        sWorkers = (std::min)(sWorkers, sHardware);
+    return (std::max)(1U, sWorkers);
+}
+
 bool addFile(CopyPlan &aPlan,
              const std::wstring &aSource,
              const std::wstring &aTarget,
              const WIN32_FIND_DATAW &aFindData,
              DWORD &aError)
 {
+    if (aPlan.files.size() + aPlan.directories.size() >=
+        kMaximumInMemoryPlanItems)
+    {
+        aError = ERROR_NOT_ENOUGH_MEMORY;
+        return false;
+    }
     if (isUnsupportedAttributes(aFindData.dwFileAttributes))
         return false;
 
@@ -576,8 +741,20 @@ bool enumerateDirectory(CopyPlan &aPlan,
                         const std::wstring &aSource,
                         const std::wstring &aTarget,
                         const WIN32_FIND_DATAW &aDirectoryData,
+                        PlanProgress &aProgress,
                         DWORD &aError)
 {
+    if (!aProgress.pulse())
+    {
+        aError = ERROR_CANCELLED;
+        return false;
+    }
+    if (aPlan.files.size() + aPlan.directories.size() >=
+        kMaximumInMemoryPlanItems)
+    {
+        aError = ERROR_NOT_ENOUGH_MEMORY;
+        return false;
+    }
     if (isUnsupportedAttributes(aDirectoryData.dwFileAttributes))
         return false;
 
@@ -629,14 +806,18 @@ bool enumerateDirectory(CopyPlan &aPlan,
         const std::wstring sChildTarget = joinPath(aTarget, sFindData.cFileName);
         if ((sFindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
         {
-            if (!enumerateDirectory(aPlan, sChildSource, sChildTarget, sFindData, aError))
+            if (!enumerateDirectory(aPlan, sChildSource, sChildTarget,
+                                    sFindData, aProgress, aError))
             {
                 sSucceeded = false;
                 break;
             }
         }
-        else if (!addFile(aPlan, sChildSource, sChildTarget, sFindData, aError))
+        else if (!aProgress.pulse() ||
+                 !addFile(aPlan, sChildSource, sChildTarget, sFindData, aError))
         {
+            if (aProgress.cancelled())
+                aError = ERROR_CANCELLED;
             sSucceeded = false;
             break;
         }
@@ -655,8 +836,10 @@ bool enumerateDirectory(CopyPlan &aPlan,
     return sSucceeded;
 }
 
-bool buildPlan(const SHFILEOPSTRUCT *aOperation, CopyPlan &aPlan, DWORD &aError)
+bool buildPlan(const SHFILEOPSTRUCT *aOperation, CopyPlan &aPlan,
+               DWORD &aError, bool &aCancelled)
 {
+    aCancelled = false;
     if (aOperation == NULL || aOperation->pFrom == NULL || aOperation->pTo == NULL)
         return false;
     if (aOperation->wFunc != FO_COPY && aOperation->wFunc != FO_MOVE)
@@ -675,7 +858,30 @@ bool buildPlan(const SHFILEOPSTRUCT *aOperation, CopyPlan &aPlan, DWORD &aError)
     if (!getVolumeName(sTargetDirectory, sTargetVolume))
         return false;
 
-    bool sAllCrossVolume = true;
+    // Decide the move engine from top-level paths before walking any tree.
+    // The old single pass could enumerate millions of descendants and only
+    // then discover that a same-volume move must use the Shell metadata path.
+    if (aOperation->wFunc == FO_MOVE)
+    {
+        const wchar_t *sProbeSource = aOperation->pFrom;
+        while (*sProbeSource != L'\0')
+        {
+            const std::wstring sProbePath(sProbeSource);
+            if (sProbePath.find_first_of(L"*?") != std::wstring::npos ||
+                !isLocalFileSystemPath(sProbePath))
+                return false;
+
+            std::wstring sProbeVolume;
+            if (!getVolumeName(sProbePath, sProbeVolume))
+                return false;
+            if (_wcsicmp(sProbeVolume.c_str(), sTargetVolume.c_str()) == 0)
+                return false;
+
+            sProbeSource += wcslen(sProbeSource) + 1;
+        }
+    }
+
+    PlanProgress sProgress(aOperation->hwnd);
     const wchar_t *sSource = aOperation->pFrom;
     while (*sSource != L'\0')
     {
@@ -687,9 +893,6 @@ bool buildPlan(const SHFILEOPSTRUCT *aOperation, CopyPlan &aPlan, DWORD &aError)
         std::wstring sSourceVolume;
         if (!getVolumeName(sSourcePath, sSourceVolume))
             return false;
-        if (_wcsicmp(sSourceVolume.c_str(), sTargetVolume.c_str()) == 0)
-            sAllCrossVolume = false;
-
         WIN32_FIND_DATAW sFindData = {0};
         HANDLE sFind = ::FindFirstFileW(sSourcePath.c_str(), &sFindData);
         if (sFind == INVALID_HANDLE_VALUE)
@@ -703,11 +906,24 @@ bool buildPlan(const SHFILEOPSTRUCT *aOperation, CopyPlan &aPlan, DWORD &aError)
 
         bool sAdded = false;
         if ((sFindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
-            sAdded = enumerateDirectory(aPlan, sSourcePath, sTargetPath, sFindData, aError);
+            sAdded = enumerateDirectory(aPlan, sSourcePath, sTargetPath,
+                                        sFindData, sProgress, aError);
         else
-            sAdded = addFile(aPlan, sSourcePath, sTargetPath, sFindData, aError);
+        {
+            if (!sProgress.pulse())
+            {
+                aError = ERROR_CANCELLED;
+                sAdded = false;
+            }
+            else
+                sAdded = addFile(aPlan, sSourcePath, sTargetPath,
+                                 sFindData, aError);
+        }
         if (!sAdded)
+        {
+            aCancelled = sProgress.cancelled() || aError == ERROR_CANCELLED;
             return false;
+        }
 
         sSource += wcslen(sSource) + 1;
     }
@@ -718,13 +934,12 @@ bool buildPlan(const SHFILEOPSTRUCT *aOperation, CopyPlan &aPlan, DWORD &aError)
     if (aOperation->wFunc == FO_MOVE)
     {
         // Same-volume moves are metadata renames and the Shell already executes
-        // them optimally.  The adaptive copy/delete path is only useful when
-        // every selected source is on another volume.
-        if (!sAllCrossVolume)
-            return false;
+        // them optimally.  All selected sources were proven cross-volume by
+        // the cheap top-level preflight above, before any recursive walk.
         aPlan.moveAcrossVolumes = true;
     }
 
+    sProgress.stop();
     return true;
 }
 
@@ -1349,6 +1564,22 @@ RobocopySelection selectRobocopy(const SHFILEOPSTRUCT *aOperation,
     aUnbuffered = sLargestFile >= 256ULL * 1024ULL * 1024ULL &&
                   sAverage >= 32ULL * 1024ULL * 1024ULL;
 
+#if defined(FXFILE_ADAPTIVE_STANDALONE)
+    // Runtime probes need deterministic coverage without interacting with a
+    // hidden modal window.  This hook does not exist in the product build.
+    wchar_t sTestChoice[32] = {0};
+    if (::GetEnvironmentVariableW(L"FXFILE_TEST_ROBOCOPY_CHOICE", sTestChoice,
+                                  _countof(sTestChoice)) > 0)
+    {
+        if (_wcsicmp(sTestChoice, L"robocopy") == 0)
+            return RobocopyAccepted;
+        if (_wcsicmp(sTestChoice, L"adaptive") == 0)
+            return RobocopyDeclined;
+        if (_wcsicmp(sTestChoice, L"cancel") == 0)
+            return RobocopyCancelled;
+    }
+#endif
+
     wchar_t sMessage[1024] = {0};
     _snwprintf_s(
         sMessage, _countof(sMessage), _TRUNCATE,
@@ -1682,21 +1913,7 @@ AdaptiveFileOperation::Result executePermanentDelete(
     sProgress->StartProgressDialog(aOperation->hwnd, NULL,
                                    PROGDLG_NORMAL | PROGDLG_AUTOTIME, NULL);
 
-    unsigned sWorkers = 1;
-    if (aPlan.files.size() >= 32)
-        sWorkers = 4;
-    else if (aPlan.files.size() >= 8)
-        sWorkers = 2;
-    if (!aPlan.files.empty())
-    {
-        const StorageKind sKind = queryStorageKind(aPlan.files[0], NULL);
-        if (sKind != StorageSolidState)
-            sWorkers = (std::min)(sWorkers, 2U);
-    }
-    const unsigned sHardware = std::thread::hardware_concurrency();
-    if (sHardware > 0)
-        sWorkers = (std::min)(sWorkers, sHardware);
-    sWorkers = (std::max)(1U, sWorkers);
+    const unsigned sWorkers = chooseDeleteWorkerCount(aPlan);
 
     SharedDeleteState sShared;
     sShared.files = &aPlan.files;
@@ -1790,10 +2007,26 @@ AdaptiveFileOperation::Result executePermanentDelete(
 }
 } // namespace anonymous
 
+AdaptiveFileOperation::ExecutionInfo::ExecutionInfo(void)
+    : mEngine(EngineNone)
+    , mReason(ReasonNotApplicable)
+    , mFileCount(0)
+    , mDirectoryCount(0)
+    , mTotalBytes(0)
+    , mWorkerCount(0)
+    , mUnbuffered(XPR_FALSE)
+    , mPlanningMilliseconds(0)
+{
+}
+
 AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
     SHFILEOPSTRUCT *aFileOperation,
-    DWORD *aError)
+    DWORD *aError,
+    ExecutionInfo *aExecutionInfo)
 {
+    const ULONGLONG sPlanningStarted = ::GetTickCount64();
+    if (aExecutionInfo != XPR_NULL)
+        *aExecutionInfo = ExecutionInfo();
     DWORD sError = ERROR_SUCCESS;
     if (aError != NULL)
         *aError = ERROR_SUCCESS;
@@ -1801,8 +2034,31 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
     if (aFileOperation != NULL && aFileOperation->wFunc == FO_DELETE)
     {
         DeletePlan sDeletePlan;
-        if (!buildDeletePlan(aFileOperation, sDeletePlan, sError))
+        bool sDeletePlanningCancelled = false;
+        if (!buildDeletePlan(aFileOperation, sDeletePlan, sError,
+                             sDeletePlanningCancelled))
+        {
+            if (sDeletePlanningCancelled)
+            {
+                if (aError != NULL)
+                    *aError = ERROR_CANCELLED;
+                return ResultCancelled;
+            }
+            if (aError != NULL)
+                *aError = sError;
             return ResultNotApplicable;
+        }
+        if (aExecutionInfo != XPR_NULL)
+        {
+            aExecutionInfo->mEngine = EngineDirectPermanentDelete;
+            aExecutionInfo->mReason = ReasonLocalUnprotectedPermanentDelete;
+            aExecutionInfo->mFileCount = sDeletePlan.files.size();
+            aExecutionInfo->mDirectoryCount = sDeletePlan.directories.size();
+            aExecutionInfo->mWorkerCount =
+                chooseDeleteWorkerCount(sDeletePlan);
+            aExecutionInfo->mPlanningMilliseconds =
+                static_cast<xpr_uint64_t>(::GetTickCount64() - sPlanningStarted);
+        }
         const Result sDeleteResult =
             executePermanentDelete(aFileOperation, sDeletePlan, sError);
         if (aError != NULL)
@@ -1811,8 +2067,27 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
     }
 
     CopyPlan sPlan;
-    if (!buildPlan(aFileOperation, sPlan, sError))
+    bool sPlanningCancelled = false;
+    if (!buildPlan(aFileOperation, sPlan, sError, sPlanningCancelled))
+    {
+        if (sPlanningCancelled)
+        {
+            if (aError != NULL)
+                *aError = ERROR_CANCELLED;
+            return ResultCancelled;
+        }
+        if (aError != NULL)
+            *aError = sError;
         return ResultNotApplicable;
+    }
+    if (aExecutionInfo != XPR_NULL)
+    {
+        aExecutionInfo->mFileCount = sPlan.files.size();
+        aExecutionInfo->mDirectoryCount = sPlan.directories.size();
+        aExecutionInfo->mTotalBytes = sPlan.totalBytes;
+        aExecutionInfo->mPlanningMilliseconds =
+            static_cast<xpr_uint64_t>(::GetTickCount64() - sPlanningStarted);
+    }
 
     unsigned sRobocopyThreads = 1;
     bool sRobocopyUnbuffered = false;
@@ -1823,6 +2098,14 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
         return ResultCancelled;
     if (sRobocopySelection == RobocopyAccepted)
     {
+        if (aExecutionInfo != XPR_NULL)
+        {
+            aExecutionInfo->mEngine = EngineRobocopy;
+            aExecutionInfo->mReason = ReasonUserApprovedLargeFolderRobocopy;
+            aExecutionInfo->mWorkerCount = sRobocopyThreads;
+            aExecutionInfo->mUnbuffered = sRobocopyUnbuffered ?
+                                          XPR_TRUE : XPR_FALSE;
+        }
         std::vector<CreatedTargetEvidence> sRobocopyOwnedRoots;
         const RobocopyResult sRobocopyResult =
             executeRobocopy(aFileOperation, sPlan, sRobocopyThreads,
@@ -1895,8 +2178,10 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
     {
         sProgress->StopProgressDialog();
         sProgress->Release();
-        rollbackTargets(sPlan, sCreatedDirectories);
-        showOperationError(aFileOperation, sError);
+        const bool sRollbackSucceeded =
+            rollbackTargets(sPlan, sCreatedDirectories);
+        showOperationError(aFileOperation, sError, NULL,
+                           sRollbackSucceeded);
         if (aError != NULL)
             *aError = sError;
         return ResultFailed;
@@ -1907,6 +2192,13 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
     std::vector<CreatedTargetEvidence> sCreatedFiles(sPlan.files.size());
     sShared.createdFiles = &sCreatedFiles;
     const unsigned sWorkerCount = chooseWorkerCount(sPlan);
+    if (aExecutionInfo != XPR_NULL)
+    {
+        aExecutionInfo->mEngine = EngineCopyFile2;
+        aExecutionInfo->mReason = sPlan.moveAcrossVolumes ?
+            ReasonCrossVolumeVerifiedMove : ReasonLocalCollisionFreeCopy;
+        aExecutionInfo->mWorkerCount = sWorkerCount;
+    }
 
     std::vector<std::thread> sWorkers;
     sWorkers.reserve(sWorkerCount);
@@ -1931,11 +2223,13 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
         sShared.cancelRequested.store(true);
         for (size_t i = 0; i < sWorkers.size(); ++i)
             sWorkers[i].join();
-        rollbackCopyTargets(sPlan, sCreatedDirectories, sCreatedFiles);
+        const bool sRollbackSucceeded =
+            rollbackCopyTargets(sPlan, sCreatedDirectories, sCreatedFiles);
         sProgress->StopProgressDialog();
         sProgress->Release();
         sError = ERROR_NOT_ENOUGH_MEMORY;
-        showOperationError(aFileOperation, sError);
+        showOperationError(aFileOperation, sError, NULL,
+                           sRollbackSucceeded);
         if (aError != NULL)
             *aError = sError;
         return ResultFailed;
@@ -2009,6 +2303,17 @@ AdaptiveFileOperation::Result AdaptiveFileOperation::tryExecute(
         return ResultFailed;
     }
 
+#if defined(FXFILE_ADAPTIVE_STANDALONE)
+    wchar_t sVerifyDelay[32] = {0};
+    if (::GetEnvironmentVariableW(L"FXFILE_TEST_BEFORE_VERIFY_DELAY_MS",
+                                  sVerifyDelay,
+                                  _countof(sVerifyDelay)) > 0)
+    {
+        const DWORD sDelay = wcstoul(sVerifyDelay, NULL, 10);
+        if (sDelay > 0)
+            ::Sleep((std::min)(sDelay, static_cast<DWORD>(10000)));
+    }
+#endif
     restoreDirectoryMetadata(sPlan);
     if (!sourceSnapshotUnchanged(sPlan, sError))
     {

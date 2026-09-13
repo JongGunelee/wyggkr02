@@ -18,6 +18,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <set>
 #include <new>
 #include <cwctype>
@@ -97,10 +98,23 @@ class OperationProgressSink : public IFileOperationProgressSink
 {
 public:
     OperationProgressSink(void) : mReferenceCount(1), mDelete(false) {}
+    ~OperationProgressSink(void)
+    {
+        for (std::map<IUnknown *, std::wstring>::iterator sIt =
+                 mPendingSources.begin();
+             sIt != mPendingSources.end(); ++sIt)
+        {
+            sIt->first->Release();
+        }
+    }
 
     void setDelete(bool aDelete) { mDelete = aDelete; }
     const std::set<std::wstring> &completed(void) const { return mCompleted; }
     const std::set<std::wstring> &failed(void) const { return mFailed; }
+    const std::vector<ModernShellFileOperation::ItemResult> &results(void) const
+    {
+        return mResults;
+    }
 
     STDMETHODIMP QueryInterface(REFIID aIid, void **aObject)
     {
@@ -128,27 +142,40 @@ public:
     STDMETHODIMP FinishOperations(HRESULT) { return S_OK; }
     STDMETHODIMP PreRenameItem(DWORD, IShellItem *, LPCWSTR) { return S_OK; }
     STDMETHODIMP PostRenameItem(DWORD, IShellItem *, LPCWSTR, HRESULT, IShellItem *) { return S_OK; }
-    STDMETHODIMP PreMoveItem(DWORD, IShellItem *, IShellItem *, LPCWSTR) { return S_OK; }
+    STDMETHODIMP PreMoveItem(DWORD, IShellItem *aItem, IShellItem *, LPCWSTR)
+    {
+        remember(aItem);
+        return S_OK;
+    }
     STDMETHODIMP PostMoveItem(DWORD, IShellItem *aItem, IShellItem *, LPCWSTR,
-                              HRESULT aResult, IShellItem *)
+                              HRESULT aResult, IShellItem *aNewItem)
     {
-        record(aItem, aResult);
+        record(aItem, aResult, aNewItem);
         return S_OK;
     }
-    STDMETHODIMP PreCopyItem(DWORD, IShellItem *, IShellItem *, LPCWSTR) { return S_OK; }
+    STDMETHODIMP PreCopyItem(DWORD, IShellItem *aItem, IShellItem *, LPCWSTR)
+    {
+        remember(aItem);
+        return S_OK;
+    }
     STDMETHODIMP PostCopyItem(DWORD, IShellItem *aItem, IShellItem *, LPCWSTR,
-                              HRESULT aResult, IShellItem *)
+                              HRESULT aResult, IShellItem *aNewItem)
     {
-        record(aItem, aResult);
+        record(aItem, aResult, aNewItem);
         return S_OK;
     }
-    STDMETHODIMP PreDeleteItem(DWORD, IShellItem *) { return S_OK; }
+    STDMETHODIMP PreDeleteItem(DWORD, IShellItem *aItem)
+    {
+        if (mDelete)
+            remember(aItem);
+        return S_OK;
+    }
     STDMETHODIMP PostDeleteItem(DWORD, IShellItem *aItem, HRESULT aResult,
                                 IShellItem *)
     {
         if (!mDelete)
             return S_OK;
-        record(aItem, aResult);
+        record(aItem, aResult, NULL);
         return S_OK;
     }
     STDMETHODIMP PreNewItem(DWORD, IShellItem *, LPCWSTR) { return S_OK; }
@@ -160,17 +187,79 @@ public:
     STDMETHODIMP ResumeTimer(void) { return S_OK; }
 
 private:
-    void record(IShellItem *aItem, HRESULT aResult)
+    void remember(IShellItem *aItem)
     {
         const std::wstring sPath = normalizePath(shellPath(aItem));
+        IUnknown *sIdentity = NULL;
+        if (sPath.empty() || aItem == NULL ||
+            FAILED(aItem->QueryInterface(IID_IUnknown,
+                                         reinterpret_cast<void **>(&sIdentity))) ||
+            sIdentity == NULL)
+            return;
+
+        std::map<IUnknown *, std::wstring>::iterator sPending =
+            mPendingSources.find(sIdentity);
+        if (sPending != mPendingSources.end())
+        {
+            sPending->second = sPath;
+            sIdentity->Release();
+        }
+        else
+        {
+            try
+            {
+                // Retain the canonical COM identity until the corresponding
+                // Post callback.  IShellItem interface pointers themselves
+                // are not guaranteed to have pointer identity across calls.
+                mPendingSources.insert(
+                    std::map<IUnknown *, std::wstring>::value_type(
+                        sIdentity, sPath));
+            }
+            catch (...)
+            {
+                sIdentity->Release();
+            }
+        }
+    }
+
+    void record(IShellItem *aItem, HRESULT aResult, IShellItem *aNewItem)
+    {
+        std::wstring sPath;
+        IUnknown *sIdentity = NULL;
+        if (aItem != NULL)
+            aItem->QueryInterface(IID_IUnknown,
+                                  reinterpret_cast<void **>(&sIdentity));
+        std::map<IUnknown *, std::wstring>::iterator sPending =
+            mPendingSources.find(sIdentity);
+        if (sPending != mPendingSources.end())
+        {
+            sPath = sPending->second;
+            sPending->first->Release();
+            mPendingSources.erase(sPending);
+        }
+        else
+            sPath = normalizePath(shellPath(aItem));
+        if (sIdentity != NULL)
+            sIdentity->Release();
         if (!sPath.empty())
+        {
             (SUCCEEDED(aResult) ? mCompleted : mFailed).insert(sPath);
+            ModernShellFileOperation::ItemResult sResult;
+            sResult.mSourcePath = sPath.c_str();
+            const std::wstring sTarget = shellPath(aNewItem);
+            if (!sTarget.empty())
+                sResult.mTargetPath = sTarget.c_str();
+            sResult.mResult = aResult;
+            mResults.push_back(sResult);
+        }
     }
 
     volatile LONG mReferenceCount;
     bool mDelete;
     std::set<std::wstring> mCompleted;
     std::set<std::wstring> mFailed;
+    std::map<IUnknown *, std::wstring> mPendingSources;
+    std::vector<ModernShellFileOperation::ItemResult> mResults;
 };
 
 void showDeleteSummary(const SHFILEOPSTRUCT *aOperation,
@@ -262,8 +351,11 @@ bool targetCollisionExists(const std::vector<std::wstring> &aSources,
 
 ModernShellFileOperation::Result ModernShellFileOperation::tryExecute(
     SHFILEOPSTRUCT *aFileOperation,
-    HRESULT *aError)
+    HRESULT *aError,
+    ExecutionInfo *aExecutionInfo)
 {
+    if (aExecutionInfo != NULL)
+        aExecutionInfo->mItems.clear();
     if (aError != NULL)
         *aError = S_OK;
     if (aFileOperation == NULL || aFileOperation->pFrom == NULL)
@@ -378,6 +470,8 @@ ModernShellFileOperation::Result ModernShellFileOperation::tryExecute(
     if (aFileOperation->wFunc == FO_DELETE &&
         (sCancelled || FAILED(sResult)))
         showDeleteSummary(aFileOperation, sSources, sSink, sCancelled);
+    if (aExecutionInfo != NULL && sSink != NULL)
+        aExecutionInfo->mItems = sSink->results();
     if (sSink != NULL)
         sSink->Release();
     if (sCancelled)

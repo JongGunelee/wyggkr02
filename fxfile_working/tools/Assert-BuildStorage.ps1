@@ -76,8 +76,8 @@ if ($lowSystemDriveOverrideActive) {
         'Low-system-drive override requires the unified workflow initial system-drive checkpoint in bytes.')
     Assert-Condition ($AllowedSystemDriveDecreaseBytes -eq 1GB) (
         "Low-system-drive override requires the exact 1 GiB incidental background-write budget; supplied $AllowedSystemDriveDecreaseBytes bytes.")
-    Assert-Condition ($systemDrive.FreeBytes -ge 100MB) (
-        "System drive emergency floor failed: $($systemDrive.FreeGiB) GiB, $($systemDrive.FreePercent)% free; required >= 100 MiB.")
+    Assert-Condition ($systemDrive.FreeBytes -ge 1GB) (
+        "System drive emergency floor failed: $($systemDrive.FreeGiB) GiB, $($systemDrive.FreePercent)% free; required >= 1 GiB.")
     Assert-Condition ($systemDrive.FreeBytes -ge ($InitialSystemFreeBytes - $AllowedSystemDriveDecreaseBytes)) (
         "System drive exceeded the workflow-wide 1 GiB incidental background-write budget. InitialBytes=$InitialSystemFreeBytes; CurrentBytes=$($systemDrive.FreeBytes); AllowedDecreaseBytes=$AllowedSystemDriveDecreaseBytes.")
     Assert-Condition ($projectDrive.Root.Equals('D:\', [StringComparison]::OrdinalIgnoreCase) -and

@@ -111,7 +111,7 @@ RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewNam
     mNewName = aNewName;
 
     if (mNewName.empty() == XPR_TRUE)
-        return ResultSucceeded;
+        return ResultEmptiedName;
 
     xpr_size_t nNewNameLen = mNewName.length();
     if (mNewName[nNewNameLen-1] == '.')
@@ -149,6 +149,18 @@ RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewNam
 
         sNewPath += mNewName;
         sNewPath += mParsingExt;
+    }
+
+    // An unchanged label is a successful no-op, not a failed filesystem
+    // move.  Avoid sending it through MoveFile/SetNameOf, which can produce a
+    // misleading collision and reopen the editor indefinitely.
+    if (_tcscmp(sOldPath.c_str(), sNewPath.c_str()) == 0)
+    {
+        mNewPidl = fxfile::base::Pidl::clone(mPidl);
+        mNewFullPidl = fxfile::base::Pidl::clone(mFullPidl);
+        return (XPR_IS_NOT_NULL(mNewPidl) &&
+                XPR_IS_NOT_NULL(mNewFullPidl)) ?
+               ResultSucceeded : ResultUnknownError;
     }
 
     HRESULT sHResult = E_FAIL;

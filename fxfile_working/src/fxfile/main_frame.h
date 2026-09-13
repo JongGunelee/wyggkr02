@@ -108,6 +108,9 @@ public:
     xpr_sint_t getViewCount(void) const;
     xpr_bool_t isStartupViewDeferred(void) const;
     void completeDeferredStartupViews(void);
+    void requestStartupKeyboardFocus(void);
+    void notifyStartupExplorerViewFirstContent(xpr_sint_t aViewIndex);
+    void notifyStartupExplorerViewReady(xpr_sint_t aViewIndex);
     xpr_bool_t getViewIndexFromViewSplit(xpr_sint_t aRowCount, xpr_sint_t aColumnCount, xpr_sint_t aRow, xpr_sint_t aColumn, xpr_sint_t &aViewIndex) const;
     xpr_bool_t getViewSplitFromViewIndex(xpr_sint_t aViewIndex, xpr_sint_t aRowCount, xpr_sint_t aColumnCount, xpr_sint_t &aRow, xpr_sint_t &aColumn) const;
     LPITEMIDLIST getSplitFolder(xpr_sint_t aIndex) const;
@@ -261,6 +264,12 @@ protected:
     xpr_bool_t  mDeferStartupViews;
     xpr_bool_t  mStartupViewBatchPending;
     xpr_bool_t  mStartupLayoutPublished;
+    xpr_bool_t  mStartupKeyboardFocusReady;
+    xpr_bool_t  mStartupKeyboardFocusPending;
+    xpr_sint_t  mStartupHistoryViewIndex;
+    xpr_bool_t  mStartupHistoryPosted;
+    xpr_uint_t  mStartupFirstContentViewMask;
+    xpr_uint_t  mStartupReadyViewMask;
 
     FileScrapPane *mFileScrapPane;
 
@@ -321,6 +330,7 @@ protected:
     afx_msg LRESULT OnCompareDirsStatus(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnDeferredStartupViews(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnDeferredStartupHistory(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT OnDeferredStartupKeyboardFocus(WPARAM wParam, LPARAM lParam);
     afx_msg void OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnLButtonDown(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnMouseMove(xpr_uint_t aFlags, CPoint aPoint);
