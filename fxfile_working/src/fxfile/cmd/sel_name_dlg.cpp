@@ -68,7 +68,9 @@ xpr_bool_t SelNameDlg::OnInitDialog(void)
     // dialog state
     const xpr_tchar_t *sSection = (mSelect == XPR_TRUE) ? XPR_STRING_LITERAL("SelName") : XPR_STRING_LITERAL("UnSelName"); 
 
-    xpr_bool_t sOnlySel = XPR_FALSE;
+    // Selecting by name starts from a clean selection unless the user
+    // explicitly unchecks this option in the current dialog.
+    xpr_bool_t sOnlySel = mSelect;
 
     mDlgState = DlgStateManager::instance().getDlgState(sSection);
     if (XPR_IS_NOT_NULL(mDlgState))

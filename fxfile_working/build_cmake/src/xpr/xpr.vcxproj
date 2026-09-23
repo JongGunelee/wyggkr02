@@ -1,0 +1,482 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3228B8F8-A433-3B33-A5EA-6051DABDD0D3}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>xpr</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Z:\bin\x64\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">xpr.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">libxprw</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Z:\bin\x64\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">xpr.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">libxprw</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Z:\bin\x64\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">xpr.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">libxprw</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Z:\bin\x64\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">xpr.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">libxprw</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR="Debug";xpr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR=\"Debug\";xpr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>Z:/obj/lib/x64/Debug/libxprw.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>Z:/bin/x64/Debug/libxprw.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR="Release";xpr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR=\"Release\";xpr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>Z:/obj/lib/x64/Release/libxprw.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>Z:/bin/x64/Release/libxprw.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR="MinSizeRel";xpr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR=\"MinSizeRel\";xpr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>Z:/obj/lib/x64/MinSizeRel/libxprw.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>Z:/bin/x64/MinSizeRel/libxprw.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR="RelWithDebInfo";xpr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;XPR_CFG_DL_EXPORT;UNICODE;_UNICODE;CMAKE_INTDIR=\"RelWithDebInfo\";xpr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>Z:\src\xpr\include;Z:\lib\iconv\include;Z:\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;legacy_stdio_definitions.lib;ws2_32.lib;Z:\lib\libxml2\lib64\libxml2.dll.a;Z:\lib\zlib\lib\zlib-x64.lib;Z:\lib\iconv\lib64\libiconv.dll.a;ws2_32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>Z:/obj/lib/x64/RelWithDebInfo/libxprw.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>Z:/bin/x64/RelWithDebInfo/libxprw.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="Z:\src\xpr\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule Z:/src/xpr/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SZ:/ -BZ:/build_cmake --check-stamp-file Z:/build_cmake/src/xpr/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Z:\build_cmake\src\xpr\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule Z:/src/xpr/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SZ:/ -BZ:/build_cmake --check-stamp-file Z:/build_cmake/src/xpr/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Z:\build_cmake\src\xpr\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule Z:/src/xpr/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SZ:/ -BZ:/build_cmake --check-stamp-file Z:/build_cmake/src/xpr/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Z:\build_cmake\src\xpr\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule Z:/src/xpr/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SZ:/ -BZ:/build_cmake --check-stamp-file Z:/build_cmake/src/xpr/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Z:\build_cmake\src\xpr\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_atomic_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_char.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_char_set.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_cstr.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_debug_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_dllmain_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_env.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_file_io_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_file_path_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_file_sys_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_guid.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_hash.cpp" />
+    <ClInclude Include="Z:\src\xpr\xpr\xpr_hash_internal.h" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_hash_knuth_multiplicative.cpp" />
+    <ClInclude Include="Z:\src\xpr\xpr\xpr_hash_knuth_multiplicative.h" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_hash_pseudo_randomizing.cpp" />
+    <ClInclude Include="Z:\src\xpr\xpr\xpr_hash_pseudo_randomizing.h" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_init.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_lazy_library_load_win.cpp" />
+    <ClInclude Include="Z:\src\xpr\xpr\xpr_lazy_library_load.h" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_memory.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_process_sync_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_process_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_rcode.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_shm_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_string.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_string_iterator.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_string_tokenizer.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_system_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_text_file_io.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_mutex_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_thread_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_time_win.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_trace_logger.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_ustring.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_ver.cpp" />
+    <ClCompile Include="Z:\src\xpr\xpr\xpr_xml.cpp" />
+    <ClCompile Include="Z:\src\xpr\mingw_compat.c" />
+    <ClInclude Include="Z:\src\xpr\include\xpr.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_atomic.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_bit.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_buffer.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_char.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_char_set.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_config.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_config_win.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_cond_variable.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_cstr.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_debug.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_define.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_dlsym.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_endian.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_env.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_file_io.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_file_path.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_file_sys.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_guid.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_hash.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_init.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_math.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_memory.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_memory_barrier.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_net_io.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_process.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_process_sync.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_rcode.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_rw_lock.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_scoped_ptr.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_shm.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_spin_lock.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_std.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_string.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_string_iterator.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_string_tokenizer.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_system.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_tchar.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_text_file_io.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_thread.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_time.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_trace_logger.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_types.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_uri.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_ustring.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_ver.h" />
+    <ClInclude Include="Z:\src\xpr\include\xpr_xml.h" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="Z:\build_cmake\ZERO_CHECK.vcxproj">
+      <Project>{F3291D7C-23C2-3BCD-96DD-29959916889E}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

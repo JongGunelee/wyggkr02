@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="Z:\build_cmake\CMakeFiles\efa467fb6e4fd42f63029b86cc9eccbd\collect_artifacts.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Z:\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Z:\build_cmake\CMakeFiles\collect_artifacts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{6F094A66-C3AC-3F64-92A0-B03B8A12C950}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

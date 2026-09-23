@@ -1380,7 +1380,7 @@ void ExplorerPane::onExplore(ExplorerCtrl &aExplorerCtrl, LPITEMIDLIST aFullPidl
         if (XPR_IS_NOT_NULL(sAddressBar) && XPR_IS_NOT_NULL(sAddressBar->m_hWnd))
         {
             if (aExplorerCtrl.isInArchiveMode() && XPR_IS_NOT_NULL(aCurPath))
-                sAddressBar->SetWindowText(aCurPath);
+                sAddressBar->showCurrentPathText(aCurPath);
             else
                 sAddressBar->showCurrentPath(aFullPidl);
         }

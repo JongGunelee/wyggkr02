@@ -1,5 +1,9 @@
 # 📁 Windows 10/11 최적화 fxfile 소스 코드 및 기술 이력 가이드
 
+> **Task 125 후속 정정:** 상단 주소 표시창의 경로 데이터는 손상되지 않았지만 `ComboBoxEx`가 이전 선택 항목을 유지해 폴더 전환·복사/이동 후 갱신·드롭다운 이벤트 때 전체 경로를 마지막 폴더명으로 다시 덮어썼다. 이제 일반 폴더와 압축 경로 모두 네이티브 선택과 내부 선택을 해제한 뒤 전체 경로 텍스트를 원자 확정하며, 주소 드롭다운 탐색도 `SetCurSel` 직후 전체 경로를 다시 확정한다. 자세한 원인·첫 스모크 실패와 자동 롤백·최종 배포 증거는 문서 끝 Task 125를 우선 참조한다.
+
+> **Task 124 후속 정정:** `이름으로 선택`의 `모두 해제하고 선택`을 열 때 체크된 기본값으로 바꿨다. `D:\WindowsApps`와 `D:\DESKTOP-VAIE004`는 현재 계정의 목록 읽기가 실제로 `Access denied`다. 이전 코드는 접근 가능 여부를 확인하기 전에 pane을 전환해 비동기 열거 실패·watcher 재시도와 경고창 반복을 유발했다. 읽을 수 없는 로컬 폴더는 기존 위치를 유지하고, 열거 도중 실패한 경우에도 취소 전 watcher/재시도 타이머를 종료한다. 자세한 증거와 한계는 문서 끝 Task 124를 우선 참조한다.
+
 > **Task 123 매뉴얼 단축키 의미 정정:** Task 122의 “전수 감사”는 실행 리소스·사용자 가속기·명령 노출·전역 후크만 검사했고, CHM 매뉴얼의 `단축키 활용` 표와 실제 `해당 명령`을 행별로 대조하지 않았다. 따라서 그 표현은 범위가 불완전했으며 Task 123이 이를 정정한다. 실제 기본 가속기 60개를 매뉴얼의 명령 ID 60개와 1:1 계약으로 고정하고, 잘못 기재된 `Ctrl+G`, `Ctrl+T`, `Ctrl+W`, 개발자/파일명 복사, Alt 방향키와 오래된 키를 바로잡았다. CHM도 이제 통합 빌드·세 배포·해시 검증의 필수 산출물이다. 상세는 문서 끝 Task 123을 우선 참조한다.
 
 > **Task 122 단축키 무결성 후속 정정:** 기본 가속기 60개/52개 명령, 사용자 저장 `fxfile-accel.dat`, 단축키 설정 UI, 본체 명령 라우팅, 런처의 `Windows 키+지정 키` 전역 후크를 분리 감사했다. 그림 보기 도킹 대상 5개 명령이 실제 메뉴·핸들러·번역에는 있으나 명령 문자열 표에서 빠져 사용자 지정 단축키 목록에 나타나지 않던 누락을 복구했다. 저장 파일의 음수/초과 개수·잘린 읽기·잘못된 플래그·빈 키/명령·중복 조합과 설정 UI의 100개 배열 초과를 거부하고, 같은 키 재지정은 기존 소유자를 원자 교체한다. 상세 구현·검증·GUI 자동화 한계는 문서 끝 Task 122를 우선 참조한다.
@@ -14,8 +18,8 @@
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 문서·정리 운영 기준: 2026-09-14 — Task 123 후속 정정 (실제 가속기와 매뉴얼 설명을 60/60 명령 ID 계약으로 고정하고 CHM을 필수 통합 배포 산출물로 관리하며 작업 종료 정리는 0.7/114.6 절차를 적용)_
-_현재 기능/배포 기준: Task 123 → 122 → 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
+_현재 문서·정리 운영 기준: 2026-09-23 — Task 125 후속 정정 (상단 주소 표시창 전체 경로 유지·드롭다운 선택 상태 분리 및 작업 종료 정리는 0.7/114.6 절차를 적용)_
+_현재 기능/배포 기준: Task 125 → 124 → 123 → 122 → 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
 _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절대경로는 당시 증거로 보존하며, 현재 실행 명령으로 복사하지 않는다._
 
@@ -89,6 +93,8 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | 일괄 이름 변경·열 말줄임·수동 열폭·창/분할 폭 연동·썸네일 캐시·간헐 무응답 | 072, 069, 056, 058~059 | `BatchRename`, `Repeat=0`, `column_ellipsis`, `OnHdnItemChanged`, `manual width`, `responsive`, `OnSize`, `viewport`, `thumbnail`, `IOCP`, `응답 없음` |
 | 자동 갱신·갱신 시 자동 정렬·외부 다운로드/복사/이동이 pane #1~#6에 늦게 보임·watcher 등록/재무장 실패 복구 | 117, 116, 115, 071, 070, 069 | `DirectoryEnumerationWorker`, `generation`, `first batch`, `dirty reconcile`, `config.refresh.no`, `config.refresh.sort`, `EventWatchFailed`, `ReadDirectoryChangesW`, `scheduleDirectoryRefresh`, `파일 변경 즉시 화면 갱신`, `OnAdvFileChangeNotify`, `endShcn`, `resortItems` |
 | 최초 활성화·폴더 진입·`[..]` 상위 복귀 직후 ↓ 없이 선택행 표시, 마우스 없이 Tab·Shift+Tab으로 pane #1~#6 직접 전환, 주소 표시줄 우회와 row 0 착지 | 121, 118, 117, 050 | `commitNavigationSelection`, `focusParentFolderRow`, `mDirectoryEnumerationParentPublished`, `sRestoredRefreshState`, `LVIS_SELECTED`, `LVIS_FOCUSED`, `SelectionMark`, `moveFocus`, `requestStartupKeyboardFocus`, `VK_TAB`, `ShiftTab`, `SysListView32` |
+| `이름으로 선택` 모두 해제 기본 체크·WindowsApps 등 접근 거부 폴더의 경고 반복/취소 지연 | 124, 117, 116 | `SelNameDlg`, `mOnlySel`, `FILE_LIST_DIRECTORY`, `ERROR_ACCESS_DENIED`, `OnDirectoryEnumeration`, `mDirectoryEnumerationDirty`, `MB_RETRYCANCEL` |
+| 상단 주소 표시창이 폴더 이동·복사/이동 갱신·상위 복귀 뒤 전체 경로 대신 마지막 폴더명만 표시 | 125, 117 | `AddressBar`, `ComboBoxEx`, `showCurrentPath`, `showCurrentPathText`, `SetCurSel(-1)`, `GetDispFullPath`, `mOldSelFullPidl` |
 | 본체 기본/사용자 지정 단축키·매뉴얼 `단축키 활용` 설명 일치·CHM 배포·단축키 설정 목록 누락·키 충돌·저장 파일 손상·런처 전역 Windows 키 조합 | 123, 122, 013 | `shortkey.htm`, `fxfile.chm`, `data-command`, `IDR_MAINFRAME ACCELERATORS`, `fxfile-accel.dat`, `AccelTable`, `AccelTableDlg`, `MAX_ACCEL`, `CommandStringTable`, `fxfile-keyhook`, `WH_KEYBOARD_LL`, `단축키 설정` |
 | 좁은 창의 선택 행을 가로 스크롤할 때 크기 이후 문자가 밀림·헤더와 선택행 열 불일치·시작 pane 부분 공개 | 115, 114, 113, 050 | `drawFinalReportSelection`, `HeaderCtrl`, `ClientToScreen`, `ScreenToClient`, `horizontal scroll`, `atomic layout publication`, `locked split`, `PartialVisibleViewCounts` |
 | 대형/특수 폴더(`00 월마감`/`0000 FxFile`) 응답 없음·폴더 아이콘 깨짐·전 파일 비동기 아이콘 | 064~066 | `CSparseImageList`, `ForceImagePresent`, `SHDefExtractIconW`, `COleMessageFilter`, `FileIconInit`, `GetFileExtIconIndex`, `TypeIconIndex`, `dummy` |
@@ -10763,3 +10769,90 @@ fxfile_working        238.05      2349  (순수 소스 및 필수 라이브러�
 - HTML 원본 수정은 배포 완료가 아니다. 컴파일된 CHM의 생성·manifest 포함·세 패키지 동일 해시까지 확인해야 사용자 환경 반영으로 판정한다.
 
 **-- Task 122의 매뉴얼 누락 감사를 명시적으로 정정하고 실제 RC 60개와 매뉴얼 60행을 command ID로 완전 결합하여 60/60 신규·47/47 전체 계약, CHM 빌드·x64/x32·세 배포·no-INI 완료 (Task 123, 2026-09-14) --**
+
+---
+
+## Task 124 — 이름 선택 기본값 및 접근 거부 폴더 탐색·취소 반복 방지 (2026-09-19)
+
+### 124.1 요청과 최종 판정
+
+- `이름으로 선택`에서 `모두 해제하고 선택`을 기본 체크하고, 읽기 권한이 없는 폴더 진입 때 경고창이 반복되며 취소가 늦는 문제를 기존 코드·설정 보호 아래 해결해 달라는 요청이다.
+- 두 현상은 버그다. 첫 번째는 `SelNameDlg::OnInitDialog()`의 지역 기본값이 항상 `XPR_FALSE`였다. 두 번째는 접근 거부를 pane 전환 전에 확인하지 않아 비동기 열거 완료 실패 뒤 watcher 변경 이벤트와 재시도가 같은 읽기 불가 위치를 다시 탐색할 수 있었다.
+
+### 124.2 관측 증거와 직접 원인
+
+- 현재 계정에서 `D:\WindowsApps`와 `D:\DESKTOP-VAIE004`는 모두 폴더로 존재하지만 목록 열기와 `Get-ChildItem`이 `Access denied`다. 소유권 탈취·ACL 변경은 하지 않았다.
+- 기존 `ExplorerCtrl::exploreItem()`은 Shell 폴더 바인딩 후 비동기 worker를 시작하고 `preEnumeration()`으로 현재 위치를 교체했다. worker가 목록 열기에 실패하면 `OnDirectoryEnumeration()`이 `postEnumeration()`을 수행하고 Retry/Cancel 경고를 열었다. 그 전후로 watcher의 dirty 플래그가 다시 갱신을 예약하는 경로가 있어 취소를 단일 종료로 보장하지 못했다.
+- 실제 화면의 `FxFile 폴더 갱신 실패`는 권한 문제를 알리지 않아 사용자가 단순 지연이나 취소 불량으로 오해하기 쉬웠다.
+
+### 124.3 구현/해결 방법
+
+- 이름 선택 대화상자만 `mSelect`에 따라 `모두 해제하고 선택` 기본값을 `True`로 표시한다. 사용자가 그 대화상자에서 체크를 해제하면 기존처럼 이번 명령에 한해 기존 선택을 유지한다. `이름으로 해제` 대화상자에는 영향을 주지 않는다.
+- 일반 로컬 고정 디스크 폴더는 pane을 교체하기 전에 `CreateFile(FILE_LIST_DIRECTORY, FILE_FLAG_BACKUP_SEMANTICS)`로 현재 사용자 토큰의 목록 읽기 가능성을 확인한다. `ERROR_ACCESS_DENIED`이면 기존 pane을 유지하고 접근 거부를 한 번 안내한다. 관리자 권한 자동 부여나 WindowsApps 보호 경계 우회는 하지 않는다.
+- 검사 후 권한이 바뀌거나 특수 provider가 나중에 실패하는 경우를 위해 비동기 완료 실패 시 dirty watcher 재갱신 예약을 건너뛰고, 모든 watcher와 재시도 타이머를 해제한 뒤 Retry/Cancel 선택을 받는다. 취소는 그 실패 건의 자동 재시도에 대해 종료 상태이며, 사용자가 다시 수동 탐색하는 것은 막지 않는다.
+
+### 124.4 실패 사례와 복구 과정
+
+- 첫 수정 직후 Task 117 정적 회귀의 `열거 중 변경은 완료 후 갱신` 계약이 실패했다. 정상 열거에서는 기존 정합성 갱신이 살아 있어야 하므로, 조건을 `sSucceeded` 블록 안의 기존 dirty 검사로 분리했다. 이후 Task 117 26/26 및 Task 124 계약이 다시 통과했다.
+- 보호 폴더의 권한은 테스트를 위해 수정하지 않았다. 접근이 허용된 다른 로컬 폴더는 기존 Shell/worker 열거와 watcher를 그대로 사용한다.
+
+### 124.5 정적·동적 검증 및 최종 해시/manifest
+
+- 신규 `tools\test_task124_selection_and_denied_folder_contracts.ps1` 6/6, 기존 Task 117 26/26·Task 121 14/14, 전체 정적 스크립트 48/48 PASS다. 현재 Windows 계정에서 두 대상의 실제 Access Denied를 읽기 전용으로 재현했다.
+- PASS preflight: `__BUILD_TEMP_BACKUP__\preflight_20260919_211757_946\preflight_report.json`; 통합 x64/x32 Release 빌드·CHM·세 배포·no-INI smoke 성공 manifest: `__BUILD_TEMP_BACKUP__\unified_deploy_20260919_211901_114\deployment_manifest.json`. 두 아키텍처 모두 저장된 여섯 pane ready 6/6, 정상 종료 0, 루트 ini/.fxfile 생성 없음이다.
+- 설치본 x64/run_x64 `fxfile.exe` SHA-256 `D8F51C9DCB9AF8513F9004E38DCB5D77E29F179B3BDE3CAD7C5B51665D3ACE36`, run_x32 `F7C4CECB0DB59E9F17BFFF85C46F647A7E9D7194555B16BFD668E836EA9ED08F`. 변경 전 복구본은 `__BUILD_TEMP_BACKUP__\task124_before_20260919`이다.
+- 최종 `VerifyOnly`는 설치 x64/run_x64/run_x32의 실행 파일·canonical 설정 10개를 다시 확인하고 Exit 0이었다. §0.7.3의 파일 기반 Audit→Delete로 완료된 `build_cmake`/`build_cmake_x32`/`obj`, 중간 CHM, Task 124 빌드 로그와 과거 deploy/preflight 각 2세대 등 정확한 9개 명시 대상을 제거했다. 최신 PASS preflight·성공 manifest·Task 124 복구본·`bin`·세 운영 패키지는 보호했다.
+
+### 124.6 교훈과 재발 방지
+
+- 탐색 대상 폴더의 읽기 권한은 기존 pane의 경로·선택·history를 교체하기 전에 확인해야 한다. 접근 실패를 열거 실패 후 Retry 대화상자에서만 처리하면 화면 상태와 watcher가 이미 실패 경로를 소유한다.
+- 비동기 작업의 `Cancel`은 대화상자만 닫는 것이 아니라 해당 작업이 남긴 watcher·타이머·dirty 이벤트의 재진입을 막아야 한다. 정상 열거에서의 변경 이벤트 복구는 보존해야 한다.
+- 정적 계약과 no-INI smoke는 구조·배포 확인이며 사용자의 특정 Shell provider/백신 부하 아래 실시간 GUI 취소 시간을 정량 보증하지 않는다. WindowsApps의 권한이 바뀌거나 읽기는 허용되지만 열거 도중 실패하는 다른 provider는 후속 실기에서 별도 추적한다.
+
+---
+
+## Task 125 — 상단 주소 표시창 전체 경로가 마지막 폴더명으로 축약되는 상태 경합 제거 (2026-09-23)
+
+### 125.1 요청과 판정
+
+- pane 이동, 하위 폴더 진입, 복사·이동 후 재진입, 상위 폴더 복귀를 반복하면 상단 주소 표시창이 전체 경로 대신 `01 사전품의` 같은 마지막 폴더명만 표시되는 현상을 기존 코드와 사용자 설정을 보호하면서 해결하는 요청이다.
+- 하단 `PathBar`와 `ExplorerCtrl`의 현재 PIDL/실제 경로는 계속 전체 경로를 보유했다. 데이터 손상이나 history 손실이 아니라 상단 `ComboBoxEx`의 **표시 상태만 짧은 목록 항목명으로 되돌아가는 버그**로 판정했다.
+
+### 125.2 근본 원인과 기존 구현의 실패 순서
+
+- Task 117의 시작 최적화에서 `AddressBar::showCurrentPath()`는 무거운 드롭다운 트리 열거 없이 편집 자식에 `GetDispFullPath()` 결과를 직접 썼다. 그러나 멤버 `mCurSel`만 `-1`로 바꾸고 네이티브 콤보의 실제 선택은 해제하지 않았다.
+- `ComboBoxEx`는 실제 선택 항목이 남아 있으면 포커스 복원, 드롭다운 통지 또는 후속 갱신 때 그 항목 텍스트를 편집 자식으로 다시 복사한다. `config.address_full_path=0`인 기본 드롭다운 항목 텍스트는 마지막 폴더명이라 전체 경로가 간헐적으로 축약됐다.
+- 주소 드롭다운 탐색은 더 명확한 역순이었다. observer가 새 폴더를 열면서 `showCurrentPath()`로 전체 경로를 쓴 뒤, `exploreItem()`이 마지막에 `SetCurSel(sCurSel)`을 실행해 짧은 항목명으로 다시 덮어썼다.
+- 압축 경로는 `ExplorerPane`에서 `SetWindowText()`를 직접 호출해 같은 선택 상태 보호 계약을 우회했다.
+
+### 125.3 무결성 보증 리팩터링
+
+- `AddressBar::showCurrentPathText()`를 전체 경로 표시의 단일 확정 지점으로 추가했다. 이 함수는 `SetCurSel(-1)`과 `mCurSel=-1`로 네이티브/내부 선택을 함께 끊은 뒤 편집 자식에 경로를 기록한다.
+- 일반 파일 시스템 경로는 기존처럼 전체 PIDL을 `GetDispFullPath()`로 변환한 뒤 새 확정 함수를 사용하며 `mOldSelFullPidl` history 복제 계약은 보존한다.
+- 드롭다운에서 선택해 탐색한 경우에는 기존 `SetCurSel()`의 탐색 의미를 유지하되 즉시 `showCurrentPath()`를 호출해 최종 표시를 전체 경로로 되돌리고 선택 상태를 분리한다.
+- 압축 경로도 직접 `SetWindowText()` 대신 동일한 `showCurrentPathText()`를 사용한다. 폴더 열거, watcher, 복사·이동 엔진, pane 경로 잠금, 시작 지연 최적화는 변경하지 않았다.
+
+### 125.4 회귀시험과 실패 사례
+
+- 신규 `tools\test_task125_address_bar_full_path_contracts.ps1`은 전체 PIDL 기반 문자열, 네이티브/멤버 선택 해제 순서, 드롭다운 `SetCurSel` 뒤 전체 경로 재확정, 일반/압축 경로 공통 계약, `SHGDN_INFOLDER` leaf-only 폴백 금지를 검사한다.
+- 전체 정적 계약 **43/43 PASS, 실패 0**이다. 현재 도구 폴더의 실제 `test_task*.ps1` 개수를 기준으로 했으며 과거 Task의 당시 개수와 혼동하지 않는다.
+- 첫 `BuildDeployVerify`는 x64/x32 컴파일과 CHM, 배포 전 검증까지 성공했으나 x32 no-INI 정상 종료 확인에서 일시적으로 exit `-1`을 받아 실패했다. 도구는 세 배포본을 자동 롤백했고 manifest 상태는 `FailedAndRolledBack`, 원인은 `x32 smoke process exited with code -1`, TEMP는 제거됐다. 이 실패를 성공으로 재사용하지 않았다.
+- 동일 빌드 산출물로 프로세스 0을 재확인한 뒤 `DeployVerify`를 다시 수행했으며 x64/x32 모두 저장 pane 6/6 준비·정상 종료를 통과했다. 따라서 첫 실패는 재현되지 않은 스모크 종료 변동으로 기록하되 숨기지 않는다.
+- Windows Computer Use의 네이티브 앱 목록/실행 API가 이 세션에서 제공되지 않아 실제 화면을 자동 클릭하는 별도 시각 시험은 수행하지 못했다. 대신 양 아키텍처 실제 실행·6/6 준비·정상 종료와 표시 상태 정적 계약을 완료했으며, 시각 자동화 미수행을 전체 경로 런타임 실기 완료로 과대 보고하지 않는다.
+
+### 125.5 빌드·배포·검증 증거
+
+- PASS preflight: `__BUILD_TEMP_BACKUP__\preflight_20260923_123155_329\preflight_report.json`; 필수 실패 0, x64/x32 configure 성공, D: Task TEMP probe/정리와 환경 복원 성공이다.
+- 첫 성공 배포 뒤 실제 앱 실행 시도로 설치 정본의 창 상태 설정 2개가 갱신되어 마지막 VerifyOnly가 run_x64 설정 차이를 정확히 검출했다. 설치 정본의 최신 사용자 상태를 기준으로 세 패키지를 다시 동기화했으며 최종 성공 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20260923_125911_384\deployment_manifest.json`이다.
+- x64 설치본/run_x64/bin SHA-256은 `0CA46DABB0709E29CE655B6C21364E7B90819A5270F8F9A3A7A2F7BA1E4B01DA`, x32 run/bin은 `4308D34746B5450DE129CF6D4F6946B67254BF674E8095B0A62BE9146C15C955`로 각각 동일하다.
+- 세 패키지 canonical 설정 10개·언어·아키텍처·루트 `fxfile.ini`/`.fxfile` 부재가 통과했다. 최종 재동기화 smoke는 x64 skeleton 10.53초/ready 13.66초, x32 skeleton 7.58초/ready 11.94초이며 둘 다 6/6이다. 이 시간은 현재 PC 표본이며 경로 표시 수정의 성능 상한 주장은 아니다.
+- 변경 전 복구본은 `__BUILD_TEMP_BACKUP__\task125_before_20260923`이다. Git 저장소가 아니므로 소스 스냅샷을 복구 근거로 사용한다.
+- §0.7.3 파일 기반 Audit/Delete로 실패 롤백 1세대, Task 124 구 preflight/성공 배포, x32 빌드 캐시, `obj`, 중간 CHM을 정리했다. x64 `build_cmake`는 백그라운드 프로세스가 `cmake_pch.pch` 핸들을 장시간 유지해 재시도 후에도 `being used by another process`였으므로 핸들 강제 폐쇄 없이 보존했다. 이는 재생성 가능한 캐시 1건의 정리 미완료이며 소스·배포 무결성과 무관하다. 다음 앱/백신 검사 종료 또는 재부팅 후 §0.7.3 절차로 정확한 해당 폴더만 재감사한다.
+
+### 125.6 교훈과 재발 방지
+
+- editable 콤보의 화면 텍스트와 목록 선택은 별도 상태다. 멤버 변수만 초기화해서는 네이티브 컨트롤이 나중에 선택 항목 텍스트를 복원하는 것을 막지 못한다.
+- observer 콜백 안에서 화면을 갱신한 뒤 바깥 호출자가 `SetCurSel()`을 실행하는 순서도 최종 표시를 다시 훼손할 수 있다. 최종 사용자 표시 계약은 마지막 네이티브 선택 변경 이후 한 곳에서 확정해야 한다.
+- 배포 스모크가 한 번 실패하면 빌드 성공만으로 완료 처리하지 않는다. 자동 롤백을 확인하고 동일 산출물 재검증 또는 원인 수정 뒤 새 성공 manifest와 마지막 VerifyOnly를 남긴다.
+
+**-- 상단 주소 표시창의 네이티브 선택 잔존과 드롭다운 역순 덮어쓰기를 제거하고 일반/압축 경로를 단일 전체 경로 확정 계약으로 통합하여 43/43 정적 계약·x64/x32 빌드·세 배포·no-INI 6/6 완료 (Task 125, 2026-09-23) --**

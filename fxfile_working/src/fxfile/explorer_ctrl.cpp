@@ -3815,6 +3815,33 @@ xpr_bool_t ExplorerCtrl::exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aUpdateB
     TraceStartup(XPR_STRING_LITERAL("ExplorerCtrl.explore.begin"));
     XPR_ASSERT(aFullPidl != XPR_NULL);
 
+    // An inaccessible fixed-volume directory must not replace the current
+    // pane before the detached enumerator discovers ACCESS_DENIED. Otherwise
+    // completion, watcher recovery and Retry/Cancel all target that same
+    // unreadable directory and can repeatedly reopen the warning dialog.
+    xpr_tchar_t sAccessPath[XPR_MAX_PATH + 1] = {0};
+    if (::SHGetPathFromIDList(aFullPidl, sAccessPath) &&
+        XPR_IS_TRUE(isAsyncLocalDirectoryEligible(sAccessPath)))
+    {
+        HANDLE sDirectory = ::CreateFile(sAccessPath, FILE_LIST_DIRECTORY,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            XPR_NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, XPR_NULL);
+        if (sDirectory == INVALID_HANDLE_VALUE)
+        {
+            if (::GetLastError() == ERROR_ACCESS_DENIED)
+            {
+                if (XPR_IS_NOT_NULL(mTvItemData) && ::IsWindow(m_hWnd))
+                    ::MessageBox(m_hWnd,
+                        XPR_STRING_LITERAL("이 폴더의 목록을 읽을 권한이 없습니다.\n기존 위치를 유지합니다."),
+                        XPR_STRING_LITERAL("FxFile 폴더 접근 거부"),
+                        MB_OK | MB_ICONWARNING);
+                return XPR_FALSE;
+            }
+        }
+        else
+            ::CloseHandle(sDirectory);
+    }
+
     xpr_bool_t    sResult            = XPR_FALSE;
     LPSHELLFOLDER sShellFolder       = XPR_NULL;
     LPSHELLFOLDER sParentShellFolder = XPR_NULL;
@@ -4122,8 +4149,12 @@ LRESULT ExplorerCtrl::OnDirectoryEnumeration(WPARAM wParam, LPARAM lParam)
     // retry as a non-empty folder.
     if (XPR_IS_NOT_NULL(gFrame))
         gFrame->requestStartupKeyboardFocus();
-    if (XPR_IS_TRUE(mDirectoryEnumerationDirty))
-        scheduleDirectoryRefresh();
+    if (XPR_IS_TRUE(sSucceeded))
+    {
+        if (XPR_IS_TRUE(mDirectoryEnumerationDirty))
+            scheduleDirectoryRefresh();
+    }
+    mDirectoryEnumerationDirty = XPR_FALSE;
     const xpr_uint64_t sFinished = ::GetTickCount64();
     const xpr_uint64_t sFirstBatchMilliseconds =
         mDirectoryEnumerationFirstBatchTick >= mDirectoryEnumerationStartedTick ?
@@ -4142,6 +4173,20 @@ LRESULT ExplorerCtrl::OnDirectoryEnumeration(WPARAM wParam, LPARAM lParam)
 
     if (XPR_IS_FALSE(sSucceeded) && XPR_IS_FALSE(mDestroying))
     {
+        // A failed folder cannot be watched as if it had a valid published
+        // listing. Retire all watches and queued reconciliation before the
+        // modal choice so Cancel cannot be followed by another auto-retry.
+        AdvFileChangeWatcher::instance().unregisterWatch(mAdvWatchId);
+        mAdvWatchId = AdvFileChangeWatcher::InvalidAdvWatchId;
+        FileChangeWatcher::instance().unregisterWatch(mWatchId);
+        mWatchId = FileChangeWatcher::InvalidWatchId;
+        ShellChangeNotify::instance().unregisterWatch(mShcnId);
+        mShcnId = 0;
+        KillTimer(TM_ID_NOTIFY_RECONCILE);
+        mDeferredDirectoryRefresh = XPR_FALSE;
+        mDeferredDirectoryRefreshPath.clear();
+        mDeferredDirectoryRefreshRetryCount = 0;
+        mDeferredDirectoryRefreshGeneration = 0;
         const xpr_sint_t sChoice = ::MessageBox(
             m_hWnd,
             XPR_STRING_LITERAL("폴더 목록을 불러오지 못했습니다.\n\n현재 위치를 다시 불러오시겠습니까?"),
@@ -4155,6 +4200,8 @@ LRESULT ExplorerCtrl::OnDirectoryEnumeration(WPARAM wParam, LPARAM lParam)
             if (XPR_IS_NOT_NULL(sRetryPidl))
                 explore(sRetryPidl, mDirectoryEnumerationUpdateBuddy);
         }
+        // Cancel is terminal for this failed enumeration. Never schedule a
+        // fresh reconciliation from a dirty watcher event left by the scan.
     }
 
     return 0;

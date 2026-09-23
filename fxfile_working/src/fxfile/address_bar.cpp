@@ -620,18 +620,38 @@ xpr_bool_t AddressBar::showCurrentPath(LPITEMIDLIST aFullPidl)
     xpr_tchar_t sFullPath[XPR_MAX_PATH * 2 + 1] = {0};
     GetDispFullPath(aFullPidl, sFullPath);
 
-    // ComboBoxEx owns a separate edit control.  Updating that control keeps
-    // the visible address identical without forcing construction of all
-    // Desktop/My Computer items which are invisible until the arrow is used.
-    CEdit *sEditCtrl = GetEditCtrl();
-    if (XPR_IS_NOT_NULL(sEditCtrl) && XPR_IS_NOT_NULL(sEditCtrl->m_hWnd))
-        sEditCtrl->SetWindowText(sFullPath);
-    else
-        SetWindowText(sFullPath);
+    if (showCurrentPathText(sFullPath) == XPR_FALSE)
+        return XPR_FALSE;
 
     COM_FREE(mOldSelFullPidl);
     mOldSelFullPidl = fxfile::base::Pidl::clone(aFullPidl);
+
+    return XPR_TRUE;
+}
+
+xpr_bool_t AddressBar::showCurrentPathText(const xpr_tchar_t *aFullPath)
+{
+    if (XPR_IS_NULL(aFullPath))
+        return XPR_FALSE;
+
+    // ComboBoxEx owns a separate edit control.  Updating that control keeps
+    // the visible address identical without forcing construction of all
+    // Desktop/My Computer items which are invisible until the arrow is used.
+    //
+    // The native ComboBoxEx also keeps its own selected list item.  If that
+    // selection is left active it can later copy the item's short label back
+    // into the edit control (for example after a folder change, a drop-down
+    // notification, or focus restoration).  Clear the native selection and
+    // the mirrored member before committing the canonical path text so those
+    // later events cannot replace the full path with only the leaf name.
+    SetCurSel(-1);
     mCurSel = -1;
+
+    CEdit *sEditCtrl = GetEditCtrl();
+    if (XPR_IS_NOT_NULL(sEditCtrl) && XPR_IS_NOT_NULL(sEditCtrl->m_hWnd))
+        sEditCtrl->SetWindowText(aFullPath);
+    else
+        SetWindowText(aFullPath);
 
     return XPR_TRUE;
 }
@@ -788,7 +808,14 @@ xpr_bool_t AddressBar::exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aNotifyBud
     }
 
     if (sResult == XPR_TRUE)
+    {
         SetCurSel(sCurSel);
+
+        // SetCurSel() makes ComboBoxEx display the item's label.  The label
+        // is intentionally short when address_full_path is disabled, but the
+        // address edit itself must always retain the canonical full path.
+        showCurrentPath(sCbItemData->mFullPidl);
+    }
 
     return sResult;
 }

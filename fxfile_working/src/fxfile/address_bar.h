@@ -35,6 +35,7 @@ public:
     // four-pane layout became usable.  The full tree is initialized lazily by
     // OnDropdown() or by an explicit address-bar command.
     xpr_bool_t showCurrentPath(LPITEMIDLIST aFullPidl);
+    xpr_bool_t showCurrentPathText(const xpr_tchar_t *aFullPath);
 
     void getFullPath(xpr_sint_t aIndex, xpr::string &aFullPath) const;
 
