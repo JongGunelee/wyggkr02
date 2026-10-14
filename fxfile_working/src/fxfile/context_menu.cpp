@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "context_menu.h"
+#include "file_operation_confirmation.h"
 #include "option.h"
 #include "file_scrap.h"
 #include "archive_engine.h"
@@ -62,9 +63,15 @@ xpr_bool_t ContextMenu::init(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST *aPidls, 
     if (XPR_IS_NULL(aShellFolder) || XPR_IS_NULL(aPidls) || aCount == 0)
         return XPR_FALSE;
 
+    // Keep shell items alive across mandatory modal consent and watcher updates.
     mShellFolder = aShellFolder;
-    mPidls = aPidls;
+    mShellFolder->AddRef();
+    mPidls = new LPCITEMIDLIST[aCount]();
     mCount = aCount;
+    for (UINT i = 0; i < aCount; ++i) {
+        mPidls[i] = fxfile::base::Pidl::clone(aPidls[i]);
+        if (!mPidls[i]) return XPR_FALSE;
+    }
 
     HRESULT sComResult;
     sComResult = mShellFolder->GetUIObjectOf(mHwnd, mCount, (LPCITEMIDLIST *)mPidls, IID_IContextMenu, XPR_NULL, (LPVOID *)&mContextMenu);
@@ -86,6 +93,7 @@ xpr_bool_t ContextMenu::init(LPSHELLFOLDER aShellFolder)
         return XPR_FALSE;
 
     mShellFolder = aShellFolder;
+    mShellFolder->AddRef();
 
     HRESULT sComResult;
     sComResult = mShellFolder->CreateViewObject(mHwnd, IID_IContextMenu, (LPVOID*)&mContextMenu);
@@ -403,6 +411,10 @@ xpr_bool_t ContextMenu::invokeCommand(xpr_uint_t aId)
     xpr_tchar_t sVerb[0xff] = {0};
     getCommandVerb(aId, sVerb, 0xfe);
 
+    if (!FileOperationConfirmation::confirmShellVerb(mHwnd, sVerb,
+        mShellFolder, mPidls, mCount))
+        return XPR_FALSE;
+
     xpr_bool_t sComResult = XPR_FALSE;
 
     if (XPR_IS_RANGE(0, aId, 0x7FFF - 1))
@@ -437,6 +449,10 @@ xpr_bool_t ContextMenu::invokeCommand(xpr_uint_t aId)
 xpr_bool_t ContextMenu::invokeCommand(const xpr_tchar_t *aVerb)
 {
     if (XPR_IS_NULL(aVerb))
+        return XPR_FALSE;
+
+    if (!FileOperationConfirmation::confirmShellVerb(mHwnd, aVerb,
+        mShellFolder, mPidls, mCount))
         return XPR_FALSE;
 
     xpr_char_t sVerb[0xff] = {0};
@@ -497,6 +513,12 @@ void ContextMenu::destroy(void)
     COM_RELEASE(mContextMenu);
     COM_RELEASE(mContextMenu2);
     COM_RELEASE(mContextMenu3);
+    for (UINT i = 0; i < mCount; ++i)
+        if (mPidls && mPidls[i]) ::ILFree(const_cast<LPITEMIDLIST>(mPidls[i]));
+    delete[] mPidls;
+    mPidls = NULL;
+    mCount = 0;
+    COM_RELEASE(mShellFolder);
 }
 
 xpr_bool_t ContextMenu::trackItemMenu(LPSHELLFOLDER  aShellFolder,

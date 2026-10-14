@@ -67,6 +67,7 @@ public:
         CRect           mWindowRect;
         xpr_sint_t      mWindowStatus;
         xpr_bool_t      mWindowPlacementLocked;
+        xpr_bool_t      mViewAutoEqualize;
         xpr_bool_t      mViewPathLocked;
         xpr_tchar_t     mLockedViewPath[MAX_VIEW_SPLIT][XPR_MAX_PATH * 2 + 1];
         xpr_bool_t      mViewSplitLocked;

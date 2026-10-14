@@ -8,6 +8,7 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "adaptive_file_operation.h"
 #include "modern_shell_file_operation.h"
 #include "file_operation_lock_store.h"
@@ -662,13 +663,21 @@ void FileScrap::doOperation(xpr_uint_t aGroupId, xpr_sint_t aMode, const xpr_tch
     //    sFlags |= FOF_MULTIDESTFILES;
 
     xpr_tchar_t *sSource = getItemFileOpPath(aGroupId);
+    const std::vector<std::wstring> sPaths = FileOperationConfirmation::paths(sSource);
+    std::wstring sSourceSnapshot;
+    for (const auto& sPath : sPaths) { sSourceSnapshot += sPath; sSourceSnapshot.push_back(L'\0'); }
+    sSourceSnapshot.push_back(L'\0');
+    const std::wstring sTargetSnapshot = aTarget ? aTarget : L"";
 
     SHFILEOPSTRUCT sShFileOpStruct = {0};
     sShFileOpStruct.hwnd   = XPR_NULL;
     sShFileOpStruct.wFunc  = sFunc;
     sShFileOpStruct.fFlags = sFlags;
-    sShFileOpStruct.pFrom  = sSource;
-    sShFileOpStruct.pTo    = aTarget;
+    sShFileOpStruct.pFrom  = sSourceSnapshot.c_str();
+    sShFileOpStruct.pTo    = sTargetSnapshot.empty() ? NULL : sTargetSnapshot.c_str();
+
+    sShFileOpStruct.hwnd = AfxGetMainWnd()->GetSafeHwnd();
+    if (!FileOperationConfirmation::confirm(&sShFileOpStruct)) return;
 
     std::wstring sBlockedPath;
     bool sSucceeded = false;

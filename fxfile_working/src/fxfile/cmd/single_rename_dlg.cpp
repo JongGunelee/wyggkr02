@@ -60,7 +60,8 @@ xpr_bool_t SingleRenameDlg::OnInitDialog(void)
 
     const xpr_tchar_t *sEditName = mRenameHelper->getEditName();
     xpr_sint_t sIconIndex = mRenameHelper->getIconIndex();
-    HICON sIcon = SingletonManager::get<ImgListManager>().mSysImgList32.ExtractIcon(sIconIndex);
+    HICON sIcon = (sIconIndex >= 0) ?
+        SingletonManager::get<ImgListManager>().mSysImgList16.ExtractIcon(sIconIndex) : XPR_NULL;
 
     xpr_tchar_t sDesc[XPR_MAX_PATH * 2] = {0};
     _stprintf(sDesc, gApp.loadFormatString(XPR_STRING_LITERAL("popup.rename.label.top_desc"), XPR_STRING_LITERAL("%s")), sEditName);
@@ -81,7 +82,8 @@ xpr_bool_t SingleRenameDlg::OnInitDialog(void)
     return XPR_TRUE;
 }
 
-void SingleRenameDlg::setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aAttributes)
+void SingleRenameDlg::setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aAttributes,
+                              const xpr_tchar_t *aCachedPath, xpr_sint_t aCachedIconIndex)
 {
     xpr_bool_t sCtrlKey = GetAsyncKeyState(VK_CONTROL) < 0;
 
@@ -96,7 +98,7 @@ void SingleRenameDlg::setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, L
     }
 
     mRenameHelper->setRenameStyle(sRenameStyle);
-    mRenameHelper->setItem(aShellFolder, aPidl, aFullPidl, aAttributes);
+    mRenameHelper->setItem(aShellFolder, aPidl, aFullPidl, aAttributes, aCachedPath, aCachedIconIndex);
 }
 
 const xpr_tchar_t *SingleRenameDlg::getNewName(void)

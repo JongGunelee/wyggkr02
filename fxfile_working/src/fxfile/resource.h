@@ -227,6 +227,9 @@
 #define IDD_ABOUT_TAB_CREDITS           442
 #define IDD_CFG_APPEARANCE_TAB          443
 #define IDD_INFO_COPYABLE               444
+#define IDD_FILE_OPERATION_CONFIRM      450
+#define IDC_FILE_CONFIRM_SUMMARY        1980
+#define IDC_FILE_CONFIRM_DETAILS        1981
 #define IDD_CALCULATOR                  445
 #define IDD_FILE_INTEGRITY_MONITOR      446
 #define IDD_FILE_LOCK_MANAGER           447
@@ -1767,6 +1770,7 @@
 #define ID_TOOL_VIEW_SPLIT_LOCK         34019
 #define ID_TOOL_CLOCK_LOCK              34020
 #define ID_TOOL_SHOW_CLOCK              34021
+#define ID_TOOL_AUTO_EQUALIZE_VIEWS     34022
 #define ID_WINDOW_NEXT                  35000
 #define ID_WINDOW_PREV                  35001
 #define ID_WINDOW_SPLIT_SINGLE          35002
@@ -1952,9 +1956,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        450
+#define _APS_NEXT_RESOURCE_VALUE        451
 #define _APS_NEXT_COMMAND_VALUE         50015
-#define _APS_NEXT_CONTROL_VALUE         1980
+#define _APS_NEXT_CONTROL_VALUE         1982
 #define _APS_NEXT_SYMED_VALUE           126
 #endif
 #endif

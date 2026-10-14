@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include <sstream>
 #include "archive_clipboard.h"
 #include "archive_engine.h"
@@ -138,7 +139,8 @@ void ClipboardFileCutCommand::execute(CommandContext &aContext)
             LPDATAOBJECT sDataObject = XPR_NULL;
             if (sExplorerCtrl->getSelDataObject(&sDataObject, SFGAO_CANMOVE) == XPR_TRUE)
             {
-                SetClipboard(sDataObject, DROPEFFECT_MOVE, sClipFormat);
+                if (SetClipboard(sDataObject, DROPEFFECT_MOVE, sClipFormat))
+                    sExplorerCtrl->updateClipboardCutState(sDataObject, true);
                 COM_RELEASE(sDataObject);
             }
 
@@ -240,7 +242,8 @@ void ClipboardFileCopyCommand::execute(CommandContext &aContext)
             LPDATAOBJECT sDataObject = XPR_NULL;
             if (sExplorerCtrl->getSelDataObject(&sDataObject, SFGAO_CANCOPY) == XPR_TRUE)
             {
-                SetClipboard(sDataObject, DROPEFFECT_COPY, sClipFormat);
+                if (SetClipboard(sDataObject, DROPEFFECT_COPY, sClipFormat))
+                    sExplorerCtrl->updateClipboardCutState(sDataObject, false);
                 COM_RELEASE(sDataObject);
             }
 
@@ -592,6 +595,13 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
 
             if (_tcslen(sTargetDirBuf) > 0 && !sItems.empty())
             {
+                const std::wstring sConfirmedArchive = sArchivePath;
+                const std::vector<std::wstring> sConfirmedItems = sItems;
+                std::vector<std::wstring> sSources;
+                for (const auto& sItem : sConfirmedItems)
+                    sSources.push_back(sConfirmedArchive + L" :: " + sItem);
+                if (!FileOperationConfirmation::confirm(sExplorerCtrl->GetSafeHwnd(),
+                    FO_COPY, sSources, {sTargetDirBuf})) return;
                 archive::ArchiveProgressDialog sProgressDlg;
                 sProgressDlg.create(sExplorerCtrl->GetSafeHwnd(), L"7-Zip 압축 풀기", L"압축 파일에서 항목을 추출하는 중입니다...");
                 auto sCallback = [&sProgressDlg](int aPercent, const std::wstring &aFile) -> bool {
@@ -601,7 +611,7 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
                     return true;
                 };
 
-                bool sOk = archive::ArchiveEngine::extractItems(sArchivePath, sItems, sTargetDirBuf, sCallback);
+                bool sOk = archive::ArchiveEngine::extractItems(sConfirmedArchive, sConfirmedItems, sTargetDirBuf, sCallback);
                 sProgressDlg.close();
 
                 if (sOk)
@@ -646,6 +656,9 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
             {
                 std::wstring sArchivePath = sExplorerCtrl->getCurArchivePath();
                 std::wstring sSubDir = sExplorerCtrl->getCurArchiveSubDir();
+
+                if (!FileOperationConfirmation::confirm(sExplorerCtrl->GetSafeHwnd(),
+                    FO_COPY, sSrcFiles, {sArchivePath + L" :: " + sSubDir})) return;
 
                 archive::ArchiveProgressDialog sProgressDlg;
                 sProgressDlg.create(sExplorerCtrl->GetSafeHwnd(), L"7-Zip 압축 추가", L"압축 파일에 항목을 추가하는 중입니다...");

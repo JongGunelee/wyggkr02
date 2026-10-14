@@ -9,6 +9,8 @@
 
 #include "stdafx.h"
 #include "main_frame.h"
+#include "equal_split_geometry.h"
+#include "window_layout_batch.h"
 
 #include "file_scrap.h"
 #include "bookmark.h"
@@ -127,6 +129,7 @@ MainFrame::MainFrame(void)
     , mAccelCount(0)
     , mCommandExecutor(XPR_NULL)
     , mPreviewMode(XPR_FALSE)
+    , mPendingAutomaticPaneFit(XPR_FALSE)
     , mDeferStartupViews(XPR_TRUE)
     , mStartupViewBatchPending(XPR_FALSE)
     , mStartupLayoutPublished(XPR_FALSE)
@@ -387,6 +390,14 @@ xpr_bool_t MainFrame::OnCreateClient(LPCREATESTRUCT aCreateStruct, CCreateContex
     ::SetProp(m_hWnd, kStartupLayoutSkeletonProperty, (HANDLE)(INT_PTR)1);
     xpr_sint_t sRowCount    = gOpt->mMain.mViewSplitRowCount;
     xpr_sint_t sColumnCount = gOpt->mMain.mViewSplitColumnCount;
+
+    // Legacy conflicting checks: preserve the explicitly locked snapshot.
+    // Choosing automatic fitting later releases this split lock atomically.
+    if (XPR_IS_TRUE(gOpt->mMain.mViewSplitLocked))
+    {
+        gOpt->mMain.mViewAutoEqualize = XPR_FALSE;
+        mPendingAutomaticPaneFit = XPR_FALSE;
+    }
 
     // A split lock is a separate snapshot. The ordinary split values remain
     // free to change while FxFile is running, and are used again immediately
@@ -1009,11 +1020,15 @@ xpr_bool_t MainFrame::isViewSplitLocked(void) const
 
 void MainFrame::setViewSplitLocked(xpr_bool_t aLocked)
 {
-    if (gOpt->mMain.mViewSplitLocked == aLocked)
+    const xpr_bool_t sDisableAutomaticFit = XPR_IS_TRUE(aLocked) &&
+                                            XPR_IS_TRUE(gOpt->mMain.mViewAutoEqualize);
+    if (gOpt->mMain.mViewSplitLocked == aLocked && XPR_IS_FALSE(sDisableAutomaticFit))
         return;
 
     if (XPR_IS_TRUE(aLocked))
     {
+        gOpt->mMain.mViewAutoEqualize = XPR_FALSE;
+        mPendingAutomaticPaneFit = XPR_FALSE;
         mSplitter.getPaneCount(&gOpt->mMain.mLockedViewSplitRowCount, &gOpt->mMain.mLockedViewSplitColumnCount);
 
         for (xpr_sint_t i = 0; i < XPR_COUNT_OF(gOpt->mMain.mViewSplitRatio); ++i)
@@ -1350,6 +1365,10 @@ xpr_bool_t MainFrame::OnEraseBkgnd(CDC *aDC)
 
 void MainFrame::OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy)
 {
+    // Only a real frame resize requests fitting, not paint/focus/watcher updates.
+    if (aType != SIZE_MINIMIZED && cx > 0 && cy > 0 &&
+        XPR_IS_NOT_NULL(gOpt) && XPR_IS_TRUE(gOpt->mMain.mViewAutoEqualize))
+        mPendingAutomaticPaneFit = XPR_TRUE;
     super::OnSize(aType, cx, cy);
 
     recalcLayout(aType);
@@ -1402,7 +1421,7 @@ void MainFrame::recalcLayout(xpr_uint_t aType)
     xpr_sint_t sRowCount = 0, sColumnCount = 0;
     mSplitter.getPaneCount(&sRowCount, &sColumnCount);
 
-    HDWP sHdwp = ::BeginDeferWindowPos(sRowCount * sColumnCount + 1);
+    WindowLayoutBatch sLayoutBatch;
 
     // adjust single folder splitter size
     CRect sSingleFolderSplitterRect(sClientRect);
@@ -1420,7 +1439,7 @@ void MainFrame::recalcLayout(xpr_uint_t aType)
         mSingleFolderSplitter.moveColumn(0, sPaneSize);
     }
 
-    mSingleFolderSplitter.resize(sHdwp);
+    mSingleFolderSplitter.resize(&sLayoutBatch);
 
     // adjust view splitter size
     CRect sSplitterRect(sClientRect);
@@ -1441,9 +1460,25 @@ void MainFrame::recalcLayout(xpr_uint_t aType)
     xpr_sint_t sHeight = sRect.Height();
 
     if (sWidth <= 0 || sHeight <= 0)
+    {
+        sLayoutBatch.apply();
         return;
+    }
 
-    if ((sRowCount <= 0 || sColumnCount <= 0) || (sRowCount == 1 && sColumnCount == 1))
+    xpr_bool_t sAutomaticFit = XPR_FALSE;
+    if (XPR_IS_TRUE(mPendingAutomaticPaneFit) &&
+        XPR_IS_TRUE(gOpt->mMain.mViewAutoEqualize) &&
+        XPR_IS_FALSE(mSplitter.isTracking()))
+    {
+        sAutomaticFit = applyEqualViewSplitGeometry();
+        if (XPR_IS_TRUE(sAutomaticFit)) mPendingAutomaticPaneFit = XPR_FALSE;
+    }
+
+    if (XPR_IS_TRUE(sAutomaticFit))
+    {
+        // Publish the prepared equal geometry in the same batch below.
+    }
+    else if ((sRowCount <= 0 || sColumnCount <= 0) || (sRowCount == 1 && sColumnCount == 1))
     {
         mSplitter.moveColumn(0, sWidth);
         mSplitter.moveRow   (0, sHeight);
@@ -1533,9 +1568,8 @@ void MainFrame::recalcLayout(xpr_uint_t aType)
         }
     }
 
-    mSplitter.resize(sHdwp);
-
-    ::EndDeferWindowPos(sHdwp);
+    mSplitter.resize(&sLayoutBatch);
+    sLayoutBatch.apply();
 }
 
 void MainFrame::OnClose(void)
@@ -3562,73 +3596,65 @@ void MainFrame::WinHelp(DWORD aData, xpr_uint_t aCmd)
 
 void MainFrame::setSplitEqually(void)
 {
-    xpr_sint_t sRowCount = 0, sColumnCount = 0;
-    mSplitter.getPaneCount(&sRowCount, &sColumnCount);
-
-    if (sRowCount > 1 || sColumnCount > 1)
+    if (XPR_IS_FALSE(mSplitter.isTracking()) &&
+        XPR_IS_TRUE(applyEqualViewSplitGeometry()))
     {
-        CRect sRect;
-        mSplitter.getWindowRect(sRect);
-
-        xpr_sint_t sWidth  = sRect.Width();
-        xpr_sint_t sHeight = sRect.Height();
-
-        if (sWidth > 0 && sHeight > 0)
-        {
-            if (sRowCount == 1 && sColumnCount == 2)
-            {
-                gOpt->mMain.mViewSplitRatio[0] = 0.5;
-                gOpt->mMain.mViewSplitSize[0] = (xpr_sint_t)(sWidth * gOpt->mMain.mViewSplitRatio[0] + 0.5);
-
-                mSplitter.moveColumn(0, gOpt->mMain.mViewSplitSize[0]);
-                mSplitter.resize();
-            }
-            else if (sRowCount == 2 && sColumnCount == 1)
-            {
-                gOpt->mMain.mViewSplitRatio[0] = 0.5;
-                gOpt->mMain.mViewSplitSize[0] = (xpr_sint_t)(sHeight * gOpt->mMain.mViewSplitRatio[0] + 0.5);
-
-                mSplitter.moveRow(0, gOpt->mMain.mViewSplitSize[0]);
-                mSplitter.resize();
-            }
-            else if (sRowCount == 2 && sColumnCount == 2)
-            {
-                gOpt->mMain.mViewSplitRatio[0] = 0.5;
-                gOpt->mMain.mViewSplitRatio[1] = 0.5;
-                gOpt->mMain.mViewSplitSize[0] = (xpr_sint_t)(sWidth  * gOpt->mMain.mViewSplitRatio[0] + 0.5);
-                gOpt->mMain.mViewSplitSize[1] = (xpr_sint_t)(sHeight * gOpt->mMain.mViewSplitRatio[1] + 0.5);
-
-                mSplitter.moveColumn(0, gOpt->mMain.mViewSplitSize[0]);
-                mSplitter.moveRow   (0, gOpt->mMain.mViewSplitSize[1]);
-                mSplitter.resize();
-            }
-            else if (sRowCount == 1 && sColumnCount == 3)
-            {
-                gOpt->mMain.mViewSplitRatio[0] = 0.333;
-                gOpt->mMain.mViewSplitRatio[1] = 0.333;
-                gOpt->mMain.mViewSplitSize[0] = (xpr_sint_t)(sWidth  * gOpt->mMain.mViewSplitRatio[0] + 0.5);
-                gOpt->mMain.mViewSplitSize[1] = (xpr_sint_t)(sWidth  * gOpt->mMain.mViewSplitRatio[1] + 0.5);
-
-                mSplitter.moveColumn(0, gOpt->mMain.mViewSplitSize[0]);
-                mSplitter.moveColumn(1, gOpt->mMain.mViewSplitSize[1]);
-                mSplitter.resize();
-            }
-            else if (sRowCount == 2 && sColumnCount == 3)
-            {
-                gOpt->mMain.mViewSplitRatio[0] = 0.333;
-                gOpt->mMain.mViewSplitRatio[1] = 0.333;
-                gOpt->mMain.mViewSplitRatio[2] = 0.5;
-                gOpt->mMain.mViewSplitSize[0] = (xpr_sint_t)(sWidth  * gOpt->mMain.mViewSplitRatio[0] + 0.5);
-                gOpt->mMain.mViewSplitSize[1] = (xpr_sint_t)(sWidth  * gOpt->mMain.mViewSplitRatio[1] + 0.5);
-                gOpt->mMain.mViewSplitSize[2] = (xpr_sint_t)(sHeight * gOpt->mMain.mViewSplitRatio[2] + 0.5);
-
-                mSplitter.moveColumn(0, gOpt->mMain.mViewSplitSize[0]);
-                mSplitter.moveColumn(1, gOpt->mMain.mViewSplitSize[1]);
-                mSplitter.moveRow   (0, gOpt->mMain.mViewSplitSize[2]);
-                mSplitter.resize();
-            }
-        }
+        mSplitter.resize();
+        Invalidate(XPR_FALSE);
     }
+}
+
+xpr_bool_t MainFrame::applyEqualViewSplitGeometry(void)
+{
+    if (XPR_IS_NULL(gOpt) || isPreviewMode() == XPR_TRUE) return XPR_FALSE;
+    xpr_sint_t sRows = 0, sColumns = 0;
+    mSplitter.getPaneCount(&sRows, &sColumns);
+    CRect sRect;
+    mSplitter.getWindowRect(sRect);
+    EqualSplitGeometry sGeometry;
+    if (!calculateEqualSplitGeometry(sRect.Width(), sRect.Height(), sRows,
+                                     sColumns, mSplitter.getSplitSize(), sGeometry))
+        return XPR_FALSE;
+    for (xpr_sint_t i = 0; i < XPR_COUNT_OF(gOpt->mMain.mViewSplitRatio); ++i)
+    {
+        gOpt->mMain.mViewSplitRatio[i] = sGeometry.ratios[i];
+        gOpt->mMain.mViewSplitSize[i] = sGeometry.storedSizes[i];
+    }
+    for (xpr_sint_t column = 0; column < sColumns; ++column)
+        mSplitter.moveColumn(column, sGeometry.columnSizes[column]);
+    for (xpr_sint_t row = 0; row < sRows; ++row)
+        mSplitter.moveRow(row, sGeometry.rowSizes[row]);
+    return XPR_TRUE;
+}
+
+xpr_bool_t MainFrame::isViewAutoEqualize(void) const
+{
+    return XPR_IS_NOT_NULL(gOpt) ? gOpt->mMain.mViewAutoEqualize : XPR_FALSE;
+}
+
+void MainFrame::setViewAutoEqualize(xpr_bool_t aEnabled)
+{
+    if (XPR_IS_NULL(gOpt)) return;
+    // Explicitly choosing automatic or manual sizing releases the split lock.
+    // Otherwise a saved lock snapshot silently replaces the last manual sizes
+    // on restart. Keep that snapshot intact for a later explicit lock choice.
+    const xpr_bool_t sUnlockSplit = XPR_IS_TRUE(gOpt->mMain.mViewSplitLocked);
+    if (gOpt->mMain.mViewAutoEqualize == aEnabled && XPR_IS_FALSE(sUnlockSplit)) return;
+    gOpt->mMain.mViewAutoEqualize = aEnabled;
+    if (XPR_IS_TRUE(sUnlockSplit))
+    {
+        gOpt->mMain.mViewSplitLocked = XPR_FALSE;
+        mSplitter.getPaneCount(&gOpt->mMain.mViewSplitRowCount,
+                               &gOpt->mMain.mViewSplitColumnCount);
+    }
+    mPendingAutomaticPaneFit = XPR_FALSE;
+    autoFitViewSizes();
+    OptionManager::instance().saveMainOption();
+}
+
+void MainFrame::autoFitViewSizes(void)
+{
+    if (XPR_IS_TRUE(isViewAutoEqualize())) setSplitEqually();
 }
 
 LPITEMIDLIST MainFrame::getSplitFolder(xpr_sint_t aIndex) const
@@ -3958,6 +3984,7 @@ void MainFrame::splitView(xpr_sint_t aRowCount, xpr_sint_t aColumnCount, xpr_boo
 
     if (XPR_IS_FALSE(aLoading))
     {
+        autoFitViewSizes();
         SetRedraw();
         RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_INTERNALPAINT | RDW_ALLCHILDREN);
     }

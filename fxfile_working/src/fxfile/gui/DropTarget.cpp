@@ -8,6 +8,7 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "DropTarget.h"
 
 #ifdef _DEBUG
@@ -168,6 +169,17 @@ DROPEFFECT DropTarget::OnDragScroll(CWnd *aWnd, DWORD aKeyState, CPoint aPoint)
 
 xpr_bool_t DropTarget::OnDrop(CWnd *aWnd, COleDataObject *aOleDataObject, DROPEFFECT aDropEffect, CPoint aPoint)
 {
+    if (mRightDrag && aWnd) {
+        // Resolve the operation before consent; a shell right-drop menu must
+        // not select a different operation after the user has confirmed.
+        aDropEffect = fxfile::FileOperationConfirmation::chooseDropEffect(
+            aWnd->GetSafeHwnd(), DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_LINK);
+        mRightDrag = XPR_FALSE;
+        if (aDropEffect == DROPEFFECT_NONE) {
+            if (mObserver) mObserver->OnDragLeave();
+            return XPR_FALSE;
+        }
+    }
     if (XPR_IS_NOT_NULL(aWnd) && XPR_IS_NOT_NULL(aOleDataObject))
     {
         if (XPR_IS_NOT_NULL(mObserver))

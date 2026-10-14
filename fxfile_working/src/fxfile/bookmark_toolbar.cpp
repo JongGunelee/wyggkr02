@@ -8,6 +8,7 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "bookmark_toolbar.h"
 
 #include "file_op_thread.h"
@@ -15,6 +16,7 @@
 #include "wnet_mgr.h"
 #include "main_frame.h"
 #include "option.h"
+#include "drag_file_operation.h"
 #include "bookmark_toolbar_observer.h"
 
 #include "gui/DragImage.h"
@@ -539,21 +541,7 @@ DROPEFFECT BookmarkToolBar::OnDragOver(COleDataObject* aOleDataObject, DWORD aKe
 
             if (sFullPidl != XPR_NULL && IsFileSystemFolder(sFullPidl))
             {
-                sDropEffect = DROPEFFECT_MOVE;
-
-                if (aKeyState & MK_ALT)          sDropEffect = DROPEFFECT_LINK;
-                else if (aKeyState & MK_CONTROL) sDropEffect = DROPEFFECT_COPY;
-                else if (aKeyState & MK_SHIFT)   sDropEffect = DROPEFFECT_MOVE;
-                else
-                {
-                    switch (gOpt->mConfig.mDragDefaultFileOp)
-                    {
-                    case DRAG_FILE_OP_DEFAULT:  sDropEffect = DROPEFFECT_MOVE; break;
-                    case DRAG_FILE_OP_COPY:     sDropEffect = DROPEFFECT_COPY; break;
-                    case DRAG_FILE_OP_LINK:     sDropEffect = DROPEFFECT_LINK; break;
-                    default:                    sDropEffect = DROPEFFECT_MOVE; break;
-                    }
-                }
+                sDropEffect = getDragFileOperation(aKeyState, gOpt->mConfig.mDragDefaultFileOp);
             }
             else
             {
@@ -585,22 +573,22 @@ DROPEFFECT BookmarkToolBar::OnDragOver(COleDataObject* aOleDataObject, DWORD aKe
                     sPointL.x = aPoint.x;
                     sPointL.y = aPoint.y;
 
-                    DWORD sTempDropEffect = DROPEFFECT_MOVE | DROPEFFECT_COPY | DROPEFFECT_LINK;
+                    DWORD sTempDropEffect = getDragFileOperation(aKeyState, gOpt->mConfig.mDragDefaultFileOp);
 
                     sHResult = sDropTarget->DragEnter(aOleDataObject->m_lpDataObject, aKeyState, sPointL, &sTempDropEffect);
                     if (SUCCEEDED(sHResult))
                     {
                         sHResult = sDropTarget->DragOver(aKeyState, sPointL, &sTempDropEffect);
                         sSucceeded = SUCCEEDED(sHResult) && sTempDropEffect != 0;
+                        if (XPR_IS_TRUE(sSucceeded)) sDropEffect = sTempDropEffect;
+                        sDropTarget->DragLeave();
                     }
                 }
 
                 COM_RELEASE(sDropTarget);
                 COM_RELEASE(sShellFolder);
 
-                if (sSucceeded == XPR_TRUE)
-                    sDropEffect = DROPEFFECT_MOVE;
-                else
+                if (sSucceeded == XPR_FALSE)
                 {
                     sBookmark = -1;
                     sDropEffect = DROPEFFECT_NONE;
@@ -883,6 +871,19 @@ void BookmarkToolBar::OnDropShortcut(STGMEDIUM *aStgMedium, xpr_sint_t aBookmark
 
         GetName(sFullPidl, SHGDN_FORPARSING, sDir);
 
+        std::vector<std::wstring> sConfirmSources;
+        for (i = 0; i < sCount; ++i) {
+            LPITEMIDLIST sItem = (LPITEMIDLIST)((xpr_byte_t*)sIda + sIda->aoffset[i + 1]);
+            LPITEMIDLIST sFull = fxfile::base::Pidl::concat(sPidl1, sItem);
+            wchar_t sPath[XPR_MAX_PATH + 1] = {};
+            if (sFull) { GetName(sFull, SHGDN_FORPARSING, sPath); COM_FREE(sFull); }
+            if (*sPath) sConfirmSources.push_back(sPath);
+        }
+        if (sConfirmSources.size() != static_cast<size_t>(sCount) ||
+            !FileOperationConfirmation::confirm(GetSafeHwnd(), FileOperationConfirmation::Link,
+                sConfirmSources, {sDir.c_str()})) {
+            COM_FREE(sFullPidl); ::GlobalUnlock(aStgMedium->hGlobal); return;
+        }
         for (i = 0; i < sCount; ++i)
         {
             // get item PIDL and get full-qualified PIDL
@@ -955,7 +956,9 @@ void BookmarkToolBar::OnDropTarget(COleDataObject *aOleDataObject, DROPEFFECT aD
 
             if (SUCCEEDED(sHResult) && sDropTarget != XPR_NULL)
             {
-                LPDATAOBJECT sDataObject = aOleDataObject->Detach();
+                // Own a separate reference across modal consent; do not
+                // release a borrowed reference from the drag source.
+                LPDATAOBJECT sDataObject = aOleDataObject->GetIDataObject(XPR_TRUE);
                 if (sDataObject != XPR_NULL)
                 {
                     sDropTarget->DragEnter(sDataObject, sKeyState, sPointL, &sTempEffect);
@@ -964,7 +967,14 @@ void BookmarkToolBar::OnDropTarget(COleDataObject *aOleDataObject, DROPEFFECT aD
                     if (mDropTarget.isRightDrag() == XPR_TRUE)
                         aDropEffect = DROPEFFECT_MOVE | DROPEFFECT_COPY | DROPEFFECT_LINK;
 
-                    sDropTarget->Drop(sDataObject, sKeyState, sPointL, &aDropEffect);
+                    wchar_t sTargetPath[XPR_MAX_PATH + 1] = {};
+                    GetName(sFullPidl, SHGDN_FORPARSING, sTargetPath);
+                    if (FileOperationConfirmation::confirmDrop(GetSafeHwnd(),
+                        sDataObject, aDropEffect, sTargetPath))
+                        sDropTarget->Drop(sDataObject, sKeyState, sPointL, &aDropEffect);
+                    else
+                        sDropTarget->DragLeave();
+                    COM_RELEASE(sDataObject);
                 }
             }
 

@@ -1,5 +1,13 @@
 # 📁 Windows 10/11 최적화 fxfile 소스 코드 및 기술 이력 가이드
 
+> **Task 129 후속 정정:** 파일/폴더 단일·다중 선택의 복사·이동·삭제·잘라내기·붙여넣기와 드래그는 대상·도착지 확인 버튼 승인 후 실행한다. 취소/Enter/Esc/닫기는 실행하지 않으며 클립보드 변경·중복 이동을 거부한다. 실제 텍스트 파일의 `FileContents` 우회 복사를 막았다. 사용자 13:08:15 ZIP의 충돌은 MFC가 빌려 준 드롭 `IDataObject`를 대상이 해제해 원본 정리에서 다시 호출한 소유권 오류였다. 세 대상 경로의 별도 참조를 확보했고 확인·거부·오류 보고 안내문을 12pt로 확대했다. 정적 48개/신규 39개, 양 아키텍처 내부·외부 셸 실기 72건과 운영본 화면·설정 보존을 확인했다. 최종 배포·정리·보장 범위와 기존 빠른 종료의 탐색 기록 한계는 문서 끝 Task 129를 우선 참조한다.
+
+> **Task 128 후속 정정:** 자동 맞춤 ON은 분할 잠금을 OFF로, 분할 잠금 ON은 자동 맞춤을 OFF로 전환한다. 두 체크 OFF는 마지막 수동 크기를 정상 종료·재실행에 유지한다. 기존 둘 다 ON은 잠금 스냅샷을 보호해 자동 맞춤 OFF로 정규화한다. x32 고정 픽셀과 x64 비율 모드에서 F5 명령·재실행 후 여섯 pane HWND 배치 및 저장값 불변, 운영본 화면·설정 보존, 정적 46개·신규 13개, 세 배포본 동기화와 양 아키텍처 no-INI 6/6을 확인했다. 상세 증거·정리 결과와 한계는 문서 끝 Task 128을 우선 참조한다.
+
+> **Task 127 후속 정정:** `도구 > 모든 창 크기 맞추기` 기본 체크와 명시 새로 고침/전체 창 크기/레이아웃 변경 맞춤을 추가했다. 수동 드래그는 허용하며 체크 해제 시 수동 비율을 보존한다. 붙여넣기 경로 조회와 작업 기록/휴지통 검색을 UI 대기에서 분리했다. 이전 성공 빌드 뒤 발견한 삭제 복원 실패는 내부 문자열의 NUL 구분 문자 유실(엔진 오류 124)이 직접 원인이었으며 공유 경로 배열로 수정 후 x64 실제 첫 Ctrl+Z 복원·3개 파일 해시 일치를 확인했다. 정적 45/45, 신규 22/22, x64 단위 77,254개, 전체 x64/x32 빌드·세 패키지 동기화·no-INI 6/6을 확인했다. **장시간 무응답 완전 해결, 진행 중 Ctrl+Z 예약, x32 GUI 삭제 복원 및 휴지통 메타데이터 완전 정리는 보장하지 않는다.** 최종 증거·정리 결과·남은 한계는 문서 끝 Task 127을 우선 참조한다.
+
+> **Task 126 후속 정정:** 드래그 `기본값`은 같은 볼륨에서도 복사이고 Shift는 이동이다(명시적인 사용자 지정 이동/바로가기 설정은 보존). F2의 반복 셸 이름·아이콘 조회와 통지 완료 대기, modal 갱신 중 빌린 COM/PIDL 수명 위험을 줄였고 가상 항목 통지를 전체 PIDL로 바로잡았다. 가로 스크롤은 사용자가 확인한 **모든 열 동반 이동**을 유지하며 선택 행·헤더 정렬만 수정했다. 정적 44개/신규 14개, 양 아키텍처 정책 144개씩, x64 여섯 pane 스크롤·실제 다중 복사·F2 실기와 x32 폴더 F2를 확인했다. **장시간 간헐 응답 없음은 미재현이며 완전 해결을 주장하지 않는다.** 최종 manifest·실기 한계·잠겨 남은 정리 대상 13개는 문서 끝 Task 126을 우선 참조한다.
+
 > **Task 125 후속 정정:** 상단 주소 표시창의 경로 데이터는 손상되지 않았지만 `ComboBoxEx`가 이전 선택 항목을 유지해 폴더 전환·복사/이동 후 갱신·드롭다운 이벤트 때 전체 경로를 마지막 폴더명으로 다시 덮어썼다. 이제 일반 폴더와 압축 경로 모두 네이티브 선택과 내부 선택을 해제한 뒤 전체 경로 텍스트를 원자 확정하며, 주소 드롭다운 탐색도 `SetCurSel` 직후 전체 경로를 다시 확정한다. 자세한 원인·첫 스모크 실패와 자동 롤백·최종 배포 증거는 문서 끝 Task 125를 우선 참조한다.
 
 > **Task 124 후속 정정:** `이름으로 선택`의 `모두 해제하고 선택`을 열 때 체크된 기본값으로 바꿨다. `D:\WindowsApps`와 `D:\DESKTOP-VAIE004`는 현재 계정의 목록 읽기가 실제로 `Access denied`다. 이전 코드는 접근 가능 여부를 확인하기 전에 pane을 전환해 비동기 열거 실패·watcher 재시도와 경고창 반복을 유발했다. 읽을 수 없는 로컬 폴더는 기존 위치를 유지하고, 열거 도중 실패한 경우에도 취소 전 watcher/재시도 타이머를 종료한다. 자세한 증거와 한계는 문서 끝 Task 124를 우선 참조한다.
@@ -18,8 +26,8 @@
 
 > **[CODING AI START HERE] 이 문서는 처음부터 끝까지 읽는 책이 아니다.** 새 작업을 시작한 코딩 AI는 아래 `0.1~0.8`만 먼저 읽고, `0.4 작업 유형별 검색 라우터`에서 지정한 Task와 실제 관련 소스만 선택해서 읽는다. 전체 Task 로그는 증거·실패·정정 이력을 보존한 검색형 아카이브다.
 
-_현재 문서·정리 운영 기준: 2026-09-23 — Task 125 후속 정정 (상단 주소 표시창 전체 경로 유지·드롭다운 선택 상태 분리 및 작업 종료 정리는 0.7/114.6 절차를 적용)_
-_현재 기능/배포 기준: Task 125 → 124 → 123 → 122 → 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
+_현재 문서·정리 운영 기준: 2026-10-14 — Task 129 후속 정정 (파일 작업 필수 확인·드롭 참조 수명·12pt 안내문; 정리 및 남은 한계는 0.7/129.5/129.7 적용)_
+_현재 기능/배포 기준: Task 129 → 128 → 127 → 126 → 125 → 124 → 123 → 122 → 121 → 120 → 119 → 118 → 117 → 116 → 115 → 114 → 113 → 112 → 111 → 110 → 109 → 108 → 107 → 106 → 105 → 104 → 103 → 102 → 101 → 100 → 099 → 098 → 097 → 095 → 093 → 092 → 091 → 090 → 089 → 088 → 087 → 086 → 083 → 077 → 076 → 075 → 072 → 071 → 070 → 069 → 068 → 067 → 066 → 065 → 064 → 061 → 060 순으로 최신 후속 정정을 우선 적용_  
 _새 Windows 준비·전체 빌드 절차: Task 035 및 `fxfile_working\docs\UNIFIED_BUILD_DEPLOYMENT.md`_
 _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절대경로는 당시 증거로 보존하며, 현재 실행 명령으로 복사하지 않는다._
 
@@ -75,6 +83,9 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | 실행 파일·DLL·언어·설정 세 패키지 배포 | 034~035, 052.7, 053.2~53.3, 054 | `Release EXE`, `ArtifactRoots`, `Korean.xml`, `rollback`, `ConfigMatchesCanonical` |
 | INI 없는 로컬 설정, AppData 간섭, 포터블 이식 | 031~035, 042 | `fxfile.ini`, `.fxfile`, `conf_home`, `CanonicalConfig`, `local pair`, `AppData` |
 | 레이아웃·북마크·도구 모음·메뉴 복원 | 036~038, 043~048 | `saveAllOptions`, `bookmark`, `coolbar`, `toolbar`, `window.position`, `lock` |
+| 자동 동일 크기 분할·분할 잠금 상호 배타·수동 크기 재시작·배치 창 배치 안전성 | 128, 127, 048 | `main.view.auto_equalize`, `main.view.split_locked`, `setViewAutoEqualize`, `setViewSplitLocked`, `WindowLayoutBatch`, `calculateEqualSplitGeometry`, `모든 창 크기 맞추기` |
+| 잘라내기/붙여넣기 지연·삭제 Ctrl+Z·최신 휴지통 기록·취소 기록 보존 | 127, 069, 117 | `CF_HDROP`, `ReleaseStgMedium`, `parseRecycleMetadata`, `resolveRecycleUndo`, `finishUndo`, `try_to_lock` |
+| 실수 드래그·복사/이동/삭제/잘라내기/붙여넣기 필수 확인·클립보드 및 선택 스냅샷·작은 안내문 | 129, 127, 126, 069 | `FileOperationConfirmation`, `GetIDataObject(TRUE)`, `HasFileSelectionData`, `GetClipboardSequenceNumber`, `IDD_FILE_OPERATION_CONFIRM`, `Malgun Gothic` |
 | 도구 메뉴의 시계 보이기·위치 잠금·가변 창 폭 | 095, 045~046 | `main.clock.show`, `ClockCtrl`, `updateClockLayout`, `WS_VISIBLE`, `rebar`, `zero-height`, `시계 보이기` |
 | FxFile 프로세스 첫 실행·닫고 재실행의 체감 지연, Windows 부팅과 분리한 측정·`[..]`만 남는 pane/흰 화면·합성 상위 행과 실제 파일·폴더 행 공개·전체 열거 완료 | 120, 119, 118, 117, 039~041, 049~050 | `AllListsRealItemMilliseconds`, `ParentOnlyWindowMilliseconds`, `RunDirect`, `StartupLayoutFirstContentViewCount`, `StartupLayoutReadyViewCount`, `sItemCountBefore`, `initial burst`, `deferred history`, `SkeletonSeconds`, `ReadySeconds`, `atomic`, `ExplorerView`, `WM_SETREDRAW` |
 | 설정 파일 위치 옵션 3개 | 042 | `%AppData%`, `프로그램 설치 폴더`, `사용자 정의`, `ConfDir::save` |
@@ -83,10 +94,13 @@ _현재 PC 환경·절대경로 기준: Task 094. Task 001~093의 다른 PC 절�
 | 계산기·도구 모음 버튼 | 046~047 | `calculator`, `계산기`, `toolbar`, `검색 아이콘` |
 | 패널 경로/분할 잠금·FIM | 048 | `layout lock`, `path lock`, `SHA-256`, `File integrity monitoring` |
 | 복사·이동 속도와 자동 엔진 선택·대량 폴더 Robocopy | 117, 116, 051~052, 067~068 | `AdaptiveFileOperation`, `buildPlan`, `planning progress`, `same-volume preflight`, `IFileOperation`, `CopyFile2`, `Robocopy`, `selectRobocopy`, `/MT`, `/J`, `seek penalty`, `cloud` |
+| pane·폴더 트리·북마크·드라이브에 마우스 드래그 기본 복사/Shift 이동·명시 사용자 설정과 modifier 우선순위 | 126, 051 | `getDragFileOperation`, `DRAG_FILE_OP_DEFAULT`, `MK_SHIFT`, `DROPEFFECT_COPY`, `DragLeave`, `OnDragOver` |
+| 단일 파일·폴더 F2 팝업 지연·갱신 중 행 수명·셸 변경 통지 대기 | 126, 069, 117 | `RenameHelper`, `mSourcePath`, `mCachedIconIndex`, `AddRef`, `Pidl::clone`, `SHCNF_FLUSHNOWAIT`, `desktop-relative PIDL`, `MoveFile`, `SetNameOf` |
+| 가로 스크롤 시 선택 행과 헤더 정렬·전체 열 동반 이동 계약 | 126, 115, 113 | `OnHScroll`, `THUMBTRACK`, `drawFinalReportSelection`, `sHeaderOrigin`, `IntersectClipRect`, `RestoreDC` |
 | 복사 실패 후 응답 없음·종료 불가·삭제/이동 잔상·외부 변경 지연 | 117, 116, 115, 069, 060, 067, 051~052 | `ModernShellFileOperation`, `per-item result`, `AdvFileChangeWatcher`, `TM_ID_NOTIFY_RECONCILE`, `TM_ID_NOTIFY_SORT`, `CancelIoEx`, `IOCP`, `ResultNotApplicable`, `rollbackTargets`, `reconcileOperationResult`, `SHCNE_DELETE`, `SHCNE_RENAMEITEM`, `FileOpThread` |
 | 삭제·휴지통·Shift+Delete·부분 실패 | 052.1~52.6 | `FOFX_RECYCLEONDELETE`, `permanent delete`, `WRP`, `remaining count` |
 | 파일·폴더 작업 잠금·Windows 보안·호버 설명 | 052.5, 053 | `FileOperationLockStore`, `Restart Manager`, `SHObjectProperties`, `ToolTip` |
-| 종료 Access Violation·오류 보고서 | 077, 069, 030, 035.8 | `Access Violation`, `crash`, `error report`, `FolderCtrl`, `updateShcnTvItemData`, `shell notification` |
+| 드래그 취소/종료 Access Violation·오류 보고서 | 129, 077, 069, 030, 035.8 | `Access Violation`, `IDataObject::Release`, `Detach`, `crash`, `error report`, `FolderCtrl`, `shell notification` |
 | Windows 11/API/64비트 초기 호환성 | TASK-001~009, 035 | `WINVER`, `RtlGetVersion`, `SIZE_T`, `DPI`, `Thread::join` |
 | OBJ·더미 시험 파일·C:/D: 용량·작업공간 정리·삭제 명령 정책 차단 | 114.5~114.6, 101, 054~055, 061 | `blocked by policy`, `file-backed cleanup`, `PowerShell 7`, `UTF-8`, `stray artifact`, `/Fo`, `RESULTS.md`, `synthetic fixture`, `staging`, `FreeGiB`, `TeraBox`, `cleanup`, `retention` |
 | 파일/폴더 선택 시 열 단위·행 전체 포커스 전환, `[..] 상위 폴더로` 포함 선택 항목 화이트 플래시(White Flash), 장시간 창 #1~#6 전환·새로고침 후 재발, GDI/USER·아이콘 누적, 선택 글자만 흰색으로 남거나 환경 설정 포커스 색이 보이지 않는 현상, 상위 폴더 행 선택 표시 소실, 다른 행 선택 후 상위 폴더 행에 남는 유령 선택색, 마우스 호버(Hover/InfoTip) 시 흰색 소실, 다중 창·과도 상태 찰나의 플래시 방지, 창별 색상, Ctrl/Shift 다중 선택, 모든 분할 pane·콘텐츠/타일/상세 보기 일관성 | 113, 112, 111, 110, 109, 108, 107, 106, 105, 099, 098, 097, 092, 091, 090, 089, 088, 087, 086, 083, 077, 076, 075 | `drawFinalReportSelection`, `CDDS_ITEMPOSTPAINT`, `fillReportSelectionBackground`, `PathBar::setPath`, `GetItemIcon`, `DESTROY_ICON`, `GetGuiResources`, `GDI`, `USER`, `generation`, `CDRF_NOTIFYITEMDRAW`, `CDRF_NOTIFYPOSTPAINT`, `CDRF_SKIPDEFAULT`, `LVS_EX_DOUBLEBUFFER`, `live ListView selection`, `화이트 플래시`, `White Flash`, `호버 소실`, `CDIS_HOT`, `InfoTip`, `LVIS_SELECTED`, `LVIS_FOCUSED`, `redrawFocusItemChange`, `CDIS_SELECTED`, `Shift`, `SelectionMark`, `row_focus_color`, `full_row_select`, `isReportView`, `VIEW_STYLE_CONTENT`, `LVS_REPORT`, `OnCustomdraw`, `ExplorerPane`, `ExplorerCtrl` |
@@ -10856,3 +10870,230 @@ fxfile_working        238.05      2349  (순수 소스 및 필수 라이브러�
 - 배포 스모크가 한 번 실패하면 빌드 성공만으로 완료 처리하지 않는다. 자동 롤백을 확인하고 동일 산출물 재검증 또는 원인 수정 뒤 새 성공 manifest와 마지막 VerifyOnly를 남긴다.
 
 **-- 상단 주소 표시창의 네이티브 선택 잔존과 드롭다운 역순 덮어쓰기를 제거하고 일반/압축 경로를 단일 전체 경로 확정 계약으로 통합하여 43/43 정적 계약·x64/x32 빌드·세 배포·no-INI 6/6 완료 (Task 125, 2026-09-23) --**
+
+---
+
+## Task 126 — 드래그 기본 복사·F2 셸 대기/수명 위험 감소·여섯 pane 스크롤 정렬 및 무응답 진단 한계 (2026-10-12)
+
+### 126.1 요청과 최종 판정
+
+- 파일/폴더 드래그는 기본 복사, Shift를 누르면 이동으로 변경한다. 간헐 F2 팝업 지연·응답 없음, 가로 스크롤 선택 행 정렬, 일반 장시간 응답 없음도 기존 코드·설정을 보호하며 점검한다.
+- 가로 스크롤의 요구는 사용자 확인으로 **모든 열은 함께 이동하되 선택 행과 헤더의 정렬 오류만 수정**이다. 크기·종류·날짜를 고정하는 별도 UI는 구현하지 않았다.
+- 기본 드래그 정책과 F2/스크롤의 확인된 위험 경로는 수정·검증했다. 일반 장시간 무응답은 이번 실기에서 재현하지 못했으며 **모든 무응답이 해결됐다는 판정은 보류**한다. Windows/백신/클라우드 자원을 FxFile만 독점하도록 변경하지 않는다.
+- 초입 0.1~0.8, Task 115/116/69와 관련 빌드 문서를 선행 확인했다. 전체 과거 로그 반복 정독 대신 라우터와 실제 소스로 범위를 좁혔다. Git 저장소가 아니므로 작업 전 전체 비생성 소스 2,238개/118,220,444바이트와 세 설정 폴더를 `__BUILD_TEMP_BACKUP__\task126_before_20261012`에 보존했다.
+
+### 126.2 관측 증거와 직접 원인
+
+- `ExplorerCtrl`/`FolderCtrl` 기본 DragOver가 출발·목적지 볼륨을 비교해 같은 볼륨이면 이동을 선택했다. Explorer는 마우스 이동마다 CIDA/셸 이름을 동기 조회하는 경로도 있었다. 북마크/드라이브는 별도 modifier 분기를 사용해 같은 기본 계약을 공유하지 않았다.
+- F2의 `RenameHelper::setItem()`은 반복적인 `IShellFolder::GetDisplayNameOf` 계열 조회와 팝업 아이콘 provider 조회를 요구했다. modal 메시지 루프 중 폴더 갱신으로 행이 삭제될 수 있는데 `IShellFolder`/상대 PIDL을 빌려 보유해 수명 안전성이 불충분했다. 완료 통지의 `SHCNF_FLUSH`는 UI 스레드에서 외부 셸 수신자의 처리 완료를 기다렸다. 이 경로의 위험은 소스로 확인했으나 사용자 실제 멈춤의 대기 스택은 확보하지 않았다.
+- 가상 항목 이름 변경은 `SHCNF_IDLIST`에 상대 자식 PIDL을 전달했다. Windows 규약은 Desktop 상대 전체 PIDL이며, 이 통지 형식 결함도 수정했다.
+- 상세 보기 선택 행은 native 기본 그리기 뒤 별도로 재합성한다. native 가로 스크롤의 픽셀 blit/노출 strip 갱신에 대해 명시적 후속 재합성이 없었고, 텍스트별 cell clip이 없어 인접 열 경계를 침범할 위험이 있었다. Task 115의 live header 좌표 매핑은 보존했다. **수정 전 사용자 현상을 같은 장기 사용 조건으로 재현한 픽셀 계측은 없으며**, 수정 후 여섯 pane 정렬 실기와 위험 경로 분석을 구분한다.
+- 초기 유휴 표본은 RAM 약 18.1GiB 여유, C: 약 75.2GiB/D: 약 1,986GiB 여유였다. V3 서비스/UI와 TeraBox 계열 프로세스가 있었고 최근 7일 Application 1000/1002에 FxFile 사건은 없었다. 이는 멈춤 순간이 아니어서 자원 부족·백신 충돌·장기 누수를 입증하거나 배제하지 않는다.
+
+### 126.3 구현/해결 방법
+
+- `drag_file_operation.h`의 생산 정책 함수를 Explorer/Folder/Bookmark/Drive가 공유한다. 기본/복사 설정은 COPY, Shift는 MOVE, Ctrl은 COPY, Alt는 LINK다. 기존 명시 MOVE/LINK 설정과 기존 modifier 우선순위는 보존한다. 현재 정본의 `config.drag_drop.default_file_op=0`은 같은 볼륨에서도 COPY로 동작한다. 오른쪽 드래그 메뉴·잘라내기/붙여넣기·복사/이동 엔진은 바꾸지 않았다.
+- 특수 셸 드롭 대상의 허용 effect는 존중하고 preview DragEnter 성공 후 DragLeave를 호출한다. 기존 무조건 MOVE 반환 및 기본 효과 계산의 반복 CIDA/셸 이름 조회를 제거했다. Korean.xml에 기본 복사/Shift 이동 의미를 표시했다.
+- RenameHelper가 COM AddRef와 상대/전체 PIDL clone을 소유하고 소멸 시 해제한다. 일반 로컬 파일·폴더는 이미 해석된 pane 경로/아이콘을 재사용하며, 미해석 아이콘은 팝업 열기의 전제 조건으로 삼지 않는다. 링크·드라이브·가상 항목의 기존 셸 이름 의미와 확장자 선택/유지 설정은 보존한다. 없는 대상의 INVALID_FILE_ATTRIBUTES를 보호 속성으로 오인하지 않는다.
+- 이름 변경 완료 통지를 `SHCNF_FLUSHNOWAIT`로 전달하고 가상 항목은 전체 PIDL을 사용한다. 폴더 트리/검색 결과/배치 이름 변경의 관련 통지도 수신자 완료를 기다리지 않도록 맞췄다. 경로별 watcher의 기존 화면 갱신은 유지한다.
+- native `OnHScroll` 처리 후 상세 보기를 `Invalidate(FALSE)`하여 erase·열폭 재설정·동기 UpdateWindow 없이 선택 행을 재합성한다. 각 텍스트 셀에 SaveDC/IntersectClipRect/RestoreDC를 적용한다. 선택 상태·색상 설정·열 순서·사용자 수동 열폭은 변경하지 않았다.
+
+### 126.4 실패 사례와 복구 과정
+
+- C++ 단독 정책 probe의 첫 컴파일은 MFC DROPEFFECT 별칭 선언 누락으로 실패했다. harness만 보정해 생산 함수 자체를 포함한 x64/x32 실행으로 검증했다.
+- 최초 통합 빌드 중 추가 공식 규약 검토에서 상대 PIDL 통지 결함을 발견했다. 자기 workflow만 **배포 전에 중단**, 자식 빌드 종료와 운영본 Task125 해시 불변을 확인하고, 수정 후 새 preflight→최종 전체 빌드·배포로 진행했다. 중단된 시도는 성공으로 인정하지 않는다.
+- 화면 제어 연결 시간 초과/중단 뒤 상태 초기화가 있었다. 초기 일반 exe 경로 실행이 같은 이름의 설치 앱으로 해석돼 실제 프로세스 경로를 확인하고 종료했다. 격리 실행은 `process:<정확한 exe 경로>`로 수행했다.
+- 합성 설정 regex가 CR을 지워 일부 설정이 무시되는 시험 준비 결함을 발견했다. CR/LF 비소비 패턴과 CRLF 정규화를 적용하고 합성 설정만 재준비했다. 모달 접근성 index 캐시 오류는 최신 실제 편집 영역의 클릭·전체 선택·입력으로 대체했으며 제품 F2 실패로 집계하지 않았다.
+- 설치 운영본 실제 화면 확인 후 정상 종료로 `fxfile-main.conf`가 갱신됐다. VerifyOnly가 run_x64 차이를 정확히 검출했으므로 설치 정본을 보존하고 fresh preflight→DeployVerify로 두 포터블본을 다시 동기화했다. 이전 PASS를 시간 제한 이후 재사용하지 않았다.
+
+### 126.5 정적·동적 검증 및 최종 해시/manifest·정리
+
+- 전체 정적 스크립트 **44/44 PASS**, 신규 계약 **14/14 PASS**, 생산 drag 정책 x64 **144/144**·x32 **144/144** PASS. 로그와 변경 전/후 해시 목록은 `__BUILD_TEMP_BACKUP__\task126_results_20261012`의 `all_static_contracts.txt`, `task126_contracts.txt`, `source_change_inventory.json` 등에 보존했다.
+- x64 실제 다중 드래그: 파일 2개와 내부 파일 포함 폴더 1개를 수정키 없이 다른 pane으로 복사했다. 원본 보존·대상 존재·모든 파일 SHA-256 일치를 확인했다(`drag_copy_hash_comparison.json`). 실제 Shift 유지 GUI drag는 도구 미지원으로 미수행이며 생산 정책 검사와 혼동하지 않는다.
+- x64 F2로 실제 파일 이름을 변경하고 같은 폴더 pane #1/#3/#5 자동 표시를 확인했다. x32 폴더 F2의 이름·아이콘·선택·취소·정상 종료를 확인했다. 입력→캡처 왕복 x64 1,412ms/x32 1,721ms는 UI 도구 비용 포함 표본으로 **순수 팝업 시간/성능 향상률이 아니다**.
+- x64 2×3 좁은 pane #1~#6에서 각각 선택 행과 가로 스크롤 막대를 0→최대로 이동했다. 최종 새 관측의 여섯 막대 100%, 선택 49바이트/일반 71바이트 행의 크기·종류·날짜 열 정렬을 실제 화면에서 확인했다. pane #4/#6의 외부 합성 복사도 재진입 없이 표시됐다.
+- x64 F2/드래그 중 121.207초/60회 자원 표본은 무응답 0, private bytes +1,519,616, handle +43이었다. 이 초기 사용 증가만으로 누수 또는 누수 부재를 단정하지 않는다. 상세 실기·실패·한계는 같은 증거 폴더 `RESULTS.md`를 읽는다.
+- 최종 PASS preflight: `__BUILD_TEMP_BACKUP__\preflight_20261012_121606_073\preflight_report.json`. 최종 성공 manifest: `__BUILD_TEMP_BACKUP__\unified_deploy_20261012_121816_415\deployment_manifest.json` (동일 최종 빌드의 설정 재동기화 DeployVerify). 최초 성공 BuildDeployVerify manifest는 증거 폴더 `initial_successful_build_manifest.json`로 별도 보존했다.
+- 설치 x64/run_x64/bin SHA-256: `D08D4797E69AC484182EBE03A1895503F9779BCF34649BDE46CE1BB995915429`. run_x32/bin: `8E08BF5552C417B05956E8E7A5E9ADA2482C569C725A10E7ED351B43DEE585CB`. CHM·언어·아키텍처·정본 설정 10개·루트 INI/.fxfile 부재 감사 통과. 최종 양 아키텍처 no-INI 6/6 및 exit 0; ready 표본 8.915/10.691초는 cold/startup 성능 개선의 증거로 해석하지 않는다.
+- §0.7.3 리터럴 16개 경로 Audit→Delete 및 한 차례 파일별 잔재 정리로 **2,927개/480,035,046바이트**를 제거했다. 합성 GUI 패키지/fixture/probe, obj, 중간 CHM, 구 preflight·배포·중단 TEMP, 최신 완료 smoke 복제본이 대상이다. 휴지통을 거치지 않은 삭제이며 시험물/캐시는 소스·도구로 재생성할 수 있다. 사용자 자료·fxfile_backup·Task126 전체 소스 복구본·bin·세 운영본·최신 PASS/성공 rollback 증거는 보존했다.
+- **정리 미완료:** `build_cmake`의 PCH 4개(269,090,816바이트), `build_cmake_x32`의 PCH 6개(376,897,536바이트), 구 `unified_deploy_20261012_062142_333`의 EXE/DLL 3개(14,699,657바이트)가 실제 `being used by another process`로 남았다. 총 **13개/660,688,009바이트**이며 `blocked by policy`나 ACL 부족이 아니다. 핸들 강제 폐쇄/백신 중지/소유권 변경을 하지 않았다. 다음 정상 종료/재부팅 후 §0.7.3에 따라 `cleanup_Delete.json`의 정확한 잔재 경로만 재감사한다. 모든 정리가 끝났다고 보고하지 않는다.
+- 삭제 후 30초를 넘긴 최종 재점검에서 제거한 13개 대상 경로의 재생성은 없었고, 잠긴 3개 상위 경로만 남았다. 최종 VerifyOnly exit 0, 세 패키지 설정 10개 일치, 금지 루트 산출물/INI 0, FxFile 관련 프로세스 0을 재확인했다. `final_verify.txt`, `final_recheck.json`, `cleanup_final_summary.json` 참조. 최종 재점검 표본 여유는 C: 약 81.56GiB, D: 약 1,984.16GiB다. 빌드/시험 TEMP는 D: 프로세스 범위였고 C:/D: 광역 삭제·전역 TEMP/TMP 수정은 하지 않았다.
+
+### 126.6 교훈과 재발 방지
+
+- Windows의 같은 볼륨 기본 이동 관례를 안전한 FxFile 기본 복사 정책과 혼동하지 않는다. drop 대상별로 정책을 복제하지 말고 생산 함수를 공유하고 수정키/명시 설정/허용 effect를 따로 검증한다.
+- modal 대화상자도 폴더 변경 메시지를 처리하므로 행 객체를 빌려 저장하면 안 된다. 자원 소유권을 독립시키고 cosmetic 셸 provider 호출을 창 표시의 필수 선행 작업으로 만들지 않는다.
+- 통지 시작과 모든 외부 수신자 처리 완료는 다르다. 완료된 파일 작업의 UI를 외부 셸 처리 완료에 묶지 말되 자체 watcher 정합성과 실제 이름·파일 존재를 별도로 검사한다.
+- 스크롤 위치를 두 번 빼거나 선택 행만 별도 좌표계를 쓰지 않는다. 실제 header 좌표를 공통 사용하고 cell clip을 복구하며 native scroll 뒤 재합성한다. 전체 열 동반 이동은 사용자 승인 계약이다.
+- 정적 계약·실행 smoke·실제 파일 조작·시각 검증·장기 자원 검증을 구분해 보고한다. 설정 미적용, 잘못 실행된 경로, 합성 부모 행만 표시된 화면, 접근성의 이전 snapshot을 성공 증거로 인정하지 않는다.
+- 정리 실패는 원인을 구분한다: 호스트 정책 차단, ACL 부족, 다른 프로세스의 파일 사용은 서로 다른 조건이다. 제거 가능 파일만 정확한 경계 안에서 처리하고 잠긴 13개는 강제 우회하지 않는다. 작은 결과 로그를 보존하며 일회용 정리 스크립트는 제거한다.
+
+### 126.7 보장 범위와 남은 한계
+
+- 일반 파일 시스템 F2 열기의 반복 provider 조회와 modal 데이터 수명 위험, 셸 통지 완료 대기 및 선택 행 스크롤 재합성의 확인된 경로를 개선했다. 권한/작업 잠금/가상 셸 의미·사용자 설정·파일 작업 엔진을 보호한 범위의 리팩터링이지 모든 Windows 환경의 절대 무결성 보증은 아니다.
+- 실제 이름 변경의 MoveFile/SetNameOf와 일부 가상/provider 조회는 아직 동기 호출이다. 디스크 필터/네트워크/provider가 장시간 막히는 경우의 즉시 취소·무한 대기 상한까지 구현했다고 주장하지 않는다. 실제 간헐 멈춤 재발 시 **멈춘 순간의 스레드 대기 스택/덤프 + 같은 시간의 FileIO/자원 관측**으로 FxFile 내부 대기와 외부 provider/백신 지연을 구분해야 한다. 짧은 유휴·121초 표본은 장시간 누수 시험의 대체물이 아니다.
+- Windows 자원은 OS·보안 필터·다른 앱과 공유된다. FxFile만 단독으로 자원을 쓰게 하거나 V3/알약을 무조건 중지하면 안전성이 보장된다는 방식은 적용하지 않는다. 이번 조사로 백신/클라우드 충돌의 원인도 확정하지 못했다.
+- 공식 근거: [Microsoft SHChangeNotify](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotify), [Microsoft IDropTarget::DragOver](https://learn.microsoft.com/en-us/windows/win32/api/oleidl/nf-oleidl-idroptarget-dragover). 사용자 간헐 멈춤의 원인 확정과 남은 잠긴 캐시 정리는 후속 관측 대상이다.
+
+---
+
+## Task 127 — 자동 창 크기 맞춤·붙여넣기 UI 대기 감소·삭제 취소 복원 및 검증 한계 (2026-10-13)
+
+### 127.1 요청과 최종 판정
+
+- 도구의 창 위치·크기 잠금 바로 위에 기본 체크되는 모든 창 크기 맞추기를 추가한다. ON에서는 명시 새로 고침/전체 창 크기/레이아웃 변경 때 동일 크기로 맞추고, OFF에서는 수동 분할을 유지한다. 명시 같은 비율로 분할하기는 별개다. 잘라내기/붙여넣기 지연과 삭제 후 Ctrl+Z도 함께 점검한다.
+- 확인된 레이아웃/붙여넣기 대기/복원 결함은 수정·배포했다. 장시간 무응답의 완전 해결이나 모든 실패·부분 복원 조합의 무결성 보증은 하지 않는다. 실제 검증과 미검증 범위는 127.5/127.7을 따른다.
+- 초입 0.1~0.8, Task 048/069/104/126 및 통합 빌드 문서를 선행 확인했다. 수정 전 전체 비생성 소스 2,243개/약 112.75MiB와 세 패키지 설정은 `__BUILD_TEMP_BACKUP__\task127_before_20261012`에 보존했다. 중단 후에는 실패 journal·native probe·최신 manifest·실제 프로세스를 다시 확인했다.
+
+### 127.2 관측 증거와 직접 원인
+
+- 기존 동일 분할은 분할선 폭을 분모에 포함해 마지막 창이 더 작았다. Splitter/ExplorerView의 DeferWindowPos는 반환된 새 HDWP를 버리고 실패 batch를 일관되게 복구하지 못했다. 반복적인 같은 사각형의 이동도 발생할 수 있었다.
+- 일반 붙여넣기는 파일별 셸 이름 해석을 UI에서 반복했고 이동 취소 기록의 파일시스템 조회도 UI 타이머에 있었다. 휴지통 검색도 Ctrl+Z 처리에서 동기로 수행했다.
+- 휴지통 파서는 버전이 아니라 전체 파일 크기로 경로 위치를 추정하고 DWORD에 7/8바이트를 읽어 Windows V2/큰 파일 크기/메모리 경계를 안전하게 처리하지 못했다. 다른 드라이브 기록 누적과 반복 열거도 있었다.
+- 첫 수정 빌드의 실제 Delete/Ctrl+Z는 복원되지 않았다. 직접 메뉴도 실패했으나 journal과 세 `$I`/`$R`의 원본 경로·생성 FILETIME은 정확히 일치했다. 생산 BBInfoFile의 native probe는 3/3을 찾았으며 엔진 호출 결과 124였다. 새 worker 경로가 사용한 `xpr::String`은 NUL 추가를 무시하여 다중 경로 배열이 합쳐진 것이 직접 원인이다. 이는 이번 리팩터링 중 도입한 결함이며 OS/사용자 착각으로 돌리지 않는다.
+
+### 127.3 구현/해결 방법
+
+- `main.view.auto_equalize` Boolean 기본 TRUE, 메뉴/명령 라우터/명령 문자열/한글화/저장 체크를 연결했다. 명시 F5, 메인 OnSize, 레이아웃 변경만 자동 맞춤을 요청하며 watcher 갱신/paint/분할선 추적 중에는 자동 맞춤하지 않는다. 잠금 저장 스냅샷은 자동 변경하지 않는다.
+- 여섯 레이아웃의 행/열 크기를 공통 순수 함수로 계산한다. 분할선 폭을 먼저 제외하고 정수 나머지를 분배해 같은 방향의 차이를 1픽셀 이내로 제한한다. WindowLayoutBatch가 HDWP 반환값을 이어 받고 실패 시 모든 대상에 fallback을 적용하며 실제 동일 사각형은 생략한다. SWP_NOACTIVATE로 기존 활성 창을 보존한다.
+- 실제 파일은 CF_HDROP을 우선 사용하며 STGMEDIUM은 ReleaseStgMedium으로 한 번 해제한다. 가상 항목/링크 의미는 기존 셸 경로를 유지한다. 이동/복사 완료 기록과 휴지통 검색은 worker로 옮기고 메뉴의 취소 가능 검사는 잠금을 기다리지 않는다.
+- 휴지통 V1/V2, UTF-16 길이, 64비트 파일 크기, 잘린/미지원 기록을 경계 검사한다. 복원 실패/취소는 기록을 남기고 성공 후에만 기록을 소모한다. 원본에 이미 다른 대상이 있으면 무조건 덮어쓰지 않는다.
+- `OperationPathPairs`의 표준 문자열로 경로별 구분 NUL과 최종 NUL을 보존하고 생산 코드와 native probe가 동일 구현을 공유한다. 한글 경로/두 경로의 구분 및 끝 NUL 단위 회귀를 추가했다.
+
+### 127.4 실패 사례와 복구 과정
+
+- 초기 C2352(static 함수에서 비static 멤버 호출), C2668(NUL 인수의 모호한 overload)을 보정했다. 컴파일 성공만으로 종료하지 않았기에 NUL이 실제 저장되지 않는 추가 의미 결함을 실기에서 발견했다. 실패 빌드는 배포되지 않았다.
+- QA native probe는 PCH 객체 미링크와 런타임 DLL 누락으로 처음 실패했다. 생성 위치를 Task D: 경로로 고정하고 실제 생산 객체/PCH 및 배포 DLL로 보정했다. x86 단독 시험 실행의 Access is denied는 보안 제품 원인이라고 입증하지 못했으며 정책/백신을 우회하지 않았다.
+- 이전 성공 manifest 뒤 삭제 복원이 실패했으므로 완료 판정을 철회하고 journal 사본을 보존했다. 수정 native 엔진 복원 0/aborted 0 및 해시 일치 후 전체 x64/x32를 다시 빌드·배포하고 승인된 동일 3개를 GUI에서 다시 Delete/Ctrl+Z 시험했다.
+- 화면 도구가 때때로 FxFile 대신 Codex 가림 화면을 반환했다. 해당 좌표로 계속 작업하지 않고 대상 창을 재활성화·새 관측했다. 설치본 확인 후 바뀐 설정은 설치 정본을 보존해 DeployVerify로 포터블본을 재동기화했다.
+
+### 127.5 정적·동적 검증 및 최종 해시/manifest·정리
+
+- 증거 디렉터리 `__BUILD_TEMP_BACKUP__\task127_results_20261012`: `RESULTS.md`, `static_contracts_resumed.json`, `probes_resume_final.log`, `failed_delete_undo_journal.dat`, `recycle_restore_fixed.log`, `final_build_manifest.json`, 빌드/배포/정리 로그를 보존한다.
+- 정적 스크립트 45/45, 신규 계약 22/22, x64 생산 순수 함수/배치/native 실패 회복/휴지통 파서/다중 경로 단위 77,254 PASS. x86 독립 probe는 실행 차단으로 미합격이다. 실제 전체 x32 앱 빌드 및 실행과 혼동하지 않는다.
+- x64 ON 수동 분할→F5 맞춤, OFF 수동 분할→F5 유지, OFF 명시 동일 분할, OFF 재시작 유지, ON 복귀→수동 분할→최대화 맞춤을 화면으로 확인했다. x32는 새 설정 기본 ON, 여섯 pane 표시, 수동 분할→F5 맞춤, 정상 종료를 확인했다. 설치 운영본에서도 메뉴 기본 체크와 여섯 실제 패널 표시를 확인했다.
+- x64 실제 파일 2개+내부 파일 포함 폴더 1개의 잘라내기/붙여넣기와 Ctrl+Z 원본 복귀를 확인했다. 최종 승인 GUI 재시험에서는 03:47:46 Delete 뒤 03:47:52 첫 Ctrl+Z로 3개 모두 복원, 세 원본 pane도 재진입/F5 없이 표시됐다. 관측 왕복 포함 시각이므로 순수 작업 지연 수치가 아니다. alpha/beta/inside의 SHA-256은 모두 원본과 일치했다(`RESULTS.md`). x32 GUI 삭제 복원은 미수행이다.
+- 최신 PASS preflight `__BUILD_TEMP_BACKUP__\preflight_20261013_033216_441\preflight_report.json`. 전체 빌드 manifest의 보존 사본은 `task127_results_20261012\final_build_manifest.json`. 설치본 화면 확인 후 최종 설정 동기화 성공 manifest는 `__BUILD_TEMP_BACKUP__\unified_deploy_20261013_035047_082\deployment_manifest.json`이다.
+- 설치 x64/run_x64/bin SHA-256 `F59452C3F3DC6DC54025634D5413993D89B1013D47D19F758E9BF775D7485F65`; run_x32/bin `C60C7C88BAFFFB6A97694BE33AE29419AFF5FA0AB1CC75169784AE6658AF5AEA`. CHM 291,305B, 언어/아키텍처/정본 10개 일치/루트 INI 부재 통과. 최종 no-INI 각 6/6·exit 0·강제 종료 없음. 준비 표본 8.59/7.30초는 cold 성능 향상률이 아니다.
+- 정리는 §0.7.3의 정확한 24개 경로 Audit→Delete 및 같은 범위의 파일별 잔재 정리로 **2,917개/1,727,706,040바이트**를 제거했다. Task126에서 잠겨 남았던 이전 13개 파일도 이번에는 제거 가능했다. 최신 소스 복구본, 최신 PASS/성공 rollback, bin/운영본/사용자 설정을 보호했다. 합성 자료/캐시는 휴지통을 거치지 않은 삭제이며 도구·소스로 재생성할 수 있다. 일회용 정리 스크립트는 제거했다.
+- **정리 미완료:** 새로 잠긴 파일 **10개/209,206,113바이트**, 상위 경로 5개가 남았다. `gui_x64`의 libxml2-2.dll/mfc140.dll, 구 배포 121816의 run_x64 EXE, 구 배포 174933의 run_x64 libxml2-2.dll/target_x64 EXE, 새 build_cmake의 PCH 및 cmake_install.cmake 3개, build_cmake_x32의 PCH다. 원문은 실제 `being used by another process`이며 ACL 또는 호스트 정책 차단으로 바꿔 보고하지 않는다. 정확한 경로/용량은 `cleanup_Audit.json` 및 `cleanup_Delete.json`에 보존했다. 다음 정상 종료/재부팅 후 정확한 잔재만 재감사하며 핸들 강제 폐쇄/소유권 변경/보안 중지를 하지 않는다.
+- 최종 VerifyOnly exit 0, 세 패키지 정본 설정 10개 일치 및 금지 루트 산출물/INI 0을 확인했다(`final_verify.log`). 30초를 넘긴 03:57:16 최종 점검에서 제거한 경로 재생성 0, FxFile 관련 프로세스 0, 최신 소스 복구본/PASS/성공 manifest 보존을 확인했다(`final_recheck.json`). 여유는 C: 82,230,112,256B, D: 2,128,744,603,648B였다. 잠긴 잔재가 있으므로 전체 정리 완료라고 주장하지 않는다.
+
+### 127.6 교훈과 재발 방지
+
+- NUL 구분 Win32 배열은 일반 표시 문자열과 다르다. overload 컴파일 성공을 계약 충족으로 오인하지 말고 실제 embedded NUL/최종 NUL과 엔진 결과를 검사한다.
+- 메뉴/UI 경로의 디스크·셸 조회를 worker로 내리되 HWND/COM 소유권/최종 결과 공개 계약을 보존한다. 실패 취소 기록은 성공으로 처리하지 않는다.
+- 자동 크기 맞춤 트리거와 배경 갱신/사용자 drag를 분리한다. 배치 API 반환 핸들, 부분 실패 복구와 SWP_NOACTIVATE를 공통 구현으로 검증한다.
+- 정적·순수 함수·smoke·실제 파일/폴더 조작·시각·장기 자원 시험은 서로 대체하지 못한다. x86 단위 실행 차단이나 x32 삭제 미시험을 전수 검증으로 숨기지 않는다.
+- 사용자 자료/휴지통 전체/백신 설정/다른 프로세스의 핸들은 임의 변경하지 않는다. 메타데이터 잔재와 사용자 자료 복원 성공을 별개로 기록한다.
+
+### 127.7 보장 범위와 남은 한계
+
+- 121.478초 표본에서 무응답 0, private +1,359,872B/handle +25였다. 이전 baseline은 동일 작업·가시성 조건이 아니며 최소화/가림에 따라 CPU가 달랐으므로 개선률·누수 부재·장시간 안정성 증거로 쓰지 않는다. 간헐 멈춤은 발생 순간 스택/덤프/FileIO와 같은 시각의 자원 관측으로 후속 원인 추적해야 한다.
+- Ctrl+Z는 완료된 작업에 제공된다. 진행 중 누른 키를 예약하는 기능은 구현하지 않았다. 휴지통 비지원 대상/Shift+Delete/휴지통 비움은 복원 불가이며 부분 복원/충돌/휴지통 외부 변경의 모든 조합은 미검증이다.
+- 다중 목적지 호환 복원은 기존 SHFileOperation 경로를 유지한다. native 복원 후 `$R`은 없어졌지만 `$I` 잔재가 남는 것을 관측했다. 데이터 복원과 휴지통 메타데이터 완전 정리는 다르며 후자는 별도 안전한 셸 복원 통합 검토가 필요하다. 사용자 휴지통을 임의 정리하지 않는다.
+- OS·디스크 필터·백신·네트워크/클라우드 provider의 응답 시간을 FxFile이 독점하거나 절대 보장할 수 없다. 실제 확인된 위험 경로를 개선한 범위의 리팩터링이며 모든 Windows 환경의 완벽한 무결성 보증은 아니다.
+- 근거: [Microsoft DeferWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-deferwindowpos), [셸 클립보드](https://learn.microsoft.com/en-us/windows/win32/shell/clipboard), [ReleaseStgMedium](https://learn.microsoft.com/en-us/windows/win32/api/ole2/nf-ole2-releasestgmedium), [libyal 휴지통 형식 연구](https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc). 마지막 자료는 Microsoft의 공개 안정 API 계약이 아니므로 미지원 형식은 안전 거부한다.
+
+---
+
+## Task 128 — 자동 맞춤·분할 잠금 상호 배타와 마지막 수동 크기 재시작 복원 (2026-10-13~14)
+
+### 128.1 요청과 최종 판정
+
+- 자동 맞춤 ON→분할 잠금 OFF, 분할 잠금 ON→자동 맞춤 OFF, 두 체크 OFF→마지막 수동 크기를 정상 종료·재실행에 유지한다. 자동 맞춤을 명시 해제하는 명령도 분할 잠금을 해제한다. 이 모드 선택은 사용자 승인된 요구이며 두 체크를 같은 값으로 묶는 동작이 아니다.
+- x64 비율 및 x32 고정 픽셀 실기, 운영본 여섯 사용자 폴더 표시·정상 종료, 세 배포본 설정 동기화와 최종 VerifyOnly를 완료했다. 위치·경로·시계 잠금은 보존했다.
+- 상세 사용법은 `fxfile_working/docs/TASK128_MANUAL_SPLIT_RESTART.md`, 실기·빌드·정리 증거는 `__BUILD_TEMP_BACKUP__/task128_results_20261013/RESULTS.md`를 따른다.
+
+### 128.2 관측 증거와 직접 원인
+
+- 기존 Task127 바이너리에서 auto=0/lock=0인 비균등 2×3 배치는 수동 드래그·재시작 후 실제로 복원됐다. auto=0/lock=1이면 `OnCreateClient`가 잠금 스냅샷을 복원했다. 운영 정본에도 split_locked=1이었으므로 자동 맞춤 OFF 자체의 버그라는 초기 판정은 원인 분리 이전의 성급한 추정이었다.
+- 사용자가 마지막 수동 크기를 기대하는 상황에서 별도의 분할 잠금이 이전 배치를 우선하는 모드 충돌이 핵심이었다. 자동 맞춤 ON과 분할 잠금 ON도 동시에 저장 가능했던 기존 설정을 명시적으로 정규화했다.
+- 기존 `x64_restart_comparison.json`에는 size3 486→512 한 키의 차이(Compare-Object 항목 2개)가 남아 있었다. 당시 화면/pane 조건을 함께 기록하지 않아 그 숫자만으로 실제 화면 불변을 판정할 수 없다. 원본 증거를 보존하고 동일 창 조건의 HWND·설정 비교로 추가 검증했다. 과거 수치 변동의 원인을 이번 표본으로 단정하지 않는다.
+
+### 128.3 구현/해결 방법
+
+- `src/fxfile/main_frame.cpp`의 `setViewAutoEqualize()`와 `setViewSplitLocked()`가 두 옵션의 상호 배타 전환과 대기 중 자동 맞춤 취소를 함께 처리한다. 잠금 해제 시 현재 행/열 형태를 저장하고 기존 잠금 스냅샷은 덮어쓰지 않는다.
+- 명령의 체크 표시를 실제 옵션 getter에서 읽는다. 기존 둘 다 ON은 시작 시 잠금 스냅샷을 보호해 자동 맞춤 OFF로 정규화한다. 둘 다 OFF에서 한 번 수행하는 동일 비율 분할은 새로운 마지막 수동 배치로 저장된다.
+- `src/fxfile/CMakeLists.txt`의 링크 PDB를 아키텍처별 빌드 캐시 `src/fxfile/link_symbols/<Config>`로 분리했다. `/DEBUG`는 유지하며 컴파일러 PDB와 링크 PDB를 구별한다. 배포 확정 뒤 PDB/캐시는 재생성 가능한 산출물로 정리했다.
+
+### 128.4 실패 사례와 복구 과정
+
+- 초기 전체 빌드는 x64 성공 뒤 x32 runtime-root PDB 쓰기 LNK1201로 실패했다. 당시 PDB 점유 프로세스나 보안 원인을 확정하지 않았고 소유권·핸들·백신 설정을 변경하지 않았다. 실패 manifest/log를 보존하고 PDB 출력 위치를 분리해 양 아키텍처 전체 빌드를 성공시켰다.
+- 재개 첫 조회 때 운영본 PID 34648이 있었으나 캡처 직전에는 종료돼 있었다. 새 운영본을 정상 실행하여 사용자 여섯 폴더 화면을 확인하고 종료했다.
+- 첫 화면 수집 도구는 MFC 도구 모음 메뉴가 native GetMenu에 노출되지 않는 상황에서 부적절한 메뉴 초기화 메시지를 사용해 수집이 지연됐다. 해당 수집 명령을 중단하고 메뉴 핸들 의존을 제거했다. 초기 화면 캡처에 Codex가 앞에 나타난 것도 확인하여 실제 앱 HWND의 PrintWindow 캡처로 교체했다. 이 도구 오류를 제품 실기 PASS로 재사용하지 않았다.
+
+### 128.5 정적·동적 검증 및 최종 해시/manifest·정리
+
+- 전체 정적 회귀 **46개, 실패 0**: `static_contracts_final.json`. 신규 **13개 PASS**는 재개 뒤 `task128_contracts_resume.log`로 다시 확인했다. 이번 재개에서는 제품 소스 추가 변경·재빌드 없이 기존 성공 산출물로 실기·재동기화했다.
+- x32 고정 픽셀: size1/2/3=**425/295/326**, 두 체크 OFF. F5 가속기의 목적지 `ID_VIEW_REFRESH(33040)`를 WM_COMMAND로 실행한 전후와 정상 종료·재실행 후에 여섯 ExplorerPane HWND 좌표/너비/높이 불변, 저장 분할 키 10개 차이 0, 종료 코드 0×2. 보고서 `x32_restart_comparison.json` 및 initial/after_f5/after_restart JSON·PNG를 보존했다.
+- x64 비율: **0.424354/0.239852/0.627097**, 저장 픽셀 460/260/512, 두 체크 OFF. 같은 비교에서 여섯 pane 실제 배치 불변·설정 차이 0·종료 코드 0×2. 보고서 `x64_resume_restart_comparison.json`, 실제 배치 JSON과 앱 화면 PNG를 보존했다. 물리 F5 키 입력 자체를 추가 검증했다는 뜻은 아니다.
+- 운영본 실제 폴더 목록 6개 화면 및 정상 종료 확인: `installed_runtime.png/json`, 종료 전후 설정 사본. 운영본 auto=0/lock=1을 보존해 두 run에 필수 설정 10개를 재동기화했다. 시험용 empty 경로를 정본으로 복제하지 않았다.
+- 최신 PASS preflight는 `__BUILD_TEMP_BACKUP__/preflight_20261014_061732_846/preflight_report.json`이다. 실제 x64/x32 configure·TEMP probe/정리·환경 복원 PASS, Git 저장소가 아니라는 비차단 경고 1건이다.
+- 최종 성공 **DeployVerify** manifest: `__BUILD_TEMP_BACKUP__/unified_deploy_20261014_061838_941/deployment_manifest.json`. 세 패키지 설정 10개·언어·아키텍처·루트 INI/.fxfile 부재 일치, 격리 no-INI x64/x32 **6/6 ready 및 ExitCode=0**, 강제 종료 없음. ready는 x64 7.430초/x32 8.825초이며 현재 PC 표본이다. build TEMP 제거·환경 복원·최종 저장소 체크 성공이다.
+- x64 설치/run/bin SHA-256=`823C3E57272B5E9B8FBF1CA9BE8B8E03E611C0C12064BAED2B6CE40FC67351FE`, x32 run/bin=`F815F5D7AAF3FECBBA75FAAEBE5D7E3F4F89CF8D57627334A52F9B06955BA2E3`.
+- §0.7.3 파일 기반 Audit/Delete로 정확한 **28경로·3,535파일·1,260,311,495바이트(1.174GiB)**를 휴지통 없이 제거했다. 빌드 캐시/obj/중간 CHM/PDB, 완료된 Task127/128 합성 복제본, 구 preflight/deploy 세대 및 최신 완료 smoke 복제본이다. 실패/성공 manifest와 구 preflight 보고서는 Task128 `archived_manifests/`로 보존했다. **잠금·미처리 대상 0**. 최신 PASS 1세대·최신 성공 deploy 1세대·Task128 소스 복구본·bin·세 패키지·사용자 보존 백업을 유지했다. 재생성 가능한 시험/캐시의 복구는 보존 소스와 새 빌드로 가능하다.
+- 정리 뒤 최종 **VerifyOnly PASS**는 `verify_only_final.log`이다. 즉시 및 30초 이상 후 대상 부재·정본 존재·관련 프로세스 0·저장소를 `cleanup_postcheck.json`으로 확인했다. 식별 가능한 Task 임시물 외의 C:/D: 사용자 자료와 Codex 대화/플러그인은 정리 범위에 포함하지 않았다.
+
+### 128.6 교훈과 재발 방지
+
+- 자동 맞춤 OFF만 읽고 잠금 복원 상태를 빠뜨리면 사용자 기대와 실제 시작 배치를 잘못 해석한다. 두 옵션과 ordinary/locked 스냅샷을 함께 읽고 합성 프로필로 원인을 분리한다.
+- 옵션 전환·대기 자동 맞춤 취소·레이아웃 형태 저장·메뉴 체크를 한 상태 전환으로 묶어야 한다. 기존 둘 다 ON은 사용자의 잠금 스냅샷을 보호하는 방향으로 정규화한다.
+- 비율 모드의 저장 픽셀 수치만 비교하지 않는다. 같은 창 조건의 실제 pane HWND 배치와 저장값을 함께 기록한다. 앱 HWND 캡처가 실제 앱 화면인지 직접 확인한다.
+- PDB 쓰기 실패를 용량 부족/백신/파일 점유로 단정하지 않는다. 원인을 확정할 증거가 없으면 기록하고 재생성 가능한 출력 경로 분리로 복구한다.
+
+### 128.7 보장 범위와 남은 한계
+
+- 정상 종료·같은 창 조건의 재시작을 검증했다. 강제 종료/충돌 저장, 다른 해상도/DPI/창 크기 및 최소 pane 경계는 보장 범위를 확장하지 않는다. 해당 경우 기존 비율 유지/고정 픽셀 정책을 따른다.
+- 운영본처럼 분할 잠금 ON이면 잠금 스냅샷이 우선한다. 마지막 수동 배치를 쓰려면 두 체크 OFF에서 조정 후 정상 종료한다.
+- Task127 이하의 파일 작업·휴지통 잔재·장시간 무응답 관련 한계는 이번 UI 모드 작업으로 변경되지 않는다.
+
+**-- 자동 맞춤·분할 잠금 상호 배타, x64 비율/x32 고정 픽셀의 F5 명령·정상 종료·재실행 배치 불변, 운영본 확인·세 설정 동기화·최종 VerifyOnly 및 임시물 정리 완료 (Task 128, 2026-10-14) --**
+
+## Task 129 — 파일 작업 필수 확인·드롭 취소 충돌·안내문 가독성 (2026-10-14)
+
+### 129.1 요청과 적용 계약
+
+사용자가 겪은 실수 드래그 이동·중복 복사·잘라내기 위치 혼선을 줄이기 위해, 단일/다중 파일·폴더의 복사·이동·삭제·잘라내기·붙여넣기 요청마다 확인창을 거친다. 기본 버튼은 취소이며 Enter는 취소다. 확인 버튼의 명시 활성화만 승인한다. 확인 생략·다시 묻지 않음 설정을 두지 않는다. 오른쪽 드래그는 먼저 구체적인 작업을 선택하고 그 대상·도착지를 확인한다. 폴더 항목 수는 선택된 최상위 수이며 하위 내용 포함을 명시한다. 휴지통/영구 삭제와 원본이 사라지는 이동을 구별한다.
+
+사용자 후속 요청의 `fxfile_error_report_261014-130815.zip`/PNG 분석과 작은 팝업 글씨 개선도 같은 작업에 포함했다. 사용 설명은 `fxfile_working/docs/TASK129_FILE_OPERATION_CONFIRMATION.md`, 최종 인계 정본은 `__BUILD_TEMP_BACKUP__/task129_results_20261014/RESULTS.md`다.
+
+### 129.2 관측 증거와 직접 원인
+
+- 기존 파일 작업 시작점은 별도 확인 없이 worker를 시작할 수 있었고, 셸 명령·외부 셸 옵션·직접 바로가기/압축/파일 모음 가지를 같이 보호해야 했다. 실제 `.txt`가 FileContents도 제공할 때 내용 가져오기 가지를 먼저 타서 이동 대신 추가 복사되는 기존 우회를 합성 실기에서 발견했다.
+- ZIP의 PID 10588과 실행 경로는 당시 `gui_x64_external_shellcheck` 시험본이었다. 정확히 일치하는 12:50:38 PDB와 CDB 스택에서 충돌은 `ExplorerCtrl::beginDragDrop+0x14b`, `DoDragDrop` 후 원본 `IDataObject::Release` 가상 호출이었다(RIP 0xB). MFC `oledrop2.cpp`는 콜백 래퍼를 `Attach(..., FALSE)`로 구성하고 `Detach`는 AddRef 없이 분리한다. 대상의 추가 Release가 빌린 원본 참조를 소비한 소유권 오류다. 힙 전체 페이지는 덤프에 없어 소멸 객체 내용을 복원하지 못했지만 코드 경로와 호출 지점은 일치한다.
+- 상세 덤프/명령 분석과 Microsoft 참조는 `CRASH_130815_ANALYSIS.md`에 보존했다. 당시 Windows Application Error/Hang/WER 범위의 이벤트는 0건이어서 자체 BugTrap ZIP의 예외·스택을 직접 증거로 사용했다. 원본 ZIP/PNG와 문제 EXE·PDB도 진단 증거로 보존했다.
+
+### 129.3 구현/해결 방법
+
+- `file_operation_confirmation.*`이 작업 종류·전체 출발 경로·도착지·중복 복사 가능성을 고정 문자열로 보여 준다. 읽기 전용 목록은 스크롤과 창 크기 조절을 지원하며 확인/거부 안내는 12pt 맑은 고딕이다. 실제 글꼴 지표로 배치하고 모니터 작업 영역 안에 표시한다. BugTrap의 12개 대화상자 리소스도 같은 글꼴로 키웠고 CP949 인코딩을 보존했다.
+- `FileOpThread::start`는 승인 전 worker·저널·파일 쓰기를 시작하지 않는다. 취소는 소유 버퍼를 정상 정리한다. 셸 메뉴는 COM/PIDL을 소유해 모달 갱신 중 빌린 선택 행을 다시 참조하지 않는다.
+- 잘라내기는 승인 후 클립보드에 등록하고 흐린 행 표시를 갱신한다. 붙여넣기는 확인 전 시퀀스를 고정하며 변경 시 거부한다. 같은 잘라내기 시퀀스의 중복 진행을 막고, 내부 엔진의 전체 항목 성공 및 동일 시퀀스일 때만 완료 클립보드를 비운다. 취소·실패·부분 완료는 보존한다.
+- 실제 파일 형식을 내용/텍스트 가져오기보다 우선하여 확인 우회와 잘못된 복사를 막는다. 가상 파일 descriptor 이름/크기를 검사하고, 취소한 표현 형식은 처리 완료로 반환해 다른 형식으로 다시 파일을 만들지 않는다.
+- Explorer/폴더 트리/북마크 셸 드롭의 `Detach`를 `GetIDataObject(TRUE)`로 교체했다. 모달 확인 동안 별도 AddRef를 보유하고 자기 참조만 해제한다. 원본 참조를 버리거나 해제를 생략하는 우회는 쓰지 않는다. FxFile 밖으로의 드래그도 전달 전 확인하고 원래 창·드롭 지점을 다시 확인한다.
+
+### 129.4 중단·실패와 복구
+
+- 외부 셸 클립보드 변경 거부 안내창의 버튼 ID 2를 도구가 ID 1로 가정한 대기는 시험 도구 오류다. 실제 버튼 열거로 고친 뒤 진행된 드래그 취소의 제품 충돌을 사용자 ZIP으로 확정하고 별도로 수정했다.
+- 셸의 정적 도구 호출 인수 오류 48건은 `static_harness_invalid_invocation.json`에 보존했다. 올바른 호출의 최종 정적 48/48 PASS를 사용한다. 재현 실패나 대기 결과를 제품 PASS로 바꾸지 않았다.
+- 설치 운영본을 실제 목록 공개 직후 너무 일찍 닫은 첫 실기에서 기존 지연 탐색 기록의 228행이 빠졌다. 다른 설정 변화는 없었다. 새 사용자 변경 부재를 해시로 확인하고 실기 전 저장본을 복원했다. 기록 복원 대기 25초 후 두 번째 실기는 전체 행 차이 0이었다. 현재 사용자 자동 맞춤 ON·분할 잠금 OFF와 여섯 경로를 보존해 동기화했다. 이 기존 빠른 종료 경로 자체의 제품 수정을 주장하지 않는다.
+
+### 129.5 검증·배포·정리 증거
+
+- 정적 회귀 **48/48**, 신규 계약 **39/39** PASS: `static_contracts_final_release.json`. x64/x32 × 내부/외부 셸 옵션 **4회·각 18건·총 72건** PASS: `runtime_verification_summary.json`. 승인 전/취소 후 해시, 승인 복사/이동 해시, 영구 삭제, 클립보드 변경 거부와 잘라내기 행 표시, 단일 텍스트 취소 뒤 세 번 연속 드래그·다중 Shift 이동을 검사했다. 종료 코드 네 번 모두 0이다.
+- 확인창 각 HWND의 글꼴 높이·배치와 PNG를 검사했다. 오류창은 DLL을 리소스로만 읽어 예외를 발생시키지 않고 미리보기하여 실제 -16px LOGFONT·본문 필요 높이·버튼 배치를 확인했다. 실제 운영본도 여섯 실제 목록·정상 종료 0, 설정 차이 0이다.
+- 양 아키텍처 전체 빌드·배포 성공 manifest의 보존 위치: `__BUILD_TEMP_BACKUP__/task129_results_20261014/archived_manifests/unified_deploy_20261014_154944_056_deployment_manifest.json`.
+- 최신 PASS 프리플라이트: `__BUILD_TEMP_BACKUP__/preflight_20261014_160930_916/preflight_report.json`. 실제 x64/x32 configure·하드게이트·환경 복원·TEMP 정리 PASS, Git 저장소 부재만 비차단 경고다.
+- **최종 성공 배포 manifest:** `__BUILD_TEMP_BACKUP__/unified_deploy_20261014_161049_855/deployment_manifest.json`, DeployVerify/Success. 세 패키지 설정 10개·언어·아키텍처·no-INI 일치. 격리 x64/x32 모두 6/6 ready·ExitCode 0·강제 종료 없음. x64 SHA-256 `D55381D715DB21BF5700C97A7176B27FAFF7131B9BB1B89870BE9A448BEF50D1`, x32 `81442639D291C63C38681EC11E13FEFACA110A48981D964C594C0BD935FF909F`.
+- 정리 경로와 결과는 `cleanup_audit.json`/`cleanup_results.json`, 최종 VerifyOnly는 `verify_only.log`, 30초 이상 부재·프로세스·정본 검사는 `cleanup_postcheck.json`을 정본으로 사용한다. 구 manifest/report는 `archived_manifests`로 보존한다. 소스 변경 27개 해시와 작업 전 2,295개 복구본, 원본 오류 증거 및 사용자 보존 백업은 유지한다. 시험 클립보드의 모든 경로가 Task129 합성 표본일 때만 비웠으며 새 사용자 클립보드는 자동 삭제하지 않는다.
+- 최종 정리 **54경로·6,115파일·2,217,622,666바이트(2.065GiB)**, 실패 0이다. **32.168초** 후 재생성 0·보존 정본 누락 0·패키지 불필요 파일 0·FxFile 프로세스 0·최종 VerifyOnly PASS를 확인했다. 작업 소스 영역 0.208GiB, 최종 C: 76.966GiB/33.223%, D: 1,975.338GiB/53.015%다. 일회용 수집/정리 스크립트는 해시를 남기고 자기 삭제했으며 공유 TEMP의 출처 불명 파일·사용자 자산은 삭제하지 않았다.
+
+### 129.6 교훈과 재발 방지
+
+셸 `Detach`와 소유권 이전을 같은 의미로 취급하지 않는다. 실제 MFC 콜백이 Attach(FALSE)로 빌린 객체인지 확인하고, 모달 동안 필요한 별도 참조만 소유한다. 승인 직전 경로·클립보드 시퀀스를 고정하며 성공·취소·부분 실패를 구별한다. 실제 텍스트 파일의 다중 표현도 회귀 표본에 포함한다. 큰 글꼴의 숫자만 바꾸지 않고 실제 컨트롤 배치와 본문 높이를 검사한다. 목록 ready와 탐색 기록 복원 완료를 구별해 자동 실기 종료로 사용자 기록을 버리지 않는다.
+
+### 129.7 보장 범위와 남은 한계
+
+실기 외부 셸 옵션은 FxFile 안에서 Windows 셸 작업을 사용한 경우다. 임의의 다른 앱에 전달하는 최종 경로/동작은 외부 앱이 결정한다. 오른쪽 드래그, 트리/북마크/드라이브, 압축·가상 파일은 구현·정적 가지를 검사했으며 모든 외부 제공자 GUI를 전수 검증하지 않았다. 이름 변경 및 일반 텍스트/이미지 가져오기는 파일 선택 확인 정책의 별도 영역이다. 전원/저장 장치/네트워크 실패와 다른 앱 동시 변경에 절대 복구를 보장하지 않는다. Task120의 지연 탐색 기록 복원 중 빠른 종료 문제와 Task127 이하의 장시간 무응답·휴지통 잔재 한계도 일반 해결됐다고 주장하지 않는다.
+
+**-- 파일 작업 필수 확인, 드롭 취소 참조 수명 수정, 12pt 안내문 가독성, 정적 48/신규 39·GUI 72건·양 아키텍처 빌드·세 배포본 동기화·최종 VerifyOnly·임시물 정리 완료 (Task 129, 2026-10-14) --**

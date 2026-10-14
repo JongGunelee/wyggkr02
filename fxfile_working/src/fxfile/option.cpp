@@ -115,6 +115,7 @@ static const OptionKey gMainOptionKeys[] =
     { XPR_STRING_LITERAL("main.file_scrap.floating.show"),                     OptionKey::TypeBoolean, &Option::mMain.mFileScrapDrop,                  (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.picture_viewer.show"),                          OptionKey::TypeBoolean, &Option::mMain.mPictureViewer,                  (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.tip_of_today.show"),                            OptionKey::TypeBoolean, &Option::mMain.mTipOfTheToday,                  (void *)XPR_TRUE                       },
+    { XPR_STRING_LITERAL("main.view.auto_equalize"),                           OptionKey::TypeBoolean, &Option::mMain.mViewAutoEqualize,               (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("main.window.position_locked"),                       OptionKey::TypeBoolean, &Option::mMain.mWindowPlacementLocked,          (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.view.path_locked"),                             OptionKey::TypeBoolean, &Option::mMain.mViewPathLocked,                 (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("main.view1.locked_path"),                            OptionKey::TypeString,   Option::mMain.mLockedViewPath[0],              (void *)XPR_STRING_LITERAL(""),        XPR_MAX_PATH * 2 + 1                   },

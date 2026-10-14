@@ -101,6 +101,10 @@ public:
 
     void splitView(xpr_sint_t aRowCount, xpr_sint_t aColumnCount, xpr_bool_t aLoading = XPR_FALSE);
     void setSplitEqually(void);
+    xpr_bool_t isViewAutoEqualize(void) const;
+    void setViewAutoEqualize(xpr_bool_t aEnabled);
+    void autoFitViewSizes(void);
+    xpr_bool_t applyEqualViewSplitGeometry(void);
     void setSplitRatio(xpr_double_t aRatio);
     xpr_bool_t isSingleView(void) const;
     void getViewSplit(xpr_sint_t &aRowCount, xpr_sint_t &aColumnCount) const;
@@ -261,6 +265,7 @@ protected:
     SysTray    *mSysTray;
     xpr_bool_t  mExit;
     xpr_bool_t  mPreviewMode;
+    xpr_bool_t  mPendingAutomaticPaneFit;
     xpr_bool_t  mDeferStartupViews;
     xpr_bool_t  mStartupViewBatchPending;
     xpr_bool_t  mStartupLayoutPublished;

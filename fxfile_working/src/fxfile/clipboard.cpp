@@ -12,6 +12,8 @@
 
 #include <afxole.h>
 #include "file_op_thread.h"
+#include "file_operation_confirmation.h"
+#include "clip_format.h"
 #include "bitmap.h"
 #include "winapi_ex.h"
 
@@ -21,6 +23,12 @@
 
 namespace fxfile
 {
+namespace {
+bool HasFileSelectionData(COleDataObject* data) {
+    return data && (data->IsDataAvailable(CF_HDROP) ||
+                   data->IsDataAvailable(ClipFormat::instance().mShellIDList));
+}
+}
 xpr_bool_t FillFormatEtc(LPFORMATETC aFormatEtc, CLIPFORMAT aClipFormat)
 {
     if (XPR_IS_NULL(aFormatEtc) || aClipFormat != 0)
@@ -62,14 +70,18 @@ static xpr_bool_t CacheClipboardFormat(LPDATAOBJECT    aDataObject,
     return XPR_TRUE;
 }
 
-void SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *aClipFormat)
+xpr_bool_t SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *aClipFormat)
 {
     if (XPR_IS_NULL(aDataObject))
-        return;
+        return XPR_FALSE;
+
+    if (aDropEffect == DROPEFFECT_MOVE &&
+        !FileOperationConfirmation::confirmCut(AfxGetMainWnd()->GetSafeHwnd(), aDataObject))
+        return XPR_FALSE;
 
     COleDataSource *sDataSource = new COleDataSource;
     if (XPR_IS_NULL(sDataSource))
-        return;
+        return XPR_FALSE;
 
     FORMATETC sFormatEtc = {0};
 
@@ -108,6 +120,7 @@ void SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *
     CacheClipboardFormat(aDataObject, sDataSource, aClipFormat[3], sFormatEtc);
 
     sDataSource->SetClipboard();
+    return XPR_TRUE;
 }
 
 xpr_bool_t DoPaste(HWND               aHwnd,
@@ -118,6 +131,7 @@ xpr_bool_t DoPaste(HWND               aHwnd,
                    xpr_uint_t         aMsg,
                    xpr_bool_t         aCopy)
 {
+    const DWORD sSequenceBeforeAttach = ::GetClipboardSequenceNumber();
     COleDataObject sOleDataObject;
     if (sOleDataObject.AttachClipboard() == XPR_FALSE)
         return XPR_FALSE;
@@ -141,7 +155,7 @@ xpr_bool_t DoPaste(HWND               aHwnd,
         ::GlobalFree(sGlobal);
     }
 
-    return DoPaste(aHwnd, &sOleDataObject, XPR_FALSE, aShellIDListClipFormat, sDropEffect, aTarget, aLinkSuffix, aMsg, aCopy);
+    return DoPaste(aHwnd, &sOleDataObject, XPR_FALSE, aShellIDListClipFormat, sDropEffect, aTarget, aLinkSuffix, aMsg, aCopy, sSequenceBeforeAttach);
 }
 
 xpr_bool_t DoPaste(HWND               aHwnd,
@@ -152,16 +166,23 @@ xpr_bool_t DoPaste(HWND               aHwnd,
                    const xpr_tchar_t *aTarget,
                    const xpr_tchar_t *aLinkSuffix,
                    xpr_uint_t         aMsg,
-                   xpr_bool_t         aCopy)
+                   xpr_bool_t         aCopy,
+                   DWORD              aClipboardSequence)
 {
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
+
+    const DWORD sClipboardSequence = aDragDrop ? 0 :
+        (aClipboardSequence ? aClipboardSequence : ::GetClipboardSequenceNumber());
 
     xpr_bool_t sResult = XPR_FALSE;
 
     CWaitCursor sWaitCursor;
     if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE && aDropEffect == DROPEFFECT_LINK)
     {
+        if (!FileOperationConfirmation::confirmDrop(aHwnd,
+            aOleDataObject->GetIDataObject(XPR_FALSE), DROPEFFECT_LINK, aTarget))
+            return XPR_FALSE;
         STGMEDIUM sStgMedium = {0};
         FORMATETC sFormatEtc = {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 
@@ -256,12 +277,54 @@ xpr_bool_t DoPaste(HWND               aHwnd,
         return sResult;
     }
 
-    xpr_uint_t sFiles;
+    xpr_uint_t sFiles = 0;
     xpr_tchar_t *sMultipleSource = XPR_NULL;
     xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
     xpr_tchar_t *sTarget = XPR_NULL;
 
-    if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE)
+    // Existing filesystem objects already expose paths. Avoid synchronous
+    // BindToObject/GetDisplayNameOf for every item on the UI thread.
+    if (aOleDataObject->IsDataAvailable(CF_HDROP) == XPR_TRUE)
+    {
+        STGMEDIUM sMedium = {0};
+        FORMATETC sFormat = {CF_HDROP, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+        if (aOleDataObject->GetData(CF_HDROP, &sMedium, &sFormat) == XPR_TRUE)
+        {
+            if (sMedium.tymed == TYMED_HGLOBAL && sMedium.hGlobal)
+            {
+                HDROP sDrop = reinterpret_cast<HDROP>(sMedium.hGlobal);
+                sFiles = ::DragQueryFile(sDrop, 0xFFFFFFFF, XPR_NULL, 0);
+                // Legacy operation buffers support MAX_PATH; fail closed for
+                // truncation rather than operating on a different pathname.
+                if (sFiles > 0 && sFiles <= 1000000)
+                {
+                    sMultipleSource = new xpr_tchar_t[(XPR_MAX_PATH + 1) * static_cast<size_t>(sFiles) + 1];
+                    sMultipleSourceEnum = sMultipleSource;
+                    sResult = XPR_TRUE;
+                    for (UINT i = 0; i < sFiles; ++i)
+                    {
+                        UINT length = ::DragQueryFile(sDrop, i, XPR_NULL, 0);
+                        if (!length || length >= XPR_MAX_PATH ||
+                            ::DragQueryFile(sDrop, i, sMultipleSourceEnum, XPR_MAX_PATH + 1) != length)
+                        {
+                            sResult = XPR_FALSE;
+                            break;
+                        }
+                        sMultipleSourceEnum += length + 1;
+                    }
+                    *sMultipleSourceEnum = 0;
+                }
+            }
+            ::ReleaseStgMedium(&sMedium);
+            if (XPR_IS_FALSE(sResult))
+            {
+                XPR_SAFE_DELETE_ARRAY(sMultipleSource);
+                return XPR_FALSE;
+            }
+        }
+    }
+
+    if (XPR_IS_FALSE(sResult) && aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE)
     {
         STGMEDIUM sStgMedium = {0};
         FORMATETC sFormatEtc = {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
@@ -321,35 +384,9 @@ xpr_bool_t DoPaste(HWND               aHwnd,
 
     if (XPR_IS_FALSE(sResult) && aOleDataObject->IsDataAvailable(CF_HDROP) == XPR_TRUE)
     {
-        // First, Get Global Data(CF_HDROP)
-        HDROP sDrop = (HDROP)aOleDataObject->GetGlobalData(CF_HDROP);
-        if (XPR_IS_NULL(sDrop))
-            return XPR_FALSE;
-
-        sFiles = ::DragQueryFile(sDrop, 0xFFFFFFFF, XPR_NULL, 0); // 0xFFFFFFFF -1
-        if (sFiles > 0)
-        {
-            xpr_sint_t i;
-            xpr_tchar_t sPath[XPR_MAX_PATH + 1];
-            sMultipleSource = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sFiles + 1];
-            sMultipleSourceEnum = sMultipleSource;
-
-            for (i = 0; i < (xpr_sint_t)sFiles; ++i)
-            {
-                ::DragQueryFile(sDrop, i, sPath, XPR_MAX_PATH);
-
-                _tcscpy(sMultipleSourceEnum, sPath);
-
-                sMultipleSourceEnum += _tcslen(sMultipleSourceEnum) + 1;
-            }
-
-            sMultipleSourceEnum[0] = '\0'; // double end null
-        }
-
-        ::DragFinish(sDrop);
-
-        if (sFiles > 0)
-            sResult = XPR_TRUE;
+        // GetData failed above. Do not obtain a second, differently owned HGLOBAL.
+        XPR_SAFE_DELETE_ARRAY(sMultipleSource);
+        return XPR_FALSE;
     }
 
     if (XPR_IS_FALSE(sResult))
@@ -405,14 +442,10 @@ xpr_bool_t DoPaste(HWND               aHwnd,
     pshfo->pFrom  = sMultipleSource;
     pshfo->pTo    = sTarget;
 
-    if (XPR_IS_FALSE(aDragDrop) && sFunc == FO_MOVE)
-    {
-        // Empty clipboard - The first parameter of OleSetClipboard function is XPR_NULL
-        ::OleSetClipboard(XPR_NULL);
-    }
-
     FileOpThread *sFileOpThread = new FileOpThread;
-    sFileOpThread->start(pshfo, aMsg >= WM_USER, aHwnd, aMsg);
+    if (XPR_IS_FALSE(aDragDrop) && sFunc == FO_MOVE)
+        sFileOpThread->setClipboardMoveSequence(sClipboardSequence);
+    sResult = sFileOpThread->start(pshfo, aMsg >= WM_USER, aHwnd, aMsg);
 
     return sResult;
 }
@@ -632,6 +665,7 @@ xpr_bool_t GetPreferredDropEffect(COleDataObject *aOleDataObject, CLIPFORMAT aPr
 
 xpr_bool_t IsPasteDIB(COleDataObject *aOleDataObject)
 {
+    if (HasFileSelectionData(aOleDataObject)) return XPR_FALSE;
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
 
@@ -643,6 +677,7 @@ xpr_bool_t IsPasteDIB(COleDataObject *aOleDataObject)
 
 xpr_bool_t IsPasteBitmap(COleDataObject *aOleDataObject)
 {
+    if (HasFileSelectionData(aOleDataObject)) return XPR_FALSE;
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
 
@@ -654,6 +689,7 @@ xpr_bool_t IsPasteBitmap(COleDataObject *aOleDataObject)
 
 xpr_bool_t IsPasteText(COleDataObject *aOleDataObject)
 {
+    if (HasFileSelectionData(aOleDataObject)) return XPR_FALSE;
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
 
@@ -665,6 +701,7 @@ xpr_bool_t IsPasteText(COleDataObject *aOleDataObject)
 
 xpr_bool_t IsPasteUnicodeText(COleDataObject *aOleDataObject)
 {
+    if (HasFileSelectionData(aOleDataObject)) return XPR_FALSE;
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
 
@@ -688,6 +725,7 @@ xpr_bool_t IsPasteShellIdList(COleDataObject *aOleDataObject, CLIPFORMAT aShellI
 
 xpr_bool_t IsPasteInetUrl(COleDataObject *aOleDataObject, CLIPFORMAT aInetUrlClipFormat, CLIPFORMAT aFileContentsClipFormat, CLIPFORMAT aFileDescriptorClipFormat)
 {
+    if (HasFileSelectionData(aOleDataObject)) return XPR_FALSE;
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
 
@@ -849,6 +887,9 @@ xpr_bool_t DoPasteInetUrl(LPDATAOBJECT aDataObject, xpr_tchar_t *aDir, CLIPFORMA
 
 xpr_bool_t IsPasteFileContents(COleDataObject *aOleDataObject, CLIPFORMAT aFileContentsClipFormat, CLIPFORMAT aFileDescriptorClipFormat)
 {
+    // A normal file may also expose FileContents (notably a single .txt).
+    // Never import that representation ahead of the confirmed copy/move path.
+    if (HasFileSelectionData(aOleDataObject)) return XPR_FALSE;
     if (XPR_IS_NULL(aOleDataObject))
         return XPR_FALSE;
 
@@ -896,6 +937,52 @@ xpr_bool_t DoPasteFileContents(LPDATAOBJECT aDataObject, xpr_tchar_t *aDir, CLIP
 
     if ((SUCCEEDED(sDescriptorResult)) && (XPR_IS_NOT_NULL(sFileGroupDescA) || XPR_IS_NOT_NULL(sFileGroupDescW)))
     {
+        if (::GlobalSize(sStgMedium.hGlobal) < sizeof(UINT)) {
+            ::GlobalUnlock(sStgMedium.hGlobal); ::ReleaseStgMedium(&sStgMedium);
+            return XPR_TRUE;
+        }
+        const UINT sDeclaredCount = aUnicode ? sFileGroupDescW->cItems : sFileGroupDescA->cItems;
+        const SIZE_T sHeader = aUnicode ? FIELD_OFFSET(FILEGROUPDESCRIPTORW, fgd) : FIELD_OFFSET(FILEGROUPDESCRIPTORA, fgd);
+        const SIZE_T sUnit = aUnicode ? sizeof(FILEDESCRIPTORW) : sizeof(FILEDESCRIPTORA);
+        const SIZE_T sBytes = ::GlobalSize(sStgMedium.hGlobal);
+        bool sValid = sDeclaredCount && sDeclaredCount <= 1000000 &&
+            sBytes >= sHeader && sDeclaredCount <= (sBytes - sHeader) / sUnit;
+        std::vector<FILEDESCRIPTORW> sOwnedDescriptorsW;
+        std::vector<FILEDESCRIPTORA> sOwnedDescriptorsA;
+        std::vector<std::wstring> sPreviewNames;
+        if (sValid) {
+            if (aUnicode) sOwnedDescriptorsW.assign(sFileGroupDescW->fgd, sFileGroupDescW->fgd + sDeclaredCount);
+            else sOwnedDescriptorsA.assign(sFileGroupDescA->fgd, sFileGroupDescA->fgd + sDeclaredCount);
+            for (UINT sOrdinal = 0; sValid && sOrdinal < sDeclaredCount; ++sOrdinal) {
+                std::wstring sName;
+                if (aUnicode) {
+                    const wchar_t* sRawName = sOwnedDescriptorsW[sOrdinal].cFileName;
+                    const size_t sLength = wcsnlen_s(sRawName, MAX_PATH);
+                    if (!sLength || sLength >= MAX_PATH) { sValid = false; break; }
+                    sName.assign(sRawName, sLength);
+                } else {
+                    const char* sRawName = sOwnedDescriptorsA[sOrdinal].cFileName;
+                    const size_t sLength = strnlen_s(sRawName, MAX_PATH);
+                    wchar_t sWide[MAX_PATH] = {};
+                    const int sLengthW = ::MultiByteToWideChar(CP_ACP, 0, sRawName,
+                        static_cast<int>(sLength), sWide, MAX_PATH);
+                    if (!sLength || sLength >= MAX_PATH || !sLengthW) { sValid = false; break; }
+                    sName.assign(sWide, sLengthW);
+                }
+                if (sName == L"." || sName == L".." || sName.find_first_of(L"\\/:") != std::wstring::npos) {
+                    sValid = false; break;
+                }
+                sPreviewNames.push_back(L"외부 제공 파일: " + sName);
+            }
+        }
+        if (!sValid || !FileOperationConfirmation::confirm(AfxGetMainWnd()->GetSafeHwnd(),
+            FO_COPY, sPreviewNames, {aDir})) {
+            ::GlobalUnlock(sStgMedium.hGlobal);
+            ::ReleaseStgMedium(&sStgMedium);
+            // This representation was handled, including cancellation. Do not
+            // fall through into another representation and write a file.
+            return XPR_TRUE;
+        }
         RemoveLastSplit(aDir);
 
         xpr_sint_t  i, sCount;
@@ -910,9 +997,9 @@ xpr_bool_t DoPasteFileContents(LPDATAOBJECT aDataObject, xpr_tchar_t *aDir, CLIP
         for (i = 0; i < sCount; ++i)
         {
             if (XPR_IS_TRUE(aUnicode))
-                sFileDescW = &sFileGroupDescW->fgd[i];
+                sFileDescW = &sOwnedDescriptorsW[i];
             else
-                sFileDescA = &sFileGroupDescA->fgd[i];
+                sFileDescA = &sOwnedDescriptorsA[i];
 
             sContentsFormatEtc.lindex = i;
 

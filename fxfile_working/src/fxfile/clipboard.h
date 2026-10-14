@@ -15,7 +15,7 @@ namespace fxfile
 {
 xpr_bool_t FillFormatEtc(LPFORMATETC aFormatEtc, CLIPFORMAT aClipFormat);
 
-void       SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *aClipFormat);
+xpr_bool_t SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *aClipFormat);
 void       SetTextClipboard(HWND aHwndOwner, const xpr_tchar_t *aText);
 void       SetTextClipboardA(HWND aHwndOwner, const xpr_char_t *aText);
 void       SetTextClipboardW(HWND aHwndOwner, const xpr_tchar_t *aText);
@@ -36,7 +36,8 @@ xpr_bool_t DoPaste(HWND               aHwnd,
                    const xpr_tchar_t *aTarget,
                    const xpr_tchar_t *aLinkSuffix,
                    xpr_uint_t         aMsg = 0,
-                   xpr_bool_t         aCopy = XPR_FALSE);
+                   xpr_bool_t         aCopy = XPR_FALSE,
+                   DWORD              aClipboardSequence = 0);
 
 xpr_bool_t DoPasteFileContents(LPDATAOBJECT  aDataObject,
                                xpr_tchar_t  *aDir,

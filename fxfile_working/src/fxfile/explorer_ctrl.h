@@ -233,6 +233,7 @@ public:
     CLIPFORMAT getClipFormatDropEffect(void) const;
     CLIPFORMAT getClipFormatShellIDList(void) const;
     xpr_bool_t getSelDataObject(LPDATAOBJECT *aDataObject, xpr_uint_t aShellAttributes = 0, DROPEFFECT *aOkDropEffect = XPR_NULL);
+    void updateClipboardCutState(LPDATAOBJECT aDataObject, bool aCut);
     xpr_bool_t hasSelShellAttributes(xpr_uint_t aShellAttributes) const;
 
     // item selection
@@ -671,6 +672,7 @@ protected:
     afx_msg void OnLButtonUp(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnMouseMove(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnVScroll(xpr_uint_t aSBCode, xpr_uint_t aPos, CScrollBar *aScrollBar);
+    afx_msg void OnHScroll(xpr_uint_t aSBCode, xpr_uint_t aPos, CScrollBar *aScrollBar);
     afx_msg void OnGetdispinfo(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnColumnclick(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnDblclk(NMHDR *aNmHdr, LRESULT *aResult);

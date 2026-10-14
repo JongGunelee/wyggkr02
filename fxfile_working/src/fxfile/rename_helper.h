@@ -39,7 +39,8 @@ public:
 
 public:
     void setRenameStyle(RenameStyle aRenameStyle);
-    void setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aShellAttributes);
+    void setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aShellAttributes,
+                 const xpr_tchar_t *aCachedPath = XPR_NULL, xpr_sint_t aCachedIconIndex = -1);
 
     const xpr_tchar_t *getEditName(void);
     void getEditSel(xpr_sint_t *aSelItem0, xpr_sint_t *aSelItem1);
@@ -51,14 +52,18 @@ public:
     const xpr_tchar_t *getNewName(void);
 
 protected:
+    RenameHelper(const RenameHelper &) = delete;
+    RenameHelper &operator=(const RenameHelper &) = delete;
     RenameStyle   mRenameStyle;
 
     LPSHELLFOLDER mShellFolder;
-    LPCITEMIDLIST mPidl;
+    LPITEMIDLIST mPidl;
     LPITEMIDLIST  mFullPidl;
     xpr_ulong_t   mShellAttributes;
 
     xpr::string   mEditName;
+    xpr::string   mSourcePath;
+    xpr_sint_t    mCachedIconIndex;
 
     LPITEMIDLIST  mNewPidl;
     LPITEMIDLIST  mNewFullPidl;

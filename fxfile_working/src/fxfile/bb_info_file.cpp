@@ -9,6 +9,8 @@
 
 #include "stdafx.h"
 #include "bb_info_file.h"
+#include "recycle_metadata.h"
+#include <vector>
 
 #include <Sddl.h> // for Security Indentifier
 
@@ -59,7 +61,7 @@ struct BBInfoFile::Index
     xpr_sint_t  mInfo2Key;
     xpr_tchar_t mKey[7];
     FILETIME    mDeleteFileTime;
-    DWORD       mFileSize;
+    xpr_uint64_t mFileSize;
     xpr_tchar_t mOriginalFilePath[MAX_PATH * 2 + 1];
 };
 
@@ -202,6 +204,10 @@ BBInfoFile::~BBInfoFile(void)
 
 xpr_bool_t BBInfoFile::open(xpr_tchar_t aDriveChar)
 {
+    // Do not retain another drive's records or repeatedly accumulate the same bin.
+    for (IndexDeque::iterator i = mIndexDeque.begin(); i != mIndexDeque.end(); ++i)
+        delete *i;
+    mIndexDeque.clear();
     mDirPath[0] = '\0';
 
     xpr_uint_t sOsVer = xpr::getOsVer();
@@ -396,11 +402,29 @@ void BBInfoFile::readVistaIndex(void)
                 {
                     sRcode = sFileIo.seekToEnd();
                     sFileSize = sFileIo.tell();
-                    sRcode = sFileIo.seekFromBegin(8);
-
-                    sRcode = sFileIo.read(&sIndex->mFileSize, (sFileSize == 544) ? 8 : 7, &sRead);
-                    sRcode = sFileIo.read(&sIndex->mDeleteFileTime, sizeof(FILETIME), &sRead);
-                    sRcode = sFileIo.read(&sOriginalFile, (xpr_size_t)(sFileSize - sFileIo.tell()), &sRead);
+                    // Version 2 adds a UTF-16 character count at offset 24.
+                    // Bound every read; never infer a format from file length.
+                    if (sFileSize < 26 || sFileSize > 128 * 1024)
+                    {
+                        delete sIndex;
+                        sFileIo.close();
+                        continue;
+                    }
+                    std::vector<unsigned char> sBytes(static_cast<size_t>(sFileSize));
+                    sFileIo.seekFromBegin(0);
+                    sRcode = sFileIo.read(&sBytes[0], sBytes.size(), &sRead);
+                    RecycleMetadata sMetadata;
+                    if (XPR_RCODE_IS_ERROR(sRcode) || sRead != static_cast<xpr_ssize_t>(sBytes.size()) ||
+                        !parseRecycleMetadata(&sBytes[0], sBytes.size(), sMetadata) ||
+                        sMetadata.originalPath.size() >= XPR_COUNT_OF(sOriginalFile))
+                    {
+                        delete sIndex;
+                        sFileIo.close();
+                        continue;
+                    }
+                    sIndex->mFileSize = sMetadata.originalSize;
+                    std::memcpy(&sIndex->mDeleteFileTime, &sMetadata.deletedTime, sizeof(FILETIME));
+                    wcscpy_s(sOriginalFile, sMetadata.originalPath.c_str());
 
                     sInputBytes = wcslen(sOriginalFile) * sizeof(xpr_wchar_t);
                     sOutputBytes = XPR_MAX_PATH * sizeof(xpr_tchar_t);

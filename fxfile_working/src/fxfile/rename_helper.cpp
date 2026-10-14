@@ -28,11 +28,14 @@ RenameHelper::RenameHelper(RenameStyle aRenameStyle)
     , mNewPidl(XPR_NULL)
     , mNewFullPidl(XPR_NULL)
     , mShellAttributes(0)
+    , mCachedIconIndex(-1)
 {
 }
 
 RenameHelper::~RenameHelper(void)
 {
+    COM_RELEASE(mShellFolder);
+    COM_FREE(mPidl);
     COM_FREE(mFullPidl);
     COM_FREE(mNewPidl);
     COM_FREE(mNewFullPidl);
@@ -43,19 +46,53 @@ void RenameHelper::setRenameStyle(RenameStyle eRenameStyle)
     mRenameStyle = eRenameStyle;
 }
 
-void RenameHelper::setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aShellAttributes)
+void RenameHelper::setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aShellAttributes,
+                           const xpr_tchar_t *aCachedPath, xpr_sint_t aCachedIconIndex)
 {
+    // A modal editor pumps folder-change messages.  The row can be removed
+    // while the dialog is open, so borrowed row COM/PIDL pointers are unsafe.
+    if (XPR_IS_NOT_NULL(aShellFolder)) aShellFolder->AddRef();
+    LPITEMIDLIST sPidl = fxfile::base::Pidl::clone(aPidl);
+    LPITEMIDLIST sFullPidl = fxfile::base::Pidl::clone(aFullPidl);
+    COM_RELEASE(mShellFolder);
+    COM_FREE(mPidl);
+    COM_FREE(mFullPidl);
+    COM_FREE(mNewPidl);
+    COM_FREE(mNewFullPidl);
     mShellFolder     = aShellFolder;
-    mPidl            = aPidl;
-    mFullPidl        = fxfile::base::Pidl::clone(aFullPidl);
+    mPidl            = sPidl;
+    mFullPidl        = sFullPidl;
     mShellAttributes = aShellAttributes;
+    mCachedIconIndex = aCachedIconIndex;
 
     mEditName.clear();
+    mSourcePath.clear();
+    mKeepExt.clear();
+    mParsingExt.clear();
+    mSelItem0 = 0;
+    mSelItem1 = -1;
 
     xpr_bool_t sFileSystem = XPR_TEST_BITS(mShellAttributes, SFGAO_FILESYSTEM);
     xpr_bool_t sFolder     = XPR_TEST_BITS(mShellAttributes, SFGAO_FOLDER);
 
-    if (XPR_IS_TRUE(sFileSystem) && XPR_IS_FALSE(sFolder))
+    if (XPR_IS_TRUE(sFileSystem))
+    {
+        if (XPR_IS_NOT_NULL(aCachedPath) && aCachedPath[0] != 0)
+            mSourcePath = aCachedPath;
+        else
+        {
+            xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
+            if (::SHGetPathFromIDList(mFullPidl, sPath)) mSourcePath = sPath;
+        }
+    }
+
+    // Ordinary filesystem names are already in the pane model.  Opening F2
+    // must not query display-name/overlay providers again (AV/cloud latency).
+    const xpr_bool_t sPlainFileSystem = XPR_IS_TRUE(sFileSystem) &&
+        mSourcePath.length() > 3 && XPR_TEST_NONE_BITS(mShellAttributes, SFGAO_LINK);
+    if (XPR_IS_TRUE(sPlainFileSystem))
+        mEditName = mSourcePath.substr(mSourcePath.rfind(XPR_STRING_LITERAL('\\')) + 1);
+    else if (XPR_IS_TRUE(sFileSystem) && XPR_IS_FALSE(sFolder))
         GetName(mShellFolder, mPidl, SHGDN_INFOLDER | SHGDN_FORPARSING, mEditName);
     else
         GetName(mShellFolder, mPidl, SHGDN_INFOLDER | SHGDN_FOREDITING, mEditName);
@@ -65,7 +102,10 @@ void RenameHelper::setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPIT
         if (XPR_IS_TRUE(sFileSystem) && mRenameStyle != RenameStyleNone)
         {
             xpr_tchar_t sFullName[XPR_MAX_PATH + 1] = {0};
-            GetName(mShellFolder, mPidl, SHGDN_INFOLDER | SHGDN_FORPARSING, sFullName);
+            if (XPR_IS_TRUE(sPlainFileSystem))
+                _tcscpy(sFullName, mEditName.c_str());
+            else
+                GetName(mShellFolder, mPidl, SHGDN_INFOLDER | SHGDN_FORPARSING, sFullName);
 
             if (_tcsicmp(mEditName.c_str(), sFullName) == 0)
             {
@@ -100,7 +140,9 @@ void RenameHelper::getEditSel(xpr_sint_t *aSelItem0, xpr_sint_t *aSelItem1)
 
 xpr_sint_t RenameHelper::getIconIndex(void)
 {
-    return GetItemIconIndex(mShellFolder, mPidl);
+    // Use a resolved list icon only.  Cosmetic provider work is never a
+    // prerequisite for showing a responsive rename dialog.
+    return mCachedIconIndex;
 }
 
 RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewName)
@@ -129,8 +171,9 @@ RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewNam
 
     xpr::string sOldPath;
     xpr::string sNewPath;
-    GetName(mShellFolder, mPidl, SHGDN_FORPARSING, sOldPath);
-    GetName(mShellFolder, mPidl, SHGDN_FORPARSING, sNewPath);
+    sOldPath = mSourcePath;
+    if (sOldPath.empty()) GetName(mShellFolder, mPidl, SHGDN_FORPARSING, sOldPath);
+    sNewPath = sOldPath;
 
     if (FileOperationLockStore::instance().affectsLockedPath(
             std::wstring(sOldPath.c_str())))
@@ -195,7 +238,8 @@ RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewNam
             if (sMsgId == IDNO)
                 return ResultUserCancel;
         }
-        else if (XPR_TEST_BITS(sFileAttributes, FILE_ATTRIBUTE_SYSTEM) || XPR_TEST_BITS(sFileAttributes, FILE_ATTRIBUTE_READONLY))
+        else if (sFileAttributes != INVALID_FILE_ATTRIBUTES &&
+                 (XPR_TEST_BITS(sFileAttributes, FILE_ATTRIBUTE_SYSTEM) || XPR_TEST_BITS(sFileAttributes, FILE_ATTRIBUTE_READONLY)))
         {
             xpr::string sAttributes;
             if (XPR_TEST_BITS(sFileAttributes, FILE_ATTRIBUTE_READONLY))
@@ -249,8 +293,10 @@ RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewNam
 
     xpr_slong_t sEventId = SHCNE_RENAMEITEM;
     xpr_uint_t sFlags = SHCNF_IDLIST;
-    const void *sItem1 = mPidl;
-    const void *sItem2 = mNewPidl;
+    // SHCNF_IDLIST requires desktop-relative (absolute) PIDLs, not the
+    // child identifiers supplied to IShellFolder::SetNameOf.
+    const void *sItem1 = mFullPidl;
+    const void *sItem2 = mNewFullPidl;
 
     if (XPR_IS_FALSE(sFile))
         sEventId = SHCNE_RENAMEFOLDER;
@@ -262,8 +308,11 @@ RenameHelper::Result RenameHelper::rename(HWND aHwnd, const xpr_tchar_t *aNewNam
         sItem2 = sNewPath.c_str();
     }
 
-    sFlags |= SHCNF_FLUSH;
-    ::SHChangeNotify(sEventId, sFlags, sItem1, sItem2);
+    // Deliver promptly, but never wait for every external Shell listener to
+    // finish on the editor/UI thread.  Pane watchers reconcile independently.
+    sFlags |= SHCNF_FLUSHNOWAIT;
+    if (XPR_IS_NOT_NULL(sItem1) && XPR_IS_NOT_NULL(sItem2))
+        ::SHChangeNotify(sEventId, sFlags, sItem1, sItem2);
 
     if (XPR_IS_TRUE(sFileSystem))
     {

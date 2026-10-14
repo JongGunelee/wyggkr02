@@ -10,6 +10,7 @@
 #ifndef __FXFILE_FILE_OP_UNDO_H__
 #define __FXFILE_FILE_OP_UNDO_H__ 1
 #pragma once
+#include <vector>
 
 namespace fxfile
 {
@@ -40,12 +41,14 @@ public:
     static xpr_sint_t getMode(void);
     static xpr_bool_t isUndo(void);
     static xpr_sint_t getCount(void);
+    static void finishUndo(xpr_sint_t aIndex, xpr_bool_t aSucceeded);
+    static xpr_bool_t resolveRecycleUndo(SHFILEOPSTRUCT *aOperation, const std::vector<FILETIME> &aTimes);
 
 protected:
     SHFILEOPSTRUCT *startCopy(xpr::FileIo &aFileIo);
     SHFILEOPSTRUCT *startMove(xpr::FileIo &aFileIo);
     SHFILEOPSTRUCT *startRename(xpr::FileIo &aFileIo);
-    SHFILEOPSTRUCT *startRecycleBin(xpr::FileIo &aFileIo);
+    SHFILEOPSTRUCT *startRecycleBin(xpr::FileIo &aFileIo, std::vector<FILETIME> &aTimes);
 
     void validateUndoDir(void);
 

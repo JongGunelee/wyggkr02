@@ -124,7 +124,7 @@ static void doBatchRename(FolderCtrl &aFolderCtrl, xpr_bool_t aWithFile, xpr_boo
             xpr_sintptr_t sId = sDlg.DoModal();
             if (sId == IDOK)
             {
-                ::SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_IDLIST | SHCNF_FLUSH, (LPVOID)aParentFullPidl, XPR_NULL);
+                ::SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_IDLIST | SHCNF_FLUSHNOWAIT, (LPVOID)aParentFullPidl, XPR_NULL);
             }
         }
     }
@@ -456,7 +456,9 @@ void RenameCommand::execute(CommandContext &aContext)
                 LPITEMIDLIST sFullPidl = fxfile::base::Pidl::concat(sExplorerCtrl->getFolderData()->mFullPidl, sLvItemData->mPidl);
 
                 SingleRenameDlg sDlg;
-                sDlg.setItem(sLvItemData->mShellFolder, sLvItemData->mPidl, sFullPidl, sLvItemData->mShellAttributes);
+                sDlg.setItem(sLvItemData->mShellFolder, sLvItemData->mPidl, sFullPidl, sLvItemData->mShellAttributes,
+                    sLvItemData->mPathResolved ? sLvItemData->mCachedPath : XPR_NULL,
+                    sLvItemData->mIconResolved ? sLvItemData->mCachedIconIndex : -1);
                 sDlg.DoModal();
 
                 COM_FREE(sFullPidl);

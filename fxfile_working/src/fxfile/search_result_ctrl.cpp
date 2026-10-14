@@ -1159,7 +1159,7 @@ void SearchResultCtrl::beginDragDrop(NM_LISTVIEW *aNmListView)
 
     if (setDataObject(&sDataObject, XPR_NULL) == XPR_TRUE)
     {
-        LPDROPSOURCE sDataSource = new DropSource();
+        LPDROPSOURCE sDataSource = new DropSource(sDataObject, GetSafeHwnd());
         if (XPR_IS_NOT_NULL(sDataSource))
         {
             IDragSourceHelper *sDragSourceHelper = XPR_NULL;
@@ -1774,7 +1774,7 @@ void SearchResultCtrl::OnEndlabeledit(NMHDR *aNmHdr, LRESULT *aResult)
                     DWORD sEventId = SHCNE_RENAMEITEM;
                     if (XPR_TEST_BITS(sOldSrItemData->mFileAttributes, FILE_ATTRIBUTE_DIRECTORY))
                         sEventId = SHCNE_RENAMEFOLDER;
-                    ::SHChangeNotify(sEventId, SHCNF_PATH | SHCNF_FLUSH, sOldPath, sNewPath);
+    ::SHChangeNotify(sEventId, SHCNF_PATH | SHCNF_FLUSHNOWAIT, sOldPath, sNewPath);
 
                     setChangeNotify();
 

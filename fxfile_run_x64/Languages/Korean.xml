@@ -305,6 +305,7 @@
             <String ID="cmd.network_drvie.disconnect">네트워크 드라이브 끊기(&amp;D)...</String>
             <String ID="cmd.save_option">모든 설정 저장하기(&amp;T)</String>
             <String ID="cmd.window_placement_lock">창 위치·크기 잠금(&amp;L)</String>
+            <String ID="cmd.auto_equalize_views">모든 창 크기 맞추기</String>
             <String ID="cmd.view_path_lock">창 경로·위치 잠금(&amp;P)</String>
             <String ID="cmd.view_split_lock">창 분할·크기 잠금(&amp;S)</String>
             <String ID="cmd.clock_lock">시계 위치·크기 잠금(&amp;S)</String>
@@ -1716,7 +1717,7 @@
             <String ID="popup.cfg.body.function.drag_drop.radio.drop_default">기본 드롭(&amp;F)</String>
             <String ID="popup.cfg.body.function.drag_drop.group.etc">기타 옵션(&amp;T)</String>
             <String ID="popup.cfg.body.function.drag_drop.label.default_file_operation">기본 동작(&amp;R):</String>
-            <String ID="popup.cfg.body.function.drag_drop.default_file_operation.default">기본값</String>
+            <String ID="popup.cfg.body.function.drag_drop.default_file_operation.default">기본값: 복사 (Shift: 이동)</String>
             <String ID="popup.cfg.body.function.drag_drop.default_file_operation.move">이동</String>
             <String ID="popup.cfg.body.function.drag_drop.default_file_operation.copy">복사</String>
             <String ID="popup.cfg.body.function.drag_drop.default_file_operation.shortcut">바로가기</String>

@@ -12,6 +12,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include "adaptive_file_operation.h"
 #include "modern_shell_file_operation.h"
 
@@ -39,12 +40,12 @@ public:
     static void setCompleteFlash(xpr_bool_t aCompleteFlash);
 
 public:
-    void start(
+    xpr_bool_t start(
         SHFILEOPSTRUCT *aShFileOpStruct,
         xpr_bool_t      aSelectItem = XPR_FALSE,
         HWND            aNotifyHwnd = XPR_NULL,
         xpr_uint_t      aMsg = 0);
-    void start(
+    xpr_bool_t start(
         xpr_bool_t      aCopy,
         xpr_tchar_t    *aSource,
         xpr_sint_t      aSourceCount,
@@ -55,6 +56,9 @@ public:
         xpr_uint_t      aMsg = 0);
 
     void setUndo(xpr_bool_t aUndo);
+    void setClipboardMoveSequence(DWORD sequence) { mClipboardMoveSequence = sequence; }
+    void setUndoJournalIndex(xpr_sint_t aIndex) { mUndoJournalIndex = aIndex; }
+    void setRecycleUndoTimes(const std::vector<FILETIME> &aTimes) { mRecycleUndoTimes = aTimes; }
 
 public:
     static xpr_sint_t getRefCount(void) { return mRefCount; }
@@ -107,6 +111,11 @@ protected:
     unsigned        mThreadId;
     HANDLE          mStopEvent;
     xpr_bool_t      mUndo;
+    xpr_sint_t      mUndoJournalIndex;
+    DWORD          mClipboardMoveSequence;
+    bool           mClipboardMoveClaimed;
+    static std::set<DWORD> mActiveClipboardMoves;
+    std::vector<FILETIME> mRecycleUndoTimes;
     xpr_bool_t      mOperationSucceeded;
     DWORD           mOperationError;
     xpr_uint64_t    mOperationId;

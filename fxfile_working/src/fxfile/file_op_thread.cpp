@@ -8,6 +8,7 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "file_op_thread.h"
 #include "adaptive_file_operation.h"
 #include "modern_shell_file_operation.h"
@@ -87,6 +88,7 @@ DWORD normalizeOperationError(HRESULT aResult)
 xpr_sint_t FileOpThread::mRefCount      = 0;
 xpr_bool_t FileOpThread::mCompleteFlash = XPR_FALSE;
 volatile LONG FileOpThread::mNextOperationId = 0;
+std::set<DWORD> FileOpThread::mActiveClipboardMoves;
 
 FileOpThread::FileOpThread(void)
     : mRefIndex(mRefCount++)
@@ -95,6 +97,9 @@ FileOpThread::FileOpThread(void)
     , mNotifyHwnd(XPR_NULL), mMsg(0)
     , mThread(XPR_NULL), mThreadId(0), mStopEvent(XPR_NULL)
     , mUndo(XPR_TRUE)
+    , mUndoJournalIndex(-1)
+    , mClipboardMoveSequence(0)
+    , mClipboardMoveClaimed(false)
     , mOperationSucceeded(XPR_FALSE)
     , mOperationError(ERROR_SUCCESS)
     , mOperationId(0)
@@ -109,6 +114,8 @@ FileOpThread::FileOpThread(void)
 
 FileOpThread::~FileOpThread(void)
 {
+    if (mUndoJournalIndex >= 0)
+        FileOpUndo::finishUndo(mUndoJournalIndex, XPR_FALSE);
     CLOSE_HANDLE(mThread);
     CLOSE_HANDLE(mStopEvent);
     mRefCount--;
@@ -130,7 +137,7 @@ void FileOpThread::setUndo(xpr_bool_t aUndo)
     mUndo = aUndo;
 }
 
-void FileOpThread::start(xpr_bool_t   aCopy,
+xpr_bool_t FileOpThread::start(xpr_bool_t   aCopy,
                          xpr_tchar_t *aSource,
                          xpr_sint_t   aSourceCount,
                          xpr_tchar_t *aTarget,
@@ -170,18 +177,40 @@ void FileOpThread::start(xpr_bool_t   aCopy,
     sShFileOpStruct->pFrom  = aSource;
     sShFileOpStruct->pTo    = aTarget;
 
-    start(sShFileOpStruct, aMsg >= WM_USER, aNotifyHwnd, aMsg);
+    return start(sShFileOpStruct, aMsg >= WM_USER, aNotifyHwnd, aMsg);
 }
 
-void FileOpThread::start(SHFILEOPSTRUCT *aShFileOpStruct,
+xpr_bool_t FileOpThread::start(SHFILEOPSTRUCT *aShFileOpStruct,
                          xpr_bool_t      aSelectItem,
                          HWND            aNotifyHwnd,
                          xpr_uint_t      aMsg)
 {
     if (XPR_IS_NOT_NULL(mThread))
-        return;
+        return XPR_FALSE;
 
     mShFileOpStruct = aShFileOpStruct;
+    if (mClipboardMoveSequence && mActiveClipboardMoves.count(mClipboardMoveSequence))
+    {
+        ::MessageBox(mShFileOpStruct->hwnd,
+            XPR_STRING_LITERAL("같은 잘라내기 항목의 이동이 진행 중입니다. 완료 후 결과를 확인하십시오."),
+            XPR_STRING_LITERAL("FxFile 파일 작업 확인"), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL);
+        PostMessage(WM_CLOSE);
+        return XPR_FALSE;
+    }
+    // Own the already captured paths before entering the modal loop. Nothing
+    // is queued, recorded, or written until this exact request is confirmed.
+    if (!FileOperationConfirmation::confirm(mShFileOpStruct) ||
+        (mClipboardMoveSequence &&
+         ::GetClipboardSequenceNumber() != mClipboardMoveSequence))
+    {
+        if (mShFileOpStruct) mShFileOpStruct->fAnyOperationsAborted = TRUE;
+        PostMessage(WM_CLOSE);
+        return XPR_FALSE;
+    }
+    if (mClipboardMoveSequence) {
+        mActiveClipboardMoves.insert(mClipboardMoveSequence);
+        mClipboardMoveClaimed = true;
+    }
     mSelectItem     = aSelectItem;
     mNotifyHwnd     = aNotifyHwnd;
     mMsg            = aMsg;
@@ -202,7 +231,7 @@ void FileOpThread::start(SHFILEOPSTRUCT *aShFileOpStruct,
     {
         mShFileOpStruct->fAnyOperationsAborted = XPR_TRUE;
         PostMessage(WM_CLOSE);
-        return;
+        return XPR_FALSE;
     }
 
     mThread = (HANDLE)::_beginthreadex(XPR_NULL, 0, FileOpProc, this, 0, &mThreadId);
@@ -211,7 +240,9 @@ void FileOpThread::start(SHFILEOPSTRUCT *aShFileOpStruct,
         mShFileOpStruct->fAnyOperationsAborted = XPR_TRUE;
         ::SetEvent(mStopEvent);
         PostMessage(WM_CLOSE);
+        return XPR_FALSE;
     }
+    return XPR_TRUE;
 }
 
 unsigned __stdcall FileOpThread::FileOpProc(LPVOID lpParam)
@@ -234,6 +265,24 @@ void FileOpThread::OnFileOp(void)
 {
     mWorkerStartedTick = ::GetTickCount64();
     const HRESULT sComResult = ::CoInitializeEx(XPR_NULL, COINIT_APARTMENTTHREADED);
+
+    // Resolve recycle-bin metadata on this worker, not inside Ctrl+Z/menu dispatch.
+    if (!mRecycleUndoTimes.empty() &&
+        XPR_IS_FALSE(FileOpUndo::resolveRecycleUndo(mShFileOpStruct, mRecycleUndoTimes)))
+    {
+        mOperationSucceeded = XPR_FALSE;
+        mOperationError = ERROR_FILE_NOT_FOUND;
+        mShFileOpStruct->fAnyOperationsAborted = XPR_TRUE;
+        mEngineName = XPR_STRING_LITERAL("recycle-undo");
+        mEngineReason = XPR_STRING_LITERAL("recycle-entry-unavailable");
+        mPreparationFinishedTick = mExecutionFinishedTick = mVerificationFinishedTick = ::GetTickCount64();
+        FileOpUndo::finishUndo(mUndoJournalIndex, XPR_FALSE);
+        mUndoJournalIndex = -1;
+        ::SetEvent(mStopEvent);
+        if (SUCCEEDED(sComResult)) ::CoUninitialize();
+        PostMessage(WM_POST_END);
+        return;
+    }
 
     std::wstring sBlockedPath;
     if (FileOperationLockStore::instance().isOperationBlocked(
@@ -330,6 +379,19 @@ void FileOpThread::OnFileOp(void)
     // immutable snapshot.
     captureOperationResult();
     mVerificationFinishedTick = ::GetTickCount64();
+
+    // Journal construction includes filesystem queries. Keep it off the UI timer.
+    if (XPR_IS_TRUE(mOperationSucceeded) && XPR_IS_TRUE(mUndo) &&
+        mShFileOpStruct->wFunc != FO_DELETE)
+    {
+        FileOpUndo sFileOpUndo;
+        sFileOpUndo.addOperation(mShFileOpStruct);
+    }
+    if (mUndoJournalIndex >= 0)
+    {
+        FileOpUndo::finishUndo(mUndoJournalIndex, mOperationSucceeded);
+        mUndoJournalIndex = -1;
+    }
 
     ::SetEvent(mStopEvent);
 
@@ -702,6 +764,16 @@ LRESULT FileOpThread::OnPostEnd(WPARAM, LPARAM)
             ++sFailedCount;
     }
 
+    // Failed/cancelled/partially completed moves keep their cut clipboard.
+    // Never erase a newer clipboard copied while the worker was running.
+    if (mClipboardMoveSequence && XPR_IS_TRUE(mOperationSucceeded) &&
+        mShFileOpStruct->wFunc == FO_MOVE &&
+        !mShFileOpStruct->fAnyOperationsAborted &&
+        sSucceededCount > 0 && sSucceededCount == mSourceSnapshots.size() &&
+        !sFailedCount && !sCancelledCount && !sUnprocessedCount &&
+        ::GetClipboardSequenceNumber() == mClipboardMoveSequence)
+        ::OleSetClipboard(NULL);
+
     const xpr_uint64_t sQueueMilliseconds =
         mWorkerStartedTick >= mAcceptedTick ?
         mWorkerStartedTick - mAcceptedTick : 0;
@@ -839,13 +911,6 @@ void FileOpThread::OnTimer(UINT_PTR nIDEvent)
                                      2000, &sNotifyResult);
             }
 
-            if (XPR_IS_TRUE(mOperationSucceeded) &&
-                XPR_IS_TRUE(mUndo) && mShFileOpStruct->wFunc != FO_DELETE)
-            {
-                FileOpUndo aFileOpUndo;
-                aFileOpUndo.addOperation(mShFileOpStruct);
-            }
-
             if (XPR_IS_NOT_NULL(mShFileOpStruct->hNameMappings))
             {
                 ::SHFreeNameMappings(mShFileOpStruct->hNameMappings);
@@ -879,6 +944,10 @@ xpr_bool_t FileOpThread::DestroyWindow(void)
         }
     }
 
+    if (mClipboardMoveClaimed) {
+        mActiveClipboardMoves.erase(mClipboardMoveSequence);
+        mClipboardMoveClaimed = false;
+    }
     if (XPR_IS_NOT_NULL(mShFileOpStruct))
     {
         xpr_tchar_t *sSource = (xpr_tchar_t *)mShFileOpStruct->pFrom;

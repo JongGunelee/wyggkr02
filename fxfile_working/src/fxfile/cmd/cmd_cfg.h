@@ -18,6 +18,7 @@ namespace fxfile
 namespace cmd
 {
 FXFILE_COMMAND_DECLARE_CLASS(SaveOptionCommand);
+FXFILE_COMMAND_DECLARE_CLASS(AutoEqualizeViewsCommand);
 FXFILE_COMMAND_DECLARE_CLASS(WindowPlacementLockCommand);
 FXFILE_COMMAND_DECLARE_CLASS(ViewPathLockCommand);
 FXFILE_COMMAND_DECLARE_CLASS(ViewSplitLockCommand);

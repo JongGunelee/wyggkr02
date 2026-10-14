@@ -12,6 +12,7 @@
 
 #include "folder_ctrl.h"
 #include "explorer_ctrl.h"
+#include "main_frame.h"
 #include "search_result_ctrl.h"
 
 #ifdef _DEBUG
@@ -30,6 +31,9 @@ xpr_sint_t RefreshCommand::canExecute(CommandContext &aContext)
 void RefreshCommand::execute(CommandContext &aContext)
 {
     FXFILE_COMMAND_DECLARE_CTRL;
+
+    // Explicit Refresh only; background notifications do not reset working sizes.
+    sMainFrame->autoFitViewSizes();
 
     FXFILE_COMMAND_IF_SEARCH_RESULT_CTRL
     {

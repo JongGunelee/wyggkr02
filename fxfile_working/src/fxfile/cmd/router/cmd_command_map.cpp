@@ -526,6 +526,7 @@ void CommandMap::map(CommandExecutor &aExecutor)
     aExecutor.bindCommand(ID_TOOL_NETWORK_CONNECT,             new cmd::NetworkDriveConnectCommand);
     aExecutor.bindCommand(ID_TOOL_NETWORK_DISCONNECT,          new cmd::NetworkDriveDisconnectCommand);
     aExecutor.bindCommand(ID_TOOL_SAVE_OPTION,                 new cmd::SaveOptionCommand);
+    aExecutor.bindCommand(ID_TOOL_AUTO_EQUALIZE_VIEWS,         new cmd::AutoEqualizeViewsCommand);
     aExecutor.bindCommand(ID_TOOL_WINDOW_PLACEMENT_LOCK,       new cmd::WindowPlacementLockCommand);
     aExecutor.bindCommand(ID_TOOL_VIEW_PATH_LOCK,              new cmd::ViewPathLockCommand);
     aExecutor.bindCommand(ID_TOOL_VIEW_SPLIT_LOCK,             new cmd::ViewSplitLockCommand);

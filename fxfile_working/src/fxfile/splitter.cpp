@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "splitter.h"
+#include "window_layout_batch.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -307,7 +308,7 @@ void Splitter::moveColumn(xpr_sint_t aColumn, xpr_sint_t cx)
     }
 }
 
-void Splitter::resize(HDWP aHdwp)
+void Splitter::resize(WindowLayoutBatch *aBatch)
 {
     if (mRowCount <= 0 || mColumnCount <= 0)
         return;
@@ -323,9 +324,8 @@ void Splitter::resize(HDWP aHdwp)
 
     sOldRight = sOldBottom = 0;
 
-    HDWP sHdwp = aHdwp;
-    if (XPR_IS_NULL(aHdwp))
-        sHdwp = ::BeginDeferWindowPos(mRowCount * mColumnCount);
+    WindowLayoutBatch sLocalBatch;
+    WindowLayoutBatch &sBatch = aBatch ? *aBatch : sLocalBatch;
 
     for (i = 0; i < mRowCount; ++i)
     {
@@ -367,7 +367,7 @@ void Splitter::resize(HDWP aHdwp)
 
             if (XPR_IS_NOT_NULL(sPane->mPaneWnd))
             {
-                ::DeferWindowPos(sHdwp, *sPane->mPaneWnd, XPR_NULL, sRect.left, sRect.top, sRect.Width(), sRect.Height(), SWP_NOZORDER);
+                sBatch.add(*sPane->mPaneWnd, sRect);
             }
 
             sOldRight = sRect.right;
@@ -376,8 +376,8 @@ void Splitter::resize(HDWP aHdwp)
         sOldBottom = sRect.bottom;
     }
 
-    if (XPR_IS_NULL(aHdwp))
-        ::EndDeferWindowPos(sHdwp);
+    if (XPR_IS_NULL(aBatch))
+        sLocalBatch.apply();
 }
 
 void Splitter::setPaneSizeLimit(xpr_sint_t sMinSize, xpr_sint_t sMaxSize)

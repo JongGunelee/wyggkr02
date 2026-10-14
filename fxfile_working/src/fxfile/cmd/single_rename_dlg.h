@@ -31,7 +31,8 @@ public:
     virtual ~SingleRenameDlg(void);
 
 public:
-    void setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aAttributes);
+    void setItem(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aPidl, LPITEMIDLIST aFullPidl, xpr_ulong_t aAttributes,
+                 const xpr_tchar_t *aCachedPath = XPR_NULL, xpr_sint_t aCachedIconIndex = -1);
     const xpr_tchar_t *getNewName(void);
 
 protected:

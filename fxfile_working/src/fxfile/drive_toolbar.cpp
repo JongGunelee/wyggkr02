@@ -8,6 +8,7 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "drive_toolbar.h"
 #include "startup_trace.h"
 
@@ -17,6 +18,7 @@
 #include "file_op_thread.h"
 #include "size_format.h"
 #include "option.h"
+#include "drag_file_operation.h"
 #include "main_frame.h"
 #include "drive_toolbar_observer.h"
 
@@ -639,24 +641,7 @@ DROPEFFECT DriveToolBar::OnDragOver(COleDataObject* pDataObject, DWORD aKeyState
         LPITEMIDLIST sFullPidl = fxfile::base::Pidl::create(sDrive);
         if (XPR_IS_NOT_NULL(sFullPidl))
         {
-            //sDropEffect = DROPEFFECT_MOVE;
-            //if ((aKeyState & MK_CONTROL) == MK_CONTROL)
-            //    sDropEffect = DROPEFFECT_COPY;
-
-            sDropEffect = DROPEFFECT_MOVE;
-            if (aKeyState & MK_ALT)     sDropEffect = DROPEFFECT_LINK;
-            else if (aKeyState & MK_CONTROL) sDropEffect = DROPEFFECT_COPY;
-            else if (aKeyState & MK_SHIFT)   sDropEffect = DROPEFFECT_MOVE;
-            else
-            {
-                switch (gOpt->mConfig.mDragDefaultFileOp)
-                {
-                case DRAG_FILE_OP_DEFAULT: sDropEffect = DROPEFFECT_MOVE; break;
-                case DRAG_FILE_OP_COPY:    sDropEffect = DROPEFFECT_COPY; break;
-                case DRAG_FILE_OP_LINK:    sDropEffect = DROPEFFECT_LINK; break;
-                default:                   sDropEffect = DROPEFFECT_MOVE; break;
-                }
-            }
+            sDropEffect = getDragFileOperation(aKeyState, gOpt->mConfig.mDragDefaultFileOp);
         }
         COM_FREE(sFullPidl);
     }
@@ -880,6 +865,19 @@ void DriveToolBar::OnDropShortcut(STGMEDIUM *pstg, xpr_sint_t aDriveIndex)
         COM_FREE(sFullPidl);
     }
 
+    std::vector<std::wstring> sConfirmSources;
+    for (i = 0; i < sCount; ++i) {
+        LPITEMIDLIST sItem = (LPITEMIDLIST)((xpr_byte_t*)sIda + sIda->aoffset[i + 1]);
+        LPITEMIDLIST sFull = fxfile::base::Pidl::concat(sPidl1, sItem);
+        wchar_t sPath[XPR_MAX_PATH + 1] = {};
+        if (sFull) { GetName(sFull, SHGDN_FORPARSING, sPath); COM_FREE(sFull); }
+        if (*sPath) sConfirmSources.push_back(sPath);
+    }
+    if (sConfirmSources.size() != static_cast<size_t>(sCount) ||
+        !FileOperationConfirmation::confirm(GetSafeHwnd(), FileOperationConfirmation::Link,
+            sConfirmSources, {sDir.c_str()})) {
+        ::GlobalUnlock(pstg->hGlobal); return;
+    }
     for (i = 0; i < sCount; ++i)
     {
         // get item PIDL and get full-qualified PIDL

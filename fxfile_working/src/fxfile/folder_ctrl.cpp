@@ -8,8 +8,10 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "folder_ctrl.h"
 #include "option.h"
+#include "drag_file_operation.h"
 #include "folder_ctrl_observer.h"
 
 #include "file_change_watcher.h" // for File Change Watcher
@@ -1278,7 +1280,7 @@ void FolderCtrl::beginDragDrop(NM_TREEVIEW* sNmTreeView)
 
         if (SUCCEEDED(sHResult))
         {
-            LPDROPSOURCE sDataSource = new DropSource();
+            LPDROPSOURCE sDataSource = new DropSource(sDataObject, GetSafeHwnd());
 
             if (XPR_IS_NOT_NULL(sDataSource))
             {
@@ -2853,7 +2855,7 @@ void FolderCtrl::OnEndlabeledit(NMHDR *aNmHdr, LRESULT *aResult)
         xpr_tchar_t sNewPath[XPR_MAX_PATH + 1] = {0};
         GetName(sTvItemData->mShellFolder, sNewPidl, SHGDN_FORPARSING, sNewPath);
 
-        ::SHChangeNotify(SHCNE_RENAMEFOLDER, SHCNF_IDLIST | SHCNF_FLUSH, sOldFullPidl, sTvItemData->mFullPidl);
+            ::SHChangeNotify(SHCNE_RENAMEFOLDER, SHCNF_IDLIST | SHCNF_FLUSHNOWAIT, sOldFullPidl, sTvItemData->mFullPidl);
 
         if (XPR_IS_TRUE(sFileSystem))
         {
@@ -2972,58 +2974,7 @@ DROPEFFECT FolderCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeyStat
 
     HTREEITEM sTreeItem = HitTest(aPoint, XPR_NULL);
 
-    if (aKeyState & MK_ALT)          sDropEffect = DROPEFFECT_LINK;
-    else if (aKeyState & MK_CONTROL) sDropEffect = DROPEFFECT_COPY;
-    else if (aKeyState & MK_SHIFT)   sDropEffect = DROPEFFECT_MOVE;
-    else
-    {
-        xpr_bool_t sCopy = XPR_TRUE;
-        if (aOleDataObject->IsDataAvailable(sClipFormat.mShellIDList) == XPR_TRUE)
-        {
-            STGMEDIUM sStgMedium = {0};
-            FORMATETC sFormatEtc = {(CLIPFORMAT)sClipFormat.mShellIDList, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-
-            if (aOleDataObject->GetData(sClipFormat.mShellIDList, &sStgMedium, &sFormatEtc) == XPR_TRUE)
-            {
-                LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-                LPITEMIDLIST sPidl1 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1];
-                GetName(sPidl1, SHGDN_FORPARSING, sPath);
-
-                xpr_tchar_t sHitPath[XPR_MAX_PATH + 1];
-                LPTVITEMDATA sTvItemData = (LPTVITEMDATA)GetItemData(sTreeItem);
-                if (XPR_IS_NOT_NULL(sTvItemData))
-                {
-                    GetName(sTvItemData->mShellFolder, sTvItemData->mPidl, SHGDN_FORPARSING, sHitPath);
-                    if (sPath[0] == sHitPath[0])
-                        sCopy = XPR_FALSE;
-                }
-
-                ::GlobalUnlock(sStgMedium.hGlobal);
-
-                ::ReleaseStgMedium(&sStgMedium);
-            }
-        }
-
-        //sDropEffect = sCopy ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
-        if (mOption.mDragDefaultFileOp == DRAG_FILE_OP_DEFAULT)
-        {
-            sDropEffect = XPR_IS_TRUE(sCopy) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
-        }
-        else if (mOption.mDragDefaultFileOp == DRAG_FILE_OP_COPY)
-        {
-            sDropEffect = DROPEFFECT_COPY;
-        }
-        else if (mOption.mDragDefaultFileOp == DRAG_FILE_OP_LINK)
-        {
-            sDropEffect = DROPEFFECT_LINK;
-        }
-        else // 1
-        {
-            sDropEffect = DROPEFFECT_MOVE;
-        }
-    }
+    sDropEffect = getDragFileOperation(aKeyState, mOption.mDragDefaultFileOp);
 
     DragImage &sDragImage = DragImage::instance();
 
@@ -3120,21 +3071,21 @@ DROPEFFECT FolderCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeyStat
             sPointL.x = aPoint.x;
             sPointL.y = aPoint.y;
 
-            DWORD sTempDropEffect = DROPEFFECT_MOVE | DROPEFFECT_COPY | DROPEFFECT_LINK;
+            DWORD sTempDropEffect = sDropEffect;
 
             sHResult = sDropTarget->DragEnter(aOleDataObject->m_lpDataObject, aKeyState, sPointL, &sTempDropEffect);
             if (SUCCEEDED(sHResult))
             {
                 sHResult = sDropTarget->DragOver(aKeyState, sPointL, &sTempDropEffect);
                 sSucceeded = SUCCEEDED(sHResult) && sTempDropEffect != 0;
+                if (XPR_IS_TRUE(sSucceeded)) sDropEffect = sTempDropEffect;
+                sDropTarget->DragLeave();
             }
         }
 
         COM_RELEASE(sDropTarget);
 
-        if (XPR_IS_TRUE(sSucceeded))
-            sDropEffect = DROPEFFECT_MOVE;
-        else
+        if (XPR_IS_FALSE(sSucceeded))
         {
             sTreeItem = XPR_NULL;
             sDropEffect = DROPEFFECT_NONE;
@@ -3323,7 +3274,9 @@ void FolderCtrl::OnDrop(COleDataObject *pOleDataObject, DROPEFFECT aDropEffect, 
 
         if (SUCCEEDED(sHResult) && XPR_IS_NOT_NULL(sDropTarget))
         {
-            LPDATAOBJECT sDataObject = pOleDataObject->Detach();
+            // Own a separate reference across modal consent; the MFC callback
+            // wrapper borrows the drag source's IDataObject.
+            LPDATAOBJECT sDataObject = pOleDataObject->GetIDataObject(XPR_TRUE);
             if (XPR_IS_NOT_NULL(sDataObject))
             {
                 sDropTarget->DragEnter(sDataObject, sKeyState, sPointL, &sTempDropEffect);
@@ -3332,7 +3285,14 @@ void FolderCtrl::OnDrop(COleDataObject *pOleDataObject, DROPEFFECT aDropEffect, 
                 if (mDropTarget.isRightDrag() == XPR_TRUE)
                     aDropEffect = DROPEFFECT_MOVE | DROPEFFECT_COPY | DROPEFFECT_LINK;
 
-                sDropTarget->Drop(sDataObject, sKeyState, sPointL, &aDropEffect);
+                if (!*sTargetDir)
+                    GetName(sShellFolder, sPidl, SHGDN_FORPARSING, sTargetDir);
+                if (FileOperationConfirmation::confirmDrop(GetSafeHwnd(),
+                    sDataObject, aDropEffect, sTargetDir))
+                    sDropTarget->Drop(sDataObject, sKeyState, sPointL, &aDropEffect);
+                else
+                    sDropTarget->DragLeave();
+                COM_RELEASE(sDataObject);
             }
         }
 

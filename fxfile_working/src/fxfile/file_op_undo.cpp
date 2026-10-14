@@ -12,8 +12,10 @@
 
 #include "file_op_thread.h"
 #include "bb_info_file.h"           // for BitBucket Info File
+#include "operation_path_pairs.h"
 
 #include <mutex>
+#include <cstring>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -28,6 +30,7 @@ namespace
 // Serialize every public journal transaction so two worker/UI threads cannot
 // allocate the same undoNNNN.dat file or replace mPath while it is in use.
 std::recursive_mutex gFileOpUndoMutex;
+int gPendingUndoIndex = -1;
 }
 
 xpr_tchar_t *FileOpUndo::mPath  = XPR_NULL;
@@ -141,7 +144,10 @@ xpr_bool_t FileOpUndo::beginAddFile(xpr::FileIo &aFileIo)
 
     sRcode = aFileIo.open(sPath, sOpenMode);
     if (XPR_RCODE_IS_ERROR(sRcode))
+    {
+        --mIndex;
         return XPR_FALSE;
+    }
 
     return XPR_TRUE;
 }
@@ -341,7 +347,7 @@ void FileOpUndo::addOperation(SHFILEOPSTRUCT *aShFileOpStruct)
         sParsing = sTarget;
         while (*(sParsing) != '\0')
         {
-            sRcode = sFileIo.write(sTarget, (_tcslen(sParsing)+1) * sizeof(xpr_tchar_t), &sWritten);
+            sRcode = sFileIo.write(sParsing, (_tcslen(sParsing)+1) * sizeof(xpr_tchar_t), &sWritten);
             sTargetLen += (xpr_sint_t)_tcslen(sParsing) + 1;
 
             sParsing += _tcslen(sParsing) + 1;
@@ -409,8 +415,10 @@ void FileOpUndo::addRename(const xpr_tchar_t *aSource, const xpr_tchar_t *aTarge
 
 xpr_bool_t FileOpUndo::isUndo(void)
 {
-    std::lock_guard<std::recursive_mutex> sGuard(gFileOpUndoMutex);
-    return XPR_IS_NOT_NULL(mPath) && (mIndex > -1);
+    // Menu updates must never wait for a worker's filesystem/journal transaction.
+    std::unique_lock<std::recursive_mutex> sGuard(gFileOpUndoMutex, std::try_to_lock);
+    return sGuard.owns_lock() && XPR_IS_NOT_NULL(mPath) && (mIndex > -1) &&
+        gPendingUndoIndex < 0 && FileOpThread::getRefCount() == 0;
 }
 
 xpr_sint_t FileOpUndo::getMode(void)
@@ -428,6 +436,7 @@ xpr_sint_t FileOpUndo::getCount(void)
 void FileOpUndo::start(void)
 {
     std::lock_guard<std::recursive_mutex> sGuard(gFileOpUndoMutex);
+    if (gPendingUndoIndex >= 0 || FileOpThread::getRefCount() != 0) return;
 
     xpr::FileIo sFileIo;
     if (beginUndoFile(sFileIo) == XPR_FALSE)
@@ -439,23 +448,28 @@ void FileOpUndo::start(void)
     sRcode = sFileIo.read(&mMode, sizeof(xpr_sint_t), &sRead);
 
     SHFILEOPSTRUCT *sShFileOpStruct = XPR_NULL;
+    std::vector<FILETIME> sRecycleTimes;
     switch (mMode)
     {
     case MODE_COPY:   sShFileOpStruct = startCopy(sFileIo);       break;
     case MODE_MOVE:   sShFileOpStruct = startMove(sFileIo);       break;
     case MODE_RENAME: sShFileOpStruct = startRename(sFileIo);     break;
-    case MODE_TRASH:  sShFileOpStruct = startRecycleBin(sFileIo); break;
+    case MODE_TRASH:  sShFileOpStruct = startRecycleBin(sFileIo, sRecycleTimes); break;
     }
 
     if (XPR_IS_NOT_NULL(sShFileOpStruct))
     {
         FileOpThread *sFileOpThread = new FileOpThread;
         sFileOpThread->setUndo(XPR_FALSE);
+        sFileOpThread->setRecycleUndoTimes(sRecycleTimes);
+        gPendingUndoIndex = mIndex;
+        sFileOpThread->setUndoJournalIndex(mIndex);
 
         sFileOpThread->start(sShFileOpStruct);
     }
 
-    endUndoFile(sFileIo);
+    // A missing/unfinished recycle entry must not silently consume the journal.
+    endUndoFile(sFileIo, XPR_FALSE);
 
     // Update Mode
     if (beginUndoFile(sFileIo, XPR_FALSE) == XPR_TRUE)
@@ -464,6 +478,27 @@ void FileOpUndo::start(void)
         mMode = -1;
 
     endUndoFile(sFileIo, XPR_FALSE);
+}
+
+void FileOpUndo::finishUndo(xpr_sint_t aIndex, xpr_bool_t aSucceeded)
+{
+    std::lock_guard<std::recursive_mutex> sGuard(gFileOpUndoMutex);
+    if (gPendingUndoIndex != aIndex) return;
+    if (XPR_IS_TRUE(aSucceeded) && mIndex == aIndex)
+    {
+        FileOpUndo sUndo;
+        xpr::FileIo sFile;
+        if (sUndo.beginUndoFile(sFile) == XPR_TRUE) sUndo.endUndoFile(sFile);
+        xpr_ssize_t sRead = 0;
+        if (sUndo.beginUndoFile(sFile, XPR_FALSE) == XPR_TRUE)
+        {
+            sFile.read(&mMode, sizeof(mMode), &sRead);
+            sUndo.endUndoFile(sFile, XPR_FALSE);
+        }
+        else mMode = -1;
+    }
+    // Cancelled/failed restoration retains the journal for retry.
+    gPendingUndoIndex = -1;
 }
 
 SHFILEOPSTRUCT *FileOpUndo::startCopy(xpr::FileIo &aFileIo)
@@ -683,7 +718,7 @@ SHFILEOPSTRUCT *FileOpUndo::startRename(xpr::FileIo &aFileIo)
     return sShFileOpStruct;
 }
 
-SHFILEOPSTRUCT *FileOpUndo::startRecycleBin(xpr::FileIo &aFileIo)
+SHFILEOPSTRUCT *FileOpUndo::startRecycleBin(xpr::FileIo &aFileIo, std::vector<FILETIME> &aTimes)
 {
     xpr_rcode_t sRcode;
     xpr_ssize_t sRead;
@@ -694,7 +729,7 @@ SHFILEOPSTRUCT *FileOpUndo::startRecycleBin(xpr::FileIo &aFileIo)
     xpr_sint_t sSourceLen = 0;
     sRcode = aFileIo.read(&sSourceLen, sizeof(xpr_sint_t), &sRead);
 
-    if (sSourceCount <= 0 || sSourceLen <= 0)
+    if (sSourceCount <= 0 || sSourceCount > 1000000 || sSourceLen <= 0 || sSourceLen > 16 * 1024 * 1024)
         return XPR_NULL;
 
     xpr_tchar_t *sSource = new xpr_tchar_t[sSourceLen + XPR_MAX_PATH + 1];
@@ -702,71 +737,62 @@ SHFILEOPSTRUCT *FileOpUndo::startRecycleBin(xpr::FileIo &aFileIo)
     sSource[sSourceLen  ] = '\0';
     sSource[sSourceLen+1] = '\0';
 
-    FILETIME *sFileTime = new FILETIME[sSourceCount];
-    sRcode = aFileIo.read(sFileTime, sizeof(FILETIME)*sSourceCount, &sRead);
+    if (XPR_RCODE_IS_ERROR(sRcode) || sRead != sSourceLen * sizeof(xpr_tchar_t))
+    { delete[] sSource; return XPR_NULL; }
+    aTimes.resize(sSourceCount);
+    sRcode = aFileIo.read(&aTimes[0], sizeof(FILETIME) * sSourceCount, &sRead);
+    if (XPR_RCODE_IS_ERROR(sRcode) || sRead != sizeof(FILETIME) * sSourceCount)
+    { delete[] sSource; aTimes.clear(); return XPR_NULL; }
+    xpr_sint_t sEntries = 0;
+    for (xpr_sint_t pos = 0; pos < sSourceLen; ++pos)
+        if (!sSource[pos]) ++sEntries;
+    if (sEntries != sSourceCount || !sSource[0] || sSource[sSourceLen - 1])
+    { delete[] sSource; aTimes.clear(); return XPR_NULL; }
+    SHFILEOPSTRUCT *sOperation = new SHFILEOPSTRUCT();
+    sOperation->hwnd = AfxGetMainWnd()->GetSafeHwnd();
+    sOperation->wFunc = FO_MOVE;
+    sOperation->fFlags = FOF_MULTIDESTFILES;
+    sOperation->pFrom = sSource;
+    return sOperation;
+}
 
-    xpr_sint_t i = 0;
-    xpr_tchar_t **sSourceElem = new xpr_tchar_t *[sSourceCount];
-    xpr_tchar_t *sSourceEnum = sSource;
-    while (*sSourceEnum != '\0')
+xpr_bool_t FileOpUndo::resolveRecycleUndo(SHFILEOPSTRUCT *aOperation, const std::vector<FILETIME> &aTimes)
+{
+    if (!aOperation || !aOperation->pFrom || aTimes.empty()) return XPR_FALSE;
+    BBInfoFile sBin;
+    xpr_tchar_t sDrive = 0;
+    OperationPathPairs<xpr_tchar_t> sPaths;
+    const xpr_tchar_t *sOriginal = aOperation->pFrom;
+    for (size_t i = 0; i < aTimes.size() && *sOriginal; ++i)
     {
-        sSourceElem[i++] = sSourceEnum;
-        sSourceEnum += _tcslen(sSourceEnum) + 1;
-    }
-
-    xpr_tchar_t *sSource2 = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sSourceCount];
-    xpr_tchar_t *sTarget2 = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sSourceCount];
-    sSource2[0] = '\0';
-    sTarget2[0] = '\0';
-
-    xpr_tchar_t sDriveChar;
-    xpr_bool_t sSucceeded;
-    BBInfoFile sBBInfoFile;
-
-    xpr_tchar_t *sSource2Enum = sSource2;
-    xpr_tchar_t *sTarget2Enum = sTarget2;
-    for (i = 0; i < sSourceCount; ++i)
-    {
-        sDriveChar = sSourceElem[i][0];
-        if (sBBInfoFile.open(sDriveChar) == XPR_FALSE)
-            continue;
-
-        sSucceeded = sBBInfoFile.findOriginalPath(sSourceElem[i], sFileTime[i], sTarget2Enum);
-        if (XPR_IS_TRUE(sSucceeded))
+        const xpr_tchar_t *sNext = sOriginal + _tcslen(sOriginal) + 1;
+        if (::GetFileAttributes(sOriginal) == INVALID_FILE_ATTRIBUTES)
         {
-            _tcscpy(sSource2Enum, sSourceElem[i]);
-
-            sSource2Enum += _tcslen(sSource2Enum) + 1;
-            sTarget2Enum += _tcslen(sTarget2Enum) + 1;
+            DWORD sError = ::GetLastError();
+            if (sError == ERROR_FILE_NOT_FOUND || sError == ERROR_PATH_NOT_FOUND)
+            {
+                if (sDrive != sOriginal[0])
+                {
+                    if (!sBin.open(sOriginal[0])) { sOriginal = sNext; continue; }
+                    sDrive = sOriginal[0];
+                }
+                xpr_tchar_t sRecycled[XPR_MAX_PATH * 2 + 1] = {0};
+                if (sBin.findOriginalPath(sOriginal, aTimes[i], sRecycled))
+                {
+                    sPaths.add(sRecycled, sOriginal);
+                }
+            }
         }
-
-        sBBInfoFile.close();
+        sOriginal = sNext;
     }
-
-    sSource2Enum[0] = '\0';
-    sTarget2Enum[0] = '\0';
-
-    XPR_SAFE_DELETE_ARRAY(sSource);
-    XPR_SAFE_DELETE_ARRAY(sSourceElem);
-    XPR_SAFE_DELETE_ARRAY(sFileTime);
-
-    SHFILEOPSTRUCT *sShFileOpStruct = XPR_NULL;
-    if (sSource2[0] != '\0' && sTarget2[0] != '\0')
-    {
-        sShFileOpStruct = new SHFILEOPSTRUCT;
-        memset(sShFileOpStruct, 0, sizeof(SHFILEOPSTRUCT));
-        sShFileOpStruct->hwnd   = AfxGetMainWnd()->GetSafeHwnd();
-        sShFileOpStruct->wFunc  = FO_MOVE;
-        sShFileOpStruct->fFlags = FOF_MULTIDESTFILES;
-        sShFileOpStruct->pFrom  = sTarget2;
-        sShFileOpStruct->pTo    = sSource2;
-    }
-    else
-    {
-        XPR_SAFE_DELETE_ARRAY(sSource2);
-        XPR_SAFE_DELETE_ARRAY(sTarget2);
-    }
-
-    return sShFileOpStruct;
+    if (sPaths.sources.empty()) return XPR_FALSE;
+    xpr_tchar_t *sSources = new xpr_tchar_t[sPaths.sources.size() + 1];
+    xpr_tchar_t *sTargets = new xpr_tchar_t[sPaths.targets.size() + 1];
+    std::memcpy(sSources, sPaths.sources.c_str(), (sPaths.sources.size() + 1) * sizeof(xpr_tchar_t));
+    std::memcpy(sTargets, sPaths.targets.c_str(), (sPaths.targets.size() + 1) * sizeof(xpr_tchar_t));
+    delete[] aOperation->pFrom;
+    aOperation->pFrom = sSources;
+    aOperation->pTo = sTargets;
+    return XPR_TRUE;
 }
 } // namespace fxfile

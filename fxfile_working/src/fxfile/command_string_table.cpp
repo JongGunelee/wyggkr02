@@ -258,6 +258,7 @@ void CommandStringTable::loadCommands(void)
     mCommandString[ID_TOOL_NETWORK_CONNECT]           = XPR_STRING_LITERAL("cmd.network_drive.connect");
     mCommandString[ID_TOOL_NETWORK_DISCONNECT]        = XPR_STRING_LITERAL("cmd.network_drvie.disconnect");
     mCommandString[ID_TOOL_SAVE_OPTION]               = XPR_STRING_LITERAL("cmd.save_option");
+    mCommandString[ID_TOOL_AUTO_EQUALIZE_VIEWS]       = XPR_STRING_LITERAL("cmd.auto_equalize_views");
     mCommandString[ID_TOOL_WINDOW_PLACEMENT_LOCK]     = XPR_STRING_LITERAL("cmd.window_placement_lock");
     mCommandString[ID_TOOL_VIEW_PATH_LOCK]            = XPR_STRING_LITERAL("cmd.view_path_lock");
     mCommandString[ID_TOOL_VIEW_SPLIT_LOCK]           = XPR_STRING_LITERAL("cmd.view_split_lock");

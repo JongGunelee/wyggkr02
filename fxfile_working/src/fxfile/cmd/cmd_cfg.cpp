@@ -36,6 +36,17 @@ void SaveOptionCommand::execute(CommandContext &aContext)
     gApp.saveAllOptions();
 }
 
+xpr_sint_t AutoEqualizeViewsCommand::canExecute(CommandContext &aContext)
+{
+    FXFILE_COMMAND_DECLARE_CTRL;
+    return StateEnable | (sMainFrame->isViewAutoEqualize() ? StateCheck : 0);
+}
+void AutoEqualizeViewsCommand::execute(CommandContext &aContext)
+{
+    FXFILE_COMMAND_DECLARE_CTRL;
+    sMainFrame->setViewAutoEqualize(!sMainFrame->isViewAutoEqualize());
+}
+
 xpr_sint_t WindowPlacementLockCommand::canExecute(CommandContext &aContext)
 {
     FXFILE_COMMAND_DECLARE_CTRL;

@@ -66,5 +66,9 @@ target_link_libraries(fxfile PRIVATE
 # 7. 출력 파일명 및 디버그/맵 설정
 set_target_properties(fxfile PROPERTIES 
     OUTPUT_NAME "fxfile"
+    # Keep linker symbols in the architecture-specific build cache. A stale
+    # runtime-root PDB can be held by external readers after FxFile exits.
+    # Never force-close those handles or remove debug information to build.
+    PDB_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/link_symbols"
     LINK_FLAGS "/MAP /DEBUG"
 )

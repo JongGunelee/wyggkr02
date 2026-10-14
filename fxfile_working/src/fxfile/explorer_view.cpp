@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "explorer_view.h"
+#include "window_layout_batch.h"
 #include "startup_trace.h"
 
 #include "img_list_manager.h"
@@ -993,7 +994,7 @@ void ExplorerView::recalcLayout(void)
     CRect sRect(sClientRect);
     xpr_bool_t sExplorerTabMode = isExplorerTabMode();
 
-    HDWP sHdwp = ::BeginDeferWindowPos((xpr_sint_t)mTabCtrl->getTabCount() + 3);
+    WindowLayoutBatch sLayoutBatch;
 
     // tab
     if (XPR_IS_NOT_NULL(mTabCtrl) && XPR_IS_NOT_NULL(mTabCtrl->m_hWnd))
@@ -1009,7 +1010,7 @@ void ExplorerView::recalcLayout(void)
             CRect sTabRect(sRect);
             sTabRect.bottom = sTabRect.top + kTabHeight;
 
-            ::DeferWindowPos(sHdwp, *mTabCtrl, XPR_NULL, sTabRect.left, sTabRect.top, sTabRect.Width(), sTabRect.Height(), SWP_NOZORDER);
+            sLayoutBatch.add(*mTabCtrl, sTabRect);
 
             sRect.top += kTabHeight;
         }
@@ -1021,7 +1022,7 @@ void ExplorerView::recalcLayout(void)
         CRect sActivateBarRect(sRect);
         sActivateBarRect.bottom = sActivateBarRect.top + 5;
 
-        ::DeferWindowPos(sHdwp, *mActivateBar, XPR_NULL, sActivateBarRect.left, sActivateBarRect.top, sActivateBarRect.Width(), sActivateBarRect.Height(), SWP_NOZORDER);
+        sLayoutBatch.add(*mActivateBar, sActivateBarRect);
 
         sRect.top += sActivateBarRect.Height();
     }
@@ -1038,7 +1039,7 @@ void ExplorerView::recalcLayout(void)
 
     mSplitter.moveColumn(0, sPaneSize);
 
-    mSplitter.resize(sHdwp);
+    mSplitter.resize(&sLayoutBatch);
 
     xpr_sint_t sColumn = XPR_IS_TRUE(gOpt->mMain.mLeftEachFolderPane[mViewIndex]) ? 1 : 0;
     mSplitter.getPaneRect(0, sColumn, sRect);
@@ -1053,12 +1054,12 @@ void ExplorerView::recalcLayout(void)
         {
             if (XPR_IS_NOT_NULL(sTabData->mTabPane))
             {
-                ::DeferWindowPos(sHdwp, *sTabData->mTabPane, XPR_NULL, sRect.left, sRect.top, sRect.Width(), sRect.Height(), SWP_NOZORDER);
+                sLayoutBatch.add(*sTabData->mTabPane, sRect);
             }
         }
     }
 
-    ::EndDeferWindowPos(sHdwp);
+    sLayoutBatch.apply();
 }
 
 void ExplorerView::OnPaint(void)

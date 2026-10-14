@@ -14,6 +14,7 @@
 namespace fxfile
 {
 class Splitter;
+class WindowLayoutBatch;
 
 class SplitterObserver
 {
@@ -58,7 +59,7 @@ public:
 public:
     void moveRow(xpr_sint_t aRow, xpr_sint_t cy);
     void moveColumn(xpr_sint_t aColumn, xpr_sint_t cx);
-    void resize(HDWP aHdwp = XPR_NULL);
+    void resize(WindowLayoutBatch *aBatch = XPR_NULL);
 
     void setPaneSizeLimit(xpr_sint_t sMinSize, xpr_sint_t sMaxSize);
     void setPaneSize(xpr_sint_t aRow, xpr_sint_t aColumn, CSize aPaneSize);

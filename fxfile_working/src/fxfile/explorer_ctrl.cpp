@@ -8,6 +8,7 @@
 // found in the LICENSE file.
 
 #include "stdafx.h"
+#include "file_operation_confirmation.h"
 #include "explorer_ctrl.h"
 #include "directory_enumeration_worker.h"
 #include "startup_trace.h"
@@ -35,6 +36,7 @@
 #include "fnmatch.h"
 #include "folder_layout.h"
 #include "option.h"
+#include "drag_file_operation.h"
 
 #include "gui/gdi.h"
 #include "gui/FlatHeaderCtrl.h"
@@ -352,6 +354,7 @@ BEGIN_MESSAGE_MAP(ExplorerCtrl, super)
     ON_WM_LBUTTONUP()
     ON_WM_MOUSEMOVE()
     ON_WM_VSCROLL()
+    ON_WM_HSCROLL()
     ON_NOTIFY_REFLECT(NM_CLICK,           OnClick)
     ON_NOTIFY_REFLECT(NM_DBLCLK,          OnDblclk)
     ON_NOTIFY_REFLECT(NM_CUSTOMDRAW,      OnCustomdraw)
@@ -6289,20 +6292,6 @@ xpr_bool_t ExplorerCtrl::getSelDataObject(LPDATAOBJECT *aDataObject, xpr_uint_t 
 
     sPidls = new LPITEMIDLIST[sSelCount];
 
-    if (aShellAttributes == SFGAO_CANMOVE || aShellAttributes == SFGAO_CANCOPY)
-    {
-        sCount = GetItemCount();
-        for (i = 0; i < sCount; ++i)
-        {
-            sLvItemData = (LPLVITEMDATA)GetItemData(i);
-            if (XPR_IS_NOT_NULL(sLvItemData))
-            {
-                if ((sLvItemData->mShellAttributes & SFGAO_GHOSTED) != SFGAO_GHOSTED)
-                    SetItemState(i, 0, LVIS_CUT);
-            }
-        }
-    }
-    sCount = 0;
 
     if (aOkDropEffect != 0)
         *aOkDropEffect = DROPEFFECT_LINK | DROPEFFECT_COPY | DROPEFFECT_MOVE;
@@ -6332,9 +6321,6 @@ xpr_bool_t ExplorerCtrl::getSelDataObject(LPDATAOBJECT *aDataObject, xpr_uint_t 
                     *aOkDropEffect &= ~SFGAO_CANCOPY;
             }
 
-            if (aShellAttributes == SFGAO_CANMOVE)
-                SetItemState(sIndex, LVIS_CUT, LVIS_CUT);
-
             sPidls[sCount++] = (LPITEMIDLIST)sLvItemData->mPidl;
             sShellFolder = sLvItemData->mShellFolder;
         }
@@ -6361,6 +6347,31 @@ xpr_bool_t ExplorerCtrl::getSelDataObject(LPDATAOBJECT *aDataObject, xpr_uint_t 
     XPR_SAFE_DELETE_ARRAY(sPidls);
 
     return sResult;
+}
+
+void ExplorerCtrl::updateClipboardCutState(LPDATAOBJECT aDataObject, bool aCut)
+{
+    std::vector<std::wstring> sCapturedPaths;
+    if (aCut && !FileOperationConfirmation::dataObjectPaths(aDataObject, sCapturedPaths)) return;
+    std::set<std::wstring> sPaths;
+    for (auto sPath : sCapturedPaths) {
+        if (!sPath.empty()) ::CharLowerBuffW(&sPath[0], static_cast<DWORD>(sPath.size()));
+        sPaths.insert(sPath);
+    }
+    for (int i = 0; i < GetItemCount(); ++i) {
+        LPLVITEMDATA sData = reinterpret_cast<LPLVITEMDATA>(GetItemData(i));
+        if (!sData || XPR_TEST_BITS(sData->mShellAttributes, SFGAO_GHOSTED)) continue;
+        std::wstring sPath;
+        if (aCut && sData->mPathResolved) sPath = sData->mCachedPath;
+        else if (aCut && GetItemState(i, LVIS_SELECTED)) {
+            wchar_t sResolved[XPR_MAX_PATH + 1] = {};
+            GetName(sData->mShellFolder, sData->mPidl, SHGDN_FORPARSING, sResolved);
+            sPath = sResolved;
+        }
+        if (!sPath.empty()) ::CharLowerBuffW(&sPath[0], static_cast<DWORD>(sPath.size()));
+        const UINT sState = aCut && sPaths.count(sPath) ? LVIS_CUT : 0;
+        SetItemState(i, sState, LVIS_CUT);
+    }
 }
 
 CImageList* ExplorerCtrl::createDragImageEx(LPPOINT aPoint)
@@ -6495,7 +6506,7 @@ void ExplorerCtrl::beginDragDrop(NM_LISTVIEW *aNmListView)
 
     if (getSelDataObject(&sDataObject, 0, &sOkDropEffect) == XPR_TRUE)
     {
-        LPDROPSOURCE sDataSource = new DropSource;
+        LPDROPSOURCE sDataSource = new DropSource(sDataObject, GetSafeHwnd());
 
         if (XPR_IS_NOT_NULL(sDataSource))
         {
@@ -6639,53 +6650,9 @@ DROPEFFECT ExplorerCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeySt
         return sDropEffect;
     }
 
-    if (aKeyState & MK_ALT)          sDropEffect = DROPEFFECT_LINK;
-    else if (aKeyState & MK_CONTROL) sDropEffect = DROPEFFECT_COPY;
-    else if (aKeyState & MK_SHIFT)   sDropEffect = DROPEFFECT_MOVE;
-    else
-    {
-        xpr_bool_t sCopy = XPR_TRUE;
-        if (aOleDataObject->IsDataAvailable(sClipFormat.mShellIDList) == XPR_TRUE)
-        {
-            STGMEDIUM sStgMedium = {0};
-            FORMATETC sFormatEtc = {(CLIPFORMAT)sClipFormat.mShellIDList, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-
-            if (aOleDataObject->GetData(sClipFormat.mShellIDList, &sStgMedium, &sFormatEtc) == XPR_TRUE)
-            {
-                LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-                LPITEMIDLIST sPidl1 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
-                GetName(sPidl1, SHGDN_FORPARSING, sPath);
-
-                const xpr_tchar_t *sCurPath = getCurPath();
-                if (sPath[0] == sCurPath[0])
-                    sCopy = XPR_FALSE;
-
-                ::GlobalUnlock(sStgMedium.hGlobal);
-
-                ::ReleaseStgMedium(&sStgMedium);
-            }
-        }
-
-        // Background Default Drop Effect
-        if (mOption.mDragDefaultFileOp == DRAG_FILE_OP_DEFAULT)
-        {
-            sDropEffect = sCopy ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
-        }
-        else if (mOption.mDragDefaultFileOp == DRAG_FILE_OP_COPY)
-        {
-            sDropEffect = DROPEFFECT_COPY;
-        }
-        else if (mOption.mDragDefaultFileOp == DRAG_FILE_OP_LINK)
-        {
-            sDropEffect = DROPEFFECT_LINK;
-        }
-        else // 1
-        {
-            sDropEffect = DROPEFFECT_MOVE;
-        }
-    }
+    // Do not fetch/render a source CIDA or call Shell display-name providers
+    // on every mouse movement just to decide a same-volume default.
+    sDropEffect = getDragFileOperation(aKeyState, mOption.mDragDefaultFileOp);
 
     DragImage &sDragImage = DragImage::instance();
 
@@ -6854,13 +6821,15 @@ DROPEFFECT ExplorerCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeySt
                 sPointL.x = sPoint.x;
                 sPointL.y = sPoint.y;
 
-                DWORD sTempDropEffect = DROPEFFECT_MOVE | DROPEFFECT_COPY | DROPEFFECT_LINK;
+                DWORD sTempDropEffect = sDropEffect;
 
                 sComResult = sDropTarget->DragEnter(aOleDataObject->m_lpDataObject, aKeyState, sPointL, &sTempDropEffect);
                 if (SUCCEEDED(sComResult))
                 {
                     sComResult = sDropTarget->DragOver(aKeyState, sPointL, &sTempDropEffect);
                     sSucceeded = SUCCEEDED(sComResult) && sTempDropEffect != 0;
+                    if (XPR_IS_TRUE(sSucceeded)) sDropEffect = sTempDropEffect;
+                    sDropTarget->DragLeave();
                 }
             }
 
@@ -6874,8 +6843,6 @@ DROPEFFECT ExplorerCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeySt
 
             if (XPR_IS_TRUE(sSucceeded))
             {
-                sDropEffect = DROPEFFECT_MOVE;
-
                 if (mDropIndex != sIndex)
                 {
                     DragImage &sDragImage = DragImage::instance();
@@ -7207,7 +7174,10 @@ void ExplorerCtrl::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEffect
 
         if (SUCCEEDED(sComResult) && XPR_IS_NOT_NULL(sDropTarget))
         {
-            LPDATAOBJECT sDataObject = aOleDataObject->Detach();
+            // MFC attaches the drag callback wrapper with bAutoRelease=FALSE.
+            // Detach does not acquire a reference: releasing it would consume
+            // the source's reference and crash its post-DoDragDrop cleanup.
+            LPDATAOBJECT sDataObject = aOleDataObject->GetIDataObject(XPR_TRUE);
             if (XPR_IS_NOT_NULL(sDataObject))
             {
                 sDropTarget->DragEnter(sDataObject, sKeyState, sPointL, &sTempDropEffect);
@@ -7225,7 +7195,15 @@ void ExplorerCtrl::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEffect
                         aDropEffect |= DROPEFFECT_MOVE | DROPEFFECT_COPY;
                 }
 
-                sDropTarget->Drop(sDataObject, sKeyState, sPointL, &aDropEffect);
+                if (!*sTargetDir) {
+                    GetName(sShellFolder, sPidl, SHGDN_FORPARSING, sTargetDir);
+                }
+                if (FileOperationConfirmation::confirmDrop(GetSafeHwnd(),
+                    sDataObject, aDropEffect, sTargetDir))
+                    sDropTarget->Drop(sDataObject, sKeyState, sPointL, &aDropEffect);
+                else
+                    sDropTarget->DragLeave();
+                COM_RELEASE(sDataObject);
             }
         }
 
@@ -7547,7 +7525,9 @@ void ExplorerCtrl::OnBeginlabeledit(NMHDR *aNmHdr, LRESULT *aResult)
 
     mRenameHelper = new RenameHelper;
     mRenameHelper->setRenameStyle(sRenameStyle);
-    mRenameHelper->setItem(sLvItemData->mShellFolder, sLvItemData->mPidl, sFullPidl, sLvItemData->mShellAttributes);
+    mRenameHelper->setItem(sLvItemData->mShellFolder, sLvItemData->mPidl, sFullPidl, sLvItemData->mShellAttributes,
+        sLvItemData->mPathResolved ? sLvItemData->mCachedPath : XPR_NULL,
+        sLvItemData->mIconResolved ? sLvItemData->mCachedIconIndex : -1);
 
     COM_FREE(sFullPidl);
 
@@ -8688,8 +8668,14 @@ void ExplorerCtrl::drawFinalReportSelection(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
             sTextFormat |= DT_LEFT;
 
         xpr::string sText = GetItemText(sItemIndex, sColumn);
+        const xpr_sint_t sCellDc = ::SaveDC(aNmLvCustomDraw->nmcd.hdc);
+        if (sCellDc == 0) continue;
+        ::IntersectClipRect(aNmLvCustomDraw->nmcd.hdc,
+            sVisibleCellRect.left, sVisibleCellRect.top,
+            sVisibleCellRect.right, sVisibleCellRect.bottom);
         ::DrawText(aNmLvCustomDraw->nmcd.hdc, sText.c_str(), static_cast<xpr_sint_t>(sText.length()),
             &sTextRect, sTextFormat);
+        ::RestoreDC(aNmLvCustomDraw->nmcd.hdc, sCellDc);
     }
 
     if (XPR_TEST_BITS(GetExtendedStyle(), LVS_EX_GRIDLINES))
@@ -11201,6 +11187,18 @@ void ExplorerCtrl::OnVScroll(xpr_uint_t aSbCode, xpr_uint_t aPos, CScrollBar *aS
             if (aSbCode != SB_THUMBTRACK)
                 Invalidate(XPR_FALSE);
         }
+    }
+}
+
+void ExplorerCtrl::OnHScroll(xpr_uint_t aSbCode, xpr_uint_t aPos, CScrollBar *aScrollBar)
+{
+    super::OnHScroll(aSbCode, aPos, aScrollBar);
+    if (XPR_IS_TRUE(isReportView()))
+    {
+        // Native scrolling can blit old selected pixels and paint only the
+        // exposed strip. Recompose after the header offset is committed,
+        // including THUMBTRACK, without erase/column reflow/synchronous paint.
+        Invalidate(XPR_FALSE);
     }
 }
 

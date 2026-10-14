@@ -10,11 +10,13 @@
 #ifndef __FXFILE_DROP_SOURCE_H__
 #define __FXFILE_DROP_SOURCE_H__
 #pragma once
+#include <string>
+#include <vector>
 
 class DropSource : public IDropSource
 {
 public:
-    DropSource(void);
+    DropSource(IDataObject* aDataObject, HWND aOwner);
 
 public:
     /* IUnknown methods */
@@ -29,6 +31,9 @@ public:
 
 private:
     xpr_ulong_t mRefCount;
+    HWND mOwner;
+    DWORD mEffect;
+    std::vector<std::wstring> mSources;
 };
 
 #endif // __FXFILE_DROP_SOURCE_H__
