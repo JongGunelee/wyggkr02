@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-x64-Unicode|x64">
+      <Configuration>Debug-x64-Unicode</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-x86-Multibyte|Win32">
+      <Configuration>Debug-x86-Multibyte</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-x86-Unicode|Win32">
+      <Configuration>Debug-x86-Unicode</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x64-Unicode|x64">
+      <Configuration>Release-x64-Unicode</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x86-Multibyte|Win32">
+      <Configuration>Release-x86-Multibyte</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x86-Unicode|Win32">
+      <Configuration>Release-x86-Unicode</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{21C2490A-9701-99AF-1DA0-7F5460ADD8FF}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>xpr</RootNamespace>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+  <PropertyGroup Label="Configuration">
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">MultiByte</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">MultiByte</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">Unicode</CharacterSet>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Label="Locals">
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+  <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props"/>
+  <ImportGroup Label="ExtensionSettings"/>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"/>
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros"/>
+  <PropertyGroup>
+    <ExecutablePath>$(ExecutablePath);$(MSBuildProjectDirectory)\.\bin\;$(MSBuildProjectDirectory)\.\bin\</ExecutablePath>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">..\..\obj\xpr\dbg-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">..\..\obj\xpr\dbg-x86-multibyte\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">..\..\obj\xpr\dbg-x86-unicode\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">..\..\obj\xpr\rel-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">..\..\obj\xpr\rel-x86-multibyte\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">..\..\obj\xpr\rel-x86-unicode\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">..\..\bin\x64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">..\..\bin\x64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">..\..\bin\x86-multibyte\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">..\..\bin\x86-multibyte\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">..\..\bin\x86-unicode\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">..\..\bin\x86-unicode\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">$(OutDir)lib$(ProjectName).dll</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">$(OutDir)lib$(ProjectName)_dbg.dll</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">$(OutDir)lib$(ProjectName)w.dll</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">$(OutDir)lib$(ProjectName)w.dll</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">$(OutDir)lib$(ProjectName)w_dbg.dll</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">$(OutDir)lib$(ProjectName)w_dbg.dll</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);libxml2.dll.a</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../lib/libxml2/lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)lib$(ProjectName)w_dbg.dll</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;DEBUG;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);libxml2.dll.a</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../lib/libxml2/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)lib$(ProjectName)_dbg.dll</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(TargetDir)$(TargetName).lib $(TargetDir).. /c /r /y/r/nxcopy $(TargetDir)$(TargetFileName) $(TargetDir).. /c /r /y/r/n</Command>
+    </PostBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;DEBUG;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);libxml2.dll.a</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../lib/libxml2/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)lib$(ProjectName)w_dbg.dll</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;DEBUG;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);libxml2.dll.a</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../lib/libxml2/lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)lib$(ProjectName)w.dll</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);libxml2.dll.a</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../lib/libxml2/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)lib$(ProjectName).dll</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(TargetDir)$(TargetName).lib $(TargetDir).. /c /r /y/r/nxcopy $(TargetDir)$(TargetFileName) $(TargetDir).. /c /r /y/r/n</Command>
+    </PostBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);libxml2.dll.a</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../lib/libxml2/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)lib$(ProjectName)w.dll</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\src\xpr\include;..\..\lib\iconv\include;..\..\lib\libxml2\include\libxml2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;XPR_CFG_DL_EXPORT;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="xpr.gyp"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="xpr\xpr_hash_internal.h"/>
+    <ClInclude Include="xpr\xpr_hash_knuth_multiplicative.h"/>
+    <ClInclude Include="xpr\xpr_hash_pseudo_randomizing.h"/>
+    <ClInclude Include="xpr\xpr_lazy_library_load.h"/>
+    <ClInclude Include="include\xpr.h"/>
+    <ClInclude Include="include\xpr_atomic.h"/>
+    <ClInclude Include="include\xpr_bit.h"/>
+    <ClInclude Include="include\xpr_buffer.h"/>
+    <ClInclude Include="include\xpr_char.h"/>
+    <ClInclude Include="include\xpr_char_set.h"/>
+    <ClInclude Include="include\xpr_config.h"/>
+    <ClInclude Include="include\xpr_config_win.h"/>
+    <ClInclude Include="include\xpr_cond_variable.h"/>
+    <ClInclude Include="include\xpr_cstr.h"/>
+    <ClInclude Include="include\xpr_debug.h"/>
+    <ClInclude Include="include\xpr_define.h"/>
+    <ClInclude Include="include\xpr_dlsym.h"/>
+    <ClInclude Include="include\xpr_endian.h"/>
+    <ClInclude Include="include\xpr_env.h"/>
+    <ClInclude Include="include\xpr_file_io.h"/>
+    <ClInclude Include="include\xpr_file_path.h"/>
+    <ClInclude Include="include\xpr_file_sys.h"/>
+    <ClInclude Include="include\xpr_guid.h"/>
+    <ClInclude Include="include\xpr_hash.h"/>
+    <ClInclude Include="include\xpr_init.h"/>
+    <ClInclude Include="include\xpr_math.h"/>
+    <ClInclude Include="include\xpr_memory.h"/>
+    <ClInclude Include="include\xpr_memory_barrier.h"/>
+    <ClInclude Include="include\xpr_net_io.h"/>
+    <ClInclude Include="include\xpr_process.h"/>
+    <ClInclude Include="include\xpr_process_sync.h"/>
+    <ClInclude Include="include\xpr_rcode.h"/>
+    <ClInclude Include="include\xpr_rw_lock.h"/>
+    <ClInclude Include="include\xpr_scoped_ptr.h"/>
+    <ClInclude Include="include\xpr_shm.h"/>
+    <ClInclude Include="include\xpr_spin_lock.h"/>
+    <ClInclude Include="include\xpr_std.h"/>
+    <ClInclude Include="include\xpr_string.h"/>
+    <ClInclude Include="include\xpr_string_iterator.h"/>
+    <ClInclude Include="include\xpr_string_tokenizer.h"/>
+    <ClInclude Include="include\xpr_system.h"/>
+    <ClInclude Include="include\xpr_tchar.h"/>
+    <ClInclude Include="include\xpr_text_file_io.h"/>
+    <ClInclude Include="include\xpr_thread.h"/>
+    <ClInclude Include="include\xpr_time.h"/>
+    <ClInclude Include="include\xpr_trace_logger.h"/>
+    <ClInclude Include="include\xpr_types.h"/>
+    <ClInclude Include="include\xpr_uri.h"/>
+    <ClInclude Include="include\xpr_ustring.h"/>
+    <ClInclude Include="include\xpr_ver.h"/>
+    <ClInclude Include="include\xpr_xml.h"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="xpr\xpr_atomic_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_atomic_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_char.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_char.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_char_set.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_char_set.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_cstr.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_cstr.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_debug_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_debug_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_dllmain_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_dllmain_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_env.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_env.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_file_io_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_file_io_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_file_path_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_file_path_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_file_sys_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_file_sys_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_guid.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_guid.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_hash.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_hash.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_hash_knuth_multiplicative.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_hash_knuth_multiplicative.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_hash_pseudo_randomizing.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_hash_pseudo_randomizing.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_init.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_init.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_lazy_library_load_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_lazy_library_load_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_memory.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_memory.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_process_sync_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_process_sync_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_process_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_process_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_rcode.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_rcode.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_shm_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_shm_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_string.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_string.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_string_iterator.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_string_iterator.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_string_tokenizer.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_string_tokenizer.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_system_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_system_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_text_file_io.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_text_file_io.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_mutex_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_mutex_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_thread_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_thread_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_time_win.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_time_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_trace_logger.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_trace_logger.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_ustring.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_ustring.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_ver.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_ver.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="xpr\xpr_xml.cpp">
+      <ObjectFileName>$(IntDir)\xpr\xpr_xml.obj</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+  <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets"/>
+  <ImportGroup Label="ExtensionTargets"/>
+</Project>

@@ -1,0 +1,1657 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-x64-Unicode|x64">
+      <Configuration>Debug-x64-Unicode</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-x86-Multibyte|Win32">
+      <Configuration>Debug-x86-Multibyte</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-x86-Unicode|Win32">
+      <Configuration>Debug-x86-Unicode</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x64-Unicode|x64">
+      <Configuration>Release-x64-Unicode</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x86-Multibyte|Win32">
+      <Configuration>Release-x86-Multibyte</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x86-Unicode|Win32">
+      <Configuration>Release-x86-Unicode</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F73E8D39-9D40-1E8C-428E-BA790F8B343E}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>fxfile</RootNamespace>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+  <PropertyGroup Label="Configuration">
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">MultiByte</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">MultiByte</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">Unicode</CharacterSet>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Label="Locals">
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+  <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props"/>
+  <ImportGroup Label="ExtensionSettings"/>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"/>
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros"/>
+  <PropertyGroup>
+    <ExecutablePath>$(ExecutablePath);$(MSBuildProjectDirectory)\.\bin\;$(MSBuildProjectDirectory)\.\bin\</ExecutablePath>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">..\..\obj\fxfile\dbg-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">..\..\obj\fxfile\dbg-x86-multibyte\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">..\..\obj\fxfile\dbg-x86-unicode\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">..\..\obj\fxfile\rel-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">..\..\obj\fxfile\rel-x86-multibyte\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">..\..\obj\fxfile\rel-x86-unicode\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">..\..\bin\x64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">..\..\bin\x64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">..\..\bin\x86-multibyte\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">..\..\bin\x86-multibyte\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">..\..\bin\x86-unicode\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">..\..\bin\x86-unicode\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">$(OutDir)$(ProjectName).exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">$(OutDir)$(ProjectName).exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">$(OutDir)$(ProjectName).exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">$(OutDir)$(ProjectName)_dbg.exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">$(OutDir)$(ProjectName)_dbg.exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">$(OutDir)$(ProjectName)_dbg.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxprw_dbg.lib;shlwapi.lib;msimg32.lib;Mpr.lib;htmlhelp.lib;Version.lib;Imm32.lib;setupapi.lib;bcrypt.lib;libgfl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../lib/gfl/lib64W;../../lib/vld/lib/Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EntryPointSymbol>wWinMainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(ProjectName)_dbg.exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxpr_dbg.lib;shlwapi.lib;msimg32.lib;Mpr.lib;htmlhelp.lib;Version.lib;Imm32.lib;setupapi.lib;bcrypt.lib;libgfl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../lib/gfl/lib;../../lib/vld/lib/Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(ProjectName)_dbg.exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxprw_dbg.lib;shlwapi.lib;msimg32.lib;Mpr.lib;htmlhelp.lib;Version.lib;Imm32.lib;setupapi.lib;bcrypt.lib;libgfl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../lib/gfl/libW;../../lib/vld/lib/Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(ProjectName)_dbg.exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxprw.lib;shlwapi.lib;msimg32.lib;Mpr.lib;htmlhelp.lib;Version.lib;Imm32.lib;setupapi.lib;bcrypt.lib;libgfl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../lib/gfl/lib64W;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <EntryPointSymbol>wWinMainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxpr.lib;shlwapi.lib;msimg32.lib;Mpr.lib;htmlhelp.lib;Version.lib;Imm32.lib;setupapi.lib;bcrypt.lib;libgfl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../lib/gfl/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxprw.lib;shlwapi.lib;msimg32.lib;Mpr.lib;htmlhelp.lib;Version.lib;Imm32.lib;setupapi.lib;bcrypt.lib;libgfl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../lib/gfl/libW;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\src\fxfile-crash;..\..\lib\gfl\include;..\..\lib\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="res\about.bmp"/>
+    <None Include="res\config_tree.bmp"/>
+    <None Include="res\dos_cmd.ico"/>
+    <None Include="res\expand.ico"/>
+    <None Include="res\file_scrap.ico"/>
+    <None Include="res\file_scrap_drop.bmp"/>
+    <None Include="res\fxfile.ico"/>
+    <None Include="res\fxfile.rc2"/>
+    <None Include="res\goup.ico"/>
+    <None Include="res\link.ico"/>
+    <None Include="res\not_custom_icon.ico"/>
+    <None Include="res\pending.ico"/>
+    <None Include="res\preview_next_cold.bmp"/>
+    <None Include="res\preview_next_hot.bmp"/>
+    <None Include="res\preview_prev_cold.bmp"/>
+    <None Include="res\preview_prev_hot.bmp"/>
+    <None Include="res\preview_print_cold.bmp"/>
+    <None Include="res\preview_print_hot.bmp"/>
+    <None Include="res\preview_zoomin_cold.bmp"/>
+    <None Include="res\preview_zoomin_hot.bmp"/>
+    <None Include="res\preview_zoomout_cold.bmp"/>
+    <None Include="res\preview_zoomout_hot.bmp"/>
+    <None Include="res\schdec.ico"/>
+    <None Include="res\schinc.ico"/>
+    <None Include="res\search.bmp"/>
+    <None Include="res\search.ico"/>
+    <None Include="res\shortcut.ico"/>
+    <None Include="res\sync_images.bmp"/>
+    <None Include="res\tb_drive.bmp"/>
+    <None Include="res\tb_main_cold_large.bmp"/>
+    <None Include="res\tb_main_cold_small.bmp"/>
+    <None Include="res\tb_main_hot_large.bmp"/>
+    <None Include="res\tb_main_hot_small.bmp"/>
+    <None Include="res\tb_rename.bmp"/>
+    <None Include="res\tip.ico"/>
+    <None Include="res\tray.ico"/>
+    <None Include="res\tray_xp.ico"/>
+    <None Include="res\fxfile.exe.manifest"/>
+    <None Include="fxfile.gyp"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\base\conf_file.h"/>
+    <ClInclude Include="..\base\conf_file_ex.h"/>
+    <ClInclude Include="..\base\crc32.h"/>
+    <ClInclude Include="..\base\def.h"/>
+    <ClInclude Include="..\base\def_win.h"/>
+    <ClInclude Include="..\base\fnmatch.h"/>
+    <ClInclude Include="..\base\format_string_table.h"/>
+    <ClInclude Include="..\base\language_pack.h"/>
+    <ClInclude Include="..\base\language_table.h"/>
+    <ClInclude Include="..\base\md5.h"/>
+    <ClInclude Include="..\base\pattern.h"/>
+    <ClInclude Include="..\base\pidl_win.h"/>
+    <ClInclude Include="..\base\sha.h"/>
+    <ClInclude Include="..\base\shell_enumerator.h"/>
+    <ClInclude Include="..\base\shell_item.h"/>
+    <ClInclude Include="..\base\string_table.h"/>
+    <ClInclude Include="..\base\update_info_manager.h"/>
+    <ClInclude Include="..\base\upchecker_def.h"/>
+    <ClInclude Include="..\base\xml.h"/>
+    <ClInclude Include="..\base\getopt.h"/>
+    <ClInclude Include="gui\BCMenu.h"/>
+    <ClInclude Include="gui\BtnST.h"/>
+    <ClInclude Include="gui\ColourPickerXP.h"/>
+    <ClInclude Include="gui\DlgToolBar.h"/>
+    <ClInclude Include="gui\DragDropToolBar.h"/>
+    <ClInclude Include="gui\DragImage.h"/>
+    <ClInclude Include="gui\DrivePieCtrl.h"/>
+    <ClInclude Include="gui\DropMenuButton.h"/>
+    <ClInclude Include="gui\DropSource.h"/>
+    <ClInclude Include="gui\DropTarget.h"/>
+    <ClInclude Include="gui\EditScroll.h"/>
+    <ClInclude Include="gui\FileDialogST.h"/>
+    <ClInclude Include="gui\FlatHeaderCtrl.h"/>
+    <ClInclude Include="gui\gdi.h"/>
+    <ClInclude Include="gui\IconList.h"/>
+    <ClInclude Include="gui\ListCtrlEx.h"/>
+    <ClInclude Include="gui\ListCtrlPrint.h"/>
+    <ClInclude Include="gui\MemDC.h"/>
+    <ClInclude Include="gui\Print.h"/>
+    <ClInclude Include="gui\ResizingDialog.h"/>
+    <ClInclude Include="gui\SizeGripWnd.h"/>
+    <ClInclude Include="gui\StatusBar.h"/>
+    <ClInclude Include="gui\StatusBarObserver.h"/>
+    <ClInclude Include="gui\SysTray.h"/>
+    <ClInclude Include="gui\TabCtrl.h"/>
+    <ClInclude Include="gui\TabCtrlObserver.h"/>
+    <ClInclude Include="gui\TextProgressCtrl.h"/>
+    <ClInclude Include="gui\TreeCtrlEx.h"/>
+    <ClInclude Include="gui\WindowScroller.h"/>
+    <ClInclude Include="gui\XPTheme.h"/>
+    <ClInclude Include="gui\rebar\CustomizeDialog.h"/>
+    <ClInclude Include="gui\rebar\DllLoader.h"/>
+    <ClInclude Include="gui\rebar\FrameWndEx.h"/>
+    <ClInclude Include="gui\rebar\GlobalData.h"/>
+    <ClInclude Include="gui\rebar\MenuBar.h"/>
+    <ClInclude Include="gui\rebar\SizableReBar.h"/>
+    <ClInclude Include="gui\rebar\ToolBarEx.h"/>
+    <ClInclude Include="gui\rebar\WinAppEx.h"/>
+    <ClInclude Include="accel_table.h"/>
+    <ClInclude Include="activate_bar.h"/>
+    <ClInclude Include="address_bar.h"/>
+    <ClInclude Include="address_bar_observer.h"/>
+    <ClInclude Include="adv_file_change_watcher.h"/>
+    <ClInclude Include="app_ver.h"/>
+    <ClInclude Include="bb_info_file.h"/>
+    <ClInclude Include="bitmap.h"/>
+    <ClInclude Include="bookmark.h"/>
+    <ClInclude Include="bookmark_item_edit_dlg.h"/>
+    <ClInclude Include="bookmark_set_wnd.h"/>
+    <ClInclude Include="bookmark_toolbar.h"/>
+    <ClInclude Include="bookmark_toolbar_observer.h"/>
+    <ClInclude Include="bookmark_wnd.h"/>
+    <ClInclude Include="clip_format.h"/>
+    <ClInclude Include="clipboard.h"/>
+    <ClInclude Include="command_string_table.h"/>
+    <ClInclude Include="conf_dir.h"/>
+    <ClInclude Include="contents_wnd.h"/>
+    <ClInclude Include="context_menu.h"/>
+    <ClInclude Include="crc_checksum.h"/>
+    <ClInclude Include="ctrl_id.h"/>
+    <ClInclude Include="dlg_state.h"/>
+    <ClInclude Include="dlg_state_manager.h"/>
+    <ClInclude Include="drive_path_bar.h"/>
+    <ClInclude Include="drive_shcn.h"/>
+    <ClInclude Include="drive_toolbar.h"/>
+    <ClInclude Include="drive_toolbar_observer.h"/>
+    <ClInclude Include="env_path.h"/>
+    <ClInclude Include="explorer_ctrl.h"/>
+    <ClInclude Include="explorer_ctrl_observer.h"/>
+    <ClInclude Include="explorer_ctrl_print.h"/>
+    <ClInclude Include="explorer_pane.h"/>
+    <ClInclude Include="explorer_pane_observer.h"/>
+    <ClInclude Include="explorer_status_bar.h"/>
+    <ClInclude Include="explorer_view.h"/>
+    <ClInclude Include="explorer_view_observer.h"/>
+    <ClInclude Include="file_change_watcher.h"/>
+    <ClInclude Include="file_op_thread.h"/>
+    <ClInclude Include="file_op_undo.h"/>
+    <ClInclude Include="file_scrap.h"/>
+    <ClInclude Include="file_scrap_ctrl.h"/>
+    <ClInclude Include="file_scrap_ctrl_observer.h"/>
+    <ClInclude Include="file_scrap_drop_dlg.h"/>
+    <ClInclude Include="file_scrap_observer.h"/>
+    <ClInclude Include="file_scrap_pane.h"/>
+    <ClInclude Include="file_scrap_toolbar.h"/>
+    <ClInclude Include="file_filter.h"/>
+    <ClInclude Include="folder_ctrl.h"/>
+    <ClInclude Include="folder_ctrl_observer.h"/>
+    <ClInclude Include="folder_layout.h"/>
+    <ClInclude Include="folder_layout_manager.h"/>
+    <ClInclude Include="folder_pane.h"/>
+    <ClInclude Include="folder_pane_observer.h"/>
+    <ClInclude Include="folder_size.h"/>
+    <ClInclude Include="folder_view.h"/>
+    <ClInclude Include="folder_view_observer.h"/>
+    <ClInclude Include="functors.h"/>
+    <ClInclude Include="fxfile_def.h"/>
+    <ClInclude Include="history.h"/>
+    <ClInclude Include="img_list_manager.h"/>
+    <ClInclude Include="item_data.h"/>
+    <ClInclude Include="keyboard.h"/>
+    <ClInclude Include="launcher_manager.h"/>
+    <ClInclude Include="main_coolbar.h"/>
+    <ClInclude Include="main_frame.h"/>
+    <ClInclude Include="main_menubar.h"/>
+    <ClInclude Include="main_toolbar.h"/>
+    <ClInclude Include="option.h"/>
+    <ClInclude Include="option_manager.h"/>
+    <ClInclude Include="option_observer.h"/>
+    <ClInclude Include="path.h"/>
+    <ClInclude Include="path_bar.h"/>
+    <ClInclude Include="path_bar_observer.h"/>
+    <ClInclude Include="picture_viewer.h"/>
+    <ClInclude Include="print_preview_view_ex.h"/>
+    <ClInclude Include="program_ass.h"/>
+    <ClInclude Include="program_opts.h"/>
+    <ClInclude Include="recent_file_list.h"/>
+    <ClInclude Include="removable_device.h"/>
+    <ClInclude Include="removable_drive.h"/>
+    <ClInclude Include="rename_helper.h"/>
+    <ClInclude Include="resource.h"/>
+    <ClInclude Include="search.h"/>
+    <ClInclude Include="search_dlg.h"/>
+    <ClInclude Include="search_dlg_observer.h"/>
+    <ClInclude Include="search_file.h"/>
+    <ClInclude Include="search_result_ctrl.h"/>
+    <ClInclude Include="search_result_ctrl_observer.h"/>
+    <ClInclude Include="search_result_pane.h"/>
+    <ClInclude Include="shell.h"/>
+    <ClInclude Include="shell_change_notify.h"/>
+    <ClInclude Include="shell_column_manager.h"/>
+    <ClInclude Include="shell_icon.h"/>
+    <ClInclude Include="shell_new.h"/>
+    <ClInclude Include="shell_registry.h"/>
+    <ClInclude Include="singleton_manager.h"/>
+    <ClInclude Include="single_process.h"/>
+    <ClInclude Include="size_format.h"/>
+    <ClInclude Include="splitter.h"/>
+    <ClInclude Include="stdafx.h"/>
+    <ClInclude Include="sync_dirs.h"/>
+    <ClInclude Include="sys_img_list.h"/>
+    <ClInclude Include="SystemInfo.h"/>
+    <ClInclude Include="tab_pane.h"/>
+    <ClInclude Include="tab_pane_observer.h"/>
+    <ClInclude Include="tab_type.h"/>
+    <ClInclude Include="targetver.h"/>
+    <ClInclude Include="thread.h"/>
+    <ClInclude Include="thumb_img_list.h"/>
+    <ClInclude Include="thumbnail.h"/>
+    <ClInclude Include="upchecker_manager.h"/>
+    <ClInclude Include="user_env.h"/>
+    <ClInclude Include="vwin32.h"/>
+    <ClInclude Include="wait_dlg.h"/>
+    <ClInclude Include="win_app.h"/>
+    <ClInclude Include="winapi_ex.h"/>
+    <ClInclude Include="wnet_mgr.h"/>
+    <ClInclude Include="cfg\cfg_adv_conf_dir_dlg.h"/>
+    <ClInclude Include="cfg\cfg_adv_dlg.h"/>
+    <ClInclude Include="cfg\cfg_adv_hotkey_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_color_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_file_list_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_filtering_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_folder_layout_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_folder_tree_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_font_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_history_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_language_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_layout_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_size_format_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_thumbnail_dlg.h"/>
+    <ClInclude Include="cfg\cfg_appearance_tab_dlg.h"/>
+    <ClInclude Include="cfg\cfg_dlg.h"/>
+    <ClInclude Include="cfg\cfg_dlg_observer.h"/>
+    <ClInclude Include="cfg\cfg_func_bookmark_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_drag_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_file_op_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_file_scrap_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_program_ass_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_refresh_dlg.h"/>
+    <ClInclude Include="cfg\cfg_func_rename_dlg.h"/>
+    <ClInclude Include="cfg\cfg_general_dlg.h"/>
+    <ClInclude Include="cfg\cfg_general_startup_dlg.h"/>
+    <ClInclude Include="cfg\cfg_main_dlg.h"/>
+    <ClInclude Include="cfg\filter_set_dlg.h"/>
+    <ClInclude Include="cfg\program_ass_set_dlg.h"/>
+    <ClInclude Include="cfg\size_format_dlg.h"/>
+    <ClInclude Include="cmd\about_dlg.h"/>
+    <ClInclude Include="cmd\about_tab_dlg.h"/>
+    <ClInclude Include="cmd\about_tab_info_dlg.h"/>
+    <ClInclude Include="cmd\about_tab_license_dlg.h"/>
+    <ClInclude Include="cmd\about_tab_credits_dlg.h"/>
+    <ClInclude Include="cmd\accel_table_dlg.h"/>
+    <ClInclude Include="cmd\attr_time.h"/>
+    <ClInclude Include="cmd\attr_time_dlg.h"/>
+    <ClInclude Include="cmd\batch_create.h"/>
+    <ClInclude Include="cmd\batch_create_dlg.h"/>
+    <ClInclude Include="cmd\batch_create_tab_dlg.h"/>
+    <ClInclude Include="cmd\batch_create_tab_format_dlg.h"/>
+    <ClInclude Include="cmd\batch_create_tab_text_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename.h"/>
+    <ClInclude Include="cmd\batch_rename_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_edit_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tab_case_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tab_delete_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tab_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tab_format_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tab_insert_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tab_replace_dlg.h"/>
+    <ClInclude Include="cmd\batch_rename_tip_dlg.h"/>
+    <ClInclude Include="cmd\bookmark_edit_dlg.h"/>
+    <ClInclude Include="cmd\cmd_app.h"/>
+    <ClInclude Include="cmd\cmd_attr_time.h"/>
+    <ClInclude Include="cmd\cmd_bookmark.h"/>
+    <ClInclude Include="cmd\cmd_cfg.h"/>
+    <ClInclude Include="cmd\cmd_checksum.h"/>
+    <ClInclude Include="cmd\cmd_clipboard.h"/>
+    <ClInclude Include="cmd\cmd_column.h"/>
+    <ClInclude Include="cmd\cmd_create_item.h"/>
+    <ClInclude Include="cmd\cmd_drive.h"/>
+    <ClInclude Include="cmd\cmd_execute.h"/>
+    <ClInclude Include="cmd\cmd_file_list.h"/>
+    <ClInclude Include="cmd\cmd_file_oper.h"/>
+    <ClInclude Include="cmd\cmd_file_property.h"/>
+    <ClInclude Include="cmd\cmd_file_scrap.h"/>
+    <ClInclude Include="cmd\cmd_file_split.h"/>
+    <ClInclude Include="cmd\cmd_folder_sync.h"/>
+    <ClInclude Include="cmd\cmd_go_path.h"/>
+    <ClInclude Include="cmd\cmd_help.h"/>
+    <ClInclude Include="cmd\cmd_history.h"/>
+    <ClInclude Include="cmd\cmd_main_gui.h"/>
+    <ClInclude Include="cmd\cmd_network.h"/>
+    <ClInclude Include="cmd\cmd_pic_conv.h"/>
+    <ClInclude Include="cmd\cmd_pic_viewer.h"/>
+    <ClInclude Include="cmd\cmd_print.h"/>
+    <ClInclude Include="cmd\cmd_program_ass.h"/>
+    <ClInclude Include="cmd\cmd_recent.h"/>
+    <ClInclude Include="cmd\cmd_refresh.h"/>
+    <ClInclude Include="cmd\cmd_rename.h"/>
+    <ClInclude Include="cmd\cmd_search.h"/>
+    <ClInclude Include="cmd\cmd_search_result.h"/>
+    <ClInclude Include="cmd\cmd_select_file.h"/>
+    <ClInclude Include="cmd\cmd_send_mail.h"/>
+    <ClInclude Include="cmd\cmd_sort.h"/>
+    <ClInclude Include="cmd\cmd_style.h"/>
+    <ClInclude Include="cmd\cmd_tab.h"/>
+    <ClInclude Include="cmd\cmd_tools.h"/>
+    <ClInclude Include="cmd\cmd_tray.h"/>
+    <ClInclude Include="cmd\cmd_undo.h"/>
+    <ClInclude Include="cmd\cmd_window.h"/>
+    <ClInclude Include="cmd\cmd_working_folder.h"/>
+    <ClInclude Include="cmd\column_set_dlg.h"/>
+    <ClInclude Include="cmd\crc_create.h"/>
+    <ClInclude Include="cmd\crc_create_dlg.h"/>
+    <ClInclude Include="cmd\crc_verify.h"/>
+    <ClInclude Include="cmd\crc_verify_dlg.h"/>
+    <ClInclude Include="cmd\create_item_dlg.h"/>
+    <ClInclude Include="desktop_background.h"/>
+    <ClInclude Include="cmd\dos_cmd_dlg.h"/>
+    <ClInclude Include="cmd\drive_detail_dlg.h"/>
+    <ClInclude Include="cmd\drive_dlg.h"/>
+    <ClInclude Include="cmd\drive_info_dlg.h"/>
+    <ClInclude Include="cmd\file_combine.h"/>
+    <ClInclude Include="cmd\file_combine_dlg.h"/>
+    <ClInclude Include="cmd\file_list.h"/>
+    <ClInclude Include="cmd\file_list_dlg.h"/>
+    <ClInclude Include="cmd\file_merge.h"/>
+    <ClInclude Include="cmd\file_merge_dlg.h"/>
+    <ClInclude Include="cmd\file_scrap_group_dlg.h"/>
+    <ClInclude Include="cmd\file_split.h"/>
+    <ClInclude Include="cmd\file_split_dlg.h"/>
+    <ClInclude Include="cmd\folder_sync_dlg.h"/>
+    <ClInclude Include="cmd\folder_sync_opt_dlg.h"/>
+    <ClInclude Include="cmd\format.h"/>
+    <ClInclude Include="cmd\format_case.h"/>
+    <ClInclude Include="cmd\format_clear.h"/>
+    <ClInclude Include="cmd\format_delete.h"/>
+    <ClInclude Include="cmd\format_factory.h"/>
+    <ClInclude Include="cmd\format_insert.h"/>
+    <ClInclude Include="cmd\format_name.h"/>
+    <ClInclude Include="cmd\format_number.h"/>
+    <ClInclude Include="cmd\format_replace.h"/>
+    <ClInclude Include="cmd\format_short_parser.h"/>
+    <ClInclude Include="cmd\format_string.h"/>
+    <ClInclude Include="cmd\format_time.h"/>
+    <ClInclude Include="cmd\format_ext_remove.h"/>
+    <ClInclude Include="cmd\go_path_dlg.h"/>
+    <ClInclude Include="cmd\history_dlg.h"/>
+    <ClInclude Include="cmd\info_copyable_dlg.h"/>
+    <ClInclude Include="cmd\input_dlg.h"/>
+    <ClInclude Include="cmd\multi_rename.h"/>
+    <ClInclude Include="cmd\param_exec_dlg.h"/>
+    <ClInclude Include="cmd\pic_conv.h"/>
+    <ClInclude Include="cmd\pic_conv_color_dlg.h"/>
+    <ClInclude Include="cmd\pic_conv_dlg.h"/>
+    <ClInclude Include="cmd\pic_conv_opt_dlg.h"/>
+    <ClInclude Include="cmd\proc_shared_file_dlg.h"/>
+    <ClInclude Include="cmd\program_ass_dlg.h"/>
+    <ClInclude Include="cmd\search_loc_dlg.h"/>
+    <ClInclude Include="cmd\search_loc_edit_dlg.h"/>
+    <ClInclude Include="cmd\sel_filter_dlg.h"/>
+    <ClInclude Include="cmd\sel_name_dlg.h"/>
+    <ClInclude Include="cmd\shortcut_dlg.h"/>
+    <ClInclude Include="cmd\single_rename_dlg.h"/>
+    <ClInclude Include="cmd\text_merge.h"/>
+    <ClInclude Include="cmd\text_merge_dlg.h"/>
+    <ClInclude Include="cmd\tip_dlg.h"/>
+    <ClInclude Include="cmd\title_dlg.h"/>
+    <ClInclude Include="cmd\trash.h"/>
+    <ClInclude Include="cmd\router\cmd_command.h"/>
+    <ClInclude Include="cmd\router\cmd_command_map.h"/>
+    <ClInclude Include="cmd\router\cmd_context.h"/>
+    <ClInclude Include="cmd\router\cmd_executor.h"/>
+    <ClInclude Include="cmd\router\cmd_parameter_define.h"/>
+    <ClInclude Include="cmd\router\cmd_parameters.h"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\base\conf_file.cpp">
+      <ObjectFileName>$(IntDir)\base\conf_file.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\crc32.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\crc32.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\fnmatch.cpp">
+      <ObjectFileName>$(IntDir)\base\fnmatch.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\format_string_table.cpp">
+      <ObjectFileName>$(IntDir)\base\format_string_table.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\language_pack.cpp">
+      <ObjectFileName>$(IntDir)\base\language_pack.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\language_table.cpp">
+      <ObjectFileName>$(IntDir)\base\language_table.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\md5.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\md5.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\pidl_win.cpp">
+      <ObjectFileName>$(IntDir)\base\pidl_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\sha.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\sha.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\shell_enumerator_win.cpp">
+      <ObjectFileName>$(IntDir)\base\shell_enumerator_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\shell_item_win.cpp">
+      <ObjectFileName>$(IntDir)\base\shell_item_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\string_table.cpp">
+      <ObjectFileName>$(IntDir)\base\string_table.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\update_info_manager.cpp">
+      <ObjectFileName>$(IntDir)\base\update_info_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\xml.cpp">
+      <ObjectFileName>$(IntDir)\base\xml.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\getopt.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\getopt.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\BCMenu.cpp">
+      <ObjectFileName>$(IntDir)\gui\BCMenu.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\BtnST.cpp">
+      <ObjectFileName>$(IntDir)\gui\BtnST.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\ColourPickerXP.cpp">
+      <ObjectFileName>$(IntDir)\gui\ColourPickerXP.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DlgToolBar.cpp">
+      <ObjectFileName>$(IntDir)\gui\DlgToolBar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DragDropToolBar.cpp">
+      <ObjectFileName>$(IntDir)\gui\DragDropToolBar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DragImage.cpp">
+      <ObjectFileName>$(IntDir)\gui\DragImage.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DrivePieCtrl.cpp">
+      <ObjectFileName>$(IntDir)\gui\DrivePieCtrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DropMenuButton.cpp">
+      <ObjectFileName>$(IntDir)\gui\DropMenuButton.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DropSource.cpp">
+      <ObjectFileName>$(IntDir)\gui\DropSource.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\DropTarget.cpp">
+      <ObjectFileName>$(IntDir)\gui\DropTarget.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\EditScroll.cpp">
+      <ObjectFileName>$(IntDir)\gui\EditScroll.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\FileDialogST.cpp">
+      <ObjectFileName>$(IntDir)\gui\FileDialogST.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\FlatHeaderCtrl.cpp">
+      <ObjectFileName>$(IntDir)\gui\FlatHeaderCtrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\gdi.cpp">
+      <ObjectFileName>$(IntDir)\gui\gdi.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\IconList.cpp">
+      <ObjectFileName>$(IntDir)\gui\IconList.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\ListCtrlEx.cpp">
+      <ObjectFileName>$(IntDir)\gui\ListCtrlEx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\ListCtrlPrint.cpp">
+      <ObjectFileName>$(IntDir)\gui\ListCtrlPrint.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\Print.cpp">
+      <ObjectFileName>$(IntDir)\gui\Print.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\ResizingDialog.cpp">
+      <ObjectFileName>$(IntDir)\gui\ResizingDialog.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\SizeGripWnd.cpp">
+      <ObjectFileName>$(IntDir)\gui\SizeGripWnd.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\StatusBar.cpp">
+      <ObjectFileName>$(IntDir)\gui\StatusBar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\SysTray.cpp">
+      <ObjectFileName>$(IntDir)\gui\SysTray.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\TabCtrl.cpp">
+      <ObjectFileName>$(IntDir)\gui\TabCtrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\TextProgressCtrl.cpp">
+      <ObjectFileName>$(IntDir)\gui\TextProgressCtrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\TreeCtrlEx.cpp">
+      <ObjectFileName>$(IntDir)\gui\TreeCtrlEx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\WindowScroller.cpp">
+      <ObjectFileName>$(IntDir)\gui\WindowScroller.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\XPTheme.cpp">
+      <ObjectFileName>$(IntDir)\gui\XPTheme.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\CustomizeDialog.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\CustomizeDialog.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\DllLoader.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\DllLoader.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\FrameWndEx.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\FrameWndEx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\MenuBar.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\MenuBar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\SizableReBar.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\SizableReBar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\ToolBarEx.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\ToolBarEx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="gui\rebar\WinAppEx.cpp">
+      <ObjectFileName>$(IntDir)\gui\rebar\WinAppEx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="accel_table.cpp">
+      <ObjectFileName>$(IntDir)\accel_table.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="activate_bar.cpp">
+      <ObjectFileName>$(IntDir)\activate_bar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="address_bar.cpp">
+      <ObjectFileName>$(IntDir)\address_bar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="adv_file_change_watcher.cpp">
+      <ObjectFileName>$(IntDir)\adv_file_change_watcher.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="app_ver.cpp">
+      <ObjectFileName>$(IntDir)\app_ver.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bb_info_file.cpp">
+      <ObjectFileName>$(IntDir)\bb_info_file.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bitmap.cpp">
+      <ObjectFileName>$(IntDir)\bitmap.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bookmark.cpp">
+      <ObjectFileName>$(IntDir)\bookmark.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bookmark_item_edit_dlg.cpp">
+      <ObjectFileName>$(IntDir)\bookmark_item_edit_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bookmark_set_wnd.cpp">
+      <ObjectFileName>$(IntDir)\bookmark_set_wnd.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bookmark_toolbar.cpp">
+      <ObjectFileName>$(IntDir)\bookmark_toolbar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="bookmark_wnd.cpp">
+      <ObjectFileName>$(IntDir)\bookmark_wnd.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="clip_format.cpp">
+      <ObjectFileName>$(IntDir)\clip_format.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="clipboard.cpp">
+      <ObjectFileName>$(IntDir)\clipboard.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="command_string_table.cpp">
+      <ObjectFileName>$(IntDir)\command_string_table.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="conf_dir.cpp">
+      <ObjectFileName>$(IntDir)\conf_dir.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="contents_wnd.cpp">
+      <ObjectFileName>$(IntDir)\contents_wnd.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="context_menu.cpp">
+      <ObjectFileName>$(IntDir)\context_menu.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="crc_checksum.cpp">
+      <ObjectFileName>$(IntDir)\crc_checksum.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="dlg_state.cpp">
+      <ObjectFileName>$(IntDir)\dlg_state.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="dlg_state_manager.cpp">
+      <ObjectFileName>$(IntDir)\dlg_state_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="drive_path_bar.cpp">
+      <ObjectFileName>$(IntDir)\drive_path_bar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="drive_shcn.cpp">
+      <ObjectFileName>$(IntDir)\drive_shcn.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="drive_toolbar.cpp">
+      <ObjectFileName>$(IntDir)\drive_toolbar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="env_path.cpp">
+      <ObjectFileName>$(IntDir)\env_path.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="explorer_ctrl.cpp">
+      <ObjectFileName>$(IntDir)\explorer_ctrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="explorer_ctrl_print.cpp">
+      <ObjectFileName>$(IntDir)\explorer_ctrl_print.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="explorer_pane.cpp">
+      <ObjectFileName>$(IntDir)\explorer_pane.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="explorer_status_bar.cpp">
+      <ObjectFileName>$(IntDir)\explorer_status_bar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="explorer_view.cpp">
+      <ObjectFileName>$(IntDir)\explorer_view.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_change_watcher.cpp">
+      <ObjectFileName>$(IntDir)\file_change_watcher.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_op_thread.cpp">
+      <ObjectFileName>$(IntDir)\file_op_thread.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_op_undo.cpp">
+      <ObjectFileName>$(IntDir)\file_op_undo.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_scrap.cpp">
+      <ObjectFileName>$(IntDir)\file_scrap.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_scrap_ctrl.cpp">
+      <ObjectFileName>$(IntDir)\file_scrap_ctrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_scrap_drop_dlg.cpp">
+      <ObjectFileName>$(IntDir)\file_scrap_drop_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_scrap_pane.cpp">
+      <ObjectFileName>$(IntDir)\file_scrap_pane.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_scrap_toolbar.cpp">
+      <ObjectFileName>$(IntDir)\file_scrap_toolbar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="file_filter.cpp">
+      <ObjectFileName>$(IntDir)\file_filter.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="folder_ctrl.cpp">
+      <ObjectFileName>$(IntDir)\folder_ctrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="folder_layout.cpp">
+      <ObjectFileName>$(IntDir)\folder_layout.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="folder_layout_manager.cpp">
+      <ObjectFileName>$(IntDir)\folder_layout_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="folder_pane.cpp">
+      <ObjectFileName>$(IntDir)\folder_pane.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="folder_size.cpp">
+      <ObjectFileName>$(IntDir)\folder_size.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="folder_view.cpp">
+      <ObjectFileName>$(IntDir)\folder_view.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="history.cpp">
+      <ObjectFileName>$(IntDir)\history.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="img_list_manager.cpp">
+      <ObjectFileName>$(IntDir)\img_list_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="keyboard.cpp">
+      <ObjectFileName>$(IntDir)\keyboard.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="launcher_manager.cpp">
+      <ObjectFileName>$(IntDir)\launcher_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="main_coolbar.cpp">
+      <ObjectFileName>$(IntDir)\main_coolbar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="main_frame.cpp">
+      <ObjectFileName>$(IntDir)\main_frame.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="main_menubar.cpp">
+      <ObjectFileName>$(IntDir)\main_menubar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="main_toolbar.cpp">
+      <ObjectFileName>$(IntDir)\main_toolbar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="option.cpp">
+      <ObjectFileName>$(IntDir)\option.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="option_manager.cpp">
+      <ObjectFileName>$(IntDir)\option_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="path.cpp">
+      <ObjectFileName>$(IntDir)\path.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="path_bar.cpp">
+      <ObjectFileName>$(IntDir)\path_bar.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="picture_viewer.cpp">
+      <ObjectFileName>$(IntDir)\picture_viewer.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="print_preview_view_ex.cpp">
+      <ObjectFileName>$(IntDir)\print_preview_view_ex.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="program_ass.cpp">
+      <ObjectFileName>$(IntDir)\program_ass.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="program_opts.cpp">
+      <ObjectFileName>$(IntDir)\program_opts.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="recent_file_list.cpp">
+      <ObjectFileName>$(IntDir)\recent_file_list.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="removable_device.cpp">
+      <ObjectFileName>$(IntDir)\removable_device.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="removable_drive.cpp">
+      <ObjectFileName>$(IntDir)\removable_drive.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="rename_helper.cpp">
+      <ObjectFileName>$(IntDir)\rename_helper.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="search_dlg.cpp">
+      <ObjectFileName>$(IntDir)\search_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="search_file.cpp">
+      <ObjectFileName>$(IntDir)\search_file.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="search_result_ctrl.cpp">
+      <ObjectFileName>$(IntDir)\search_result_ctrl.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="search_result_pane.cpp">
+      <ObjectFileName>$(IntDir)\search_result_pane.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="shell.cpp">
+      <ObjectFileName>$(IntDir)\shell.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="shell_change_notify.cpp">
+      <ObjectFileName>$(IntDir)\shell_change_notify.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="shell_column_manager.cpp">
+      <ObjectFileName>$(IntDir)\shell_column_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="shell_icon.cpp">
+      <ObjectFileName>$(IntDir)\shell_icon.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="shell_new.cpp">
+      <ObjectFileName>$(IntDir)\shell_new.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="shell_registry.cpp">
+      <ObjectFileName>$(IntDir)\shell_registry.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="singleton_manager.cpp">
+      <ObjectFileName>$(IntDir)\singleton_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="single_process.cpp">
+      <ObjectFileName>$(IntDir)\single_process.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="size_format.cpp">
+      <ObjectFileName>$(IntDir)\size_format.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="splitter.cpp">
+      <ObjectFileName>$(IntDir)\splitter.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Unicode|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-x86-Unicode|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug-x86-Multibyte|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-x86-Multibyte|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">Create</PrecompiledHeader>
+      <ObjectFileName>$(IntDir)\stdafx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="sync_dirs.cpp">
+      <ObjectFileName>$(IntDir)\sync_dirs.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="sys_img_list.cpp">
+      <ObjectFileName>$(IntDir)\sys_img_list.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="SystemInfo.cpp">
+      <ObjectFileName>$(IntDir)\SystemInfo.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="tab_pane.cpp">
+      <ObjectFileName>$(IntDir)\tab_pane.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="thread.cpp">
+      <ObjectFileName>$(IntDir)\thread.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="thumb_img_list.cpp">
+      <ObjectFileName>$(IntDir)\thumb_img_list.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="thumbnail.cpp">
+      <ObjectFileName>$(IntDir)\thumbnail.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="upchecker_manager.cpp">
+      <ObjectFileName>$(IntDir)\upchecker_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="user_env.cpp">
+      <ObjectFileName>$(IntDir)\user_env.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="wait_dlg.cpp">
+      <ObjectFileName>$(IntDir)\wait_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="win_app.cpp">
+      <ObjectFileName>$(IntDir)\win_app.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="winapi_ex.cpp">
+      <ObjectFileName>$(IntDir)\winapi_ex.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="wnet_mgr.cpp">
+      <ObjectFileName>$(IntDir)\wnet_mgr.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_adv_conf_dir_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_adv_conf_dir_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_adv_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_adv_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_adv_hotkey_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_adv_hotkey_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_color_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_color_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_file_list_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_file_list_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_filtering_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_filtering_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_folder_layout_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_folder_layout_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_folder_tree_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_folder_tree_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_font_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_font_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_history_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_history_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_language_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_language_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_layout_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_layout_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_size_format_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_size_format_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_thumbnail_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_thumbnail_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_appearance_tab_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_appearance_tab_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_bookmark_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_bookmark_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_drag_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_drag_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_file_op_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_file_op_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_file_scrap_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_file_scrap_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_program_ass_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_program_ass_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_refresh_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_refresh_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_func_rename_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_func_rename_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_general_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_general_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_general_startup_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_general_startup_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\cfg_main_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\cfg_main_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\filter_set_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\filter_set_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\program_ass_set_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\program_ass_set_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cfg\size_format_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cfg\size_format_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\about_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\about_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\about_tab_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\about_tab_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\about_tab_info_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\about_tab_info_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\about_tab_license_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\about_tab_license_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\about_tab_credits_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\about_tab_credits_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\accel_table_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\accel_table_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\attr_time.cpp">
+      <ObjectFileName>$(IntDir)\cmd\attr_time.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\attr_time_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\attr_time_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_create.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_create.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_create_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_create_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_create_tab_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_create_tab_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_create_tab_format_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_create_tab_format_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_create_tab_text_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_create_tab_text_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_edit_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_edit_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tab_case_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tab_case_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tab_delete_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tab_delete_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tab_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tab_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tab_format_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tab_format_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tab_insert_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tab_insert_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tab_replace_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tab_replace_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\batch_rename_tip_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\batch_rename_tip_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\bookmark_edit_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\bookmark_edit_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_app.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_app.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_attr_time.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_attr_time.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_bookmark.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_bookmark.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_cfg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_cfg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_checksum.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_checksum.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_clipboard.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_clipboard.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_column.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_column.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_create_item.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_create_item.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_drive.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_drive.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_execute.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_execute.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_file_list.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_file_list.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_file_oper.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_file_oper.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_file_property.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_file_property.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_file_scrap.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_file_scrap.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_file_split.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_file_split.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_folder_sync.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_folder_sync.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_go_path.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_go_path.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_help.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_help.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_history.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_history.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_main_gui.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_main_gui.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_network.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_network.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_pic_conv.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_pic_conv.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_pic_viewer.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_pic_viewer.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_print.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_print.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_program_ass.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_program_ass.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_recent.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_recent.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_refresh.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_refresh.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_rename.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_rename.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_search.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_search.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_search_result.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_search_result.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_select_file.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_select_file.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_send_mail.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_send_mail.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_sort.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_sort.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_style.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_style.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_tab.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_tab.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_tools.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_tools.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_tray.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_tray.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_undo.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_undo.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_window.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_window.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\cmd_working_folder.cpp">
+      <ObjectFileName>$(IntDir)\cmd\cmd_working_folder.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\column_set_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\column_set_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\crc_create.cpp">
+      <ObjectFileName>$(IntDir)\cmd\crc_create.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\crc_create_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\crc_create_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\crc_verify.cpp">
+      <ObjectFileName>$(IntDir)\cmd\crc_verify.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\crc_verify_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\crc_verify_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\create_item_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\create_item_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="desktop_background.cpp">
+      <ObjectFileName>$(IntDir)\desktop_background.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\dos_cmd_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\dos_cmd_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\drive_detail_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\drive_detail_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\drive_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\drive_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\drive_info_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\drive_info_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_combine.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_combine.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_combine_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_combine_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_list.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_list.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_list_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_list_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_merge.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_merge.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_merge_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_merge_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_scrap_group_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_scrap_group_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_split.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_split.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\file_split_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\file_split_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\folder_sync_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\folder_sync_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\folder_sync_opt_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\folder_sync_opt_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_case.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_case.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_clear.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_clear.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_delete.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_delete.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_factory.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_factory.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_insert.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_insert.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_name.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_name.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_number.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_number.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_replace.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_replace.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_short_parser.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_short_parser.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_string.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_string.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_time.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_time.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\format_ext_remove.cpp">
+      <ObjectFileName>$(IntDir)\cmd\format_ext_remove.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\go_path_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\go_path_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\history_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\history_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\info_copyable_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\info_copyable_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\input_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\input_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\multi_rename.cpp">
+      <ObjectFileName>$(IntDir)\cmd\multi_rename.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\param_exec_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\param_exec_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\pic_conv.cpp">
+      <ObjectFileName>$(IntDir)\cmd\pic_conv.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\pic_conv_color_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\pic_conv_color_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\pic_conv_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\pic_conv_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\pic_conv_opt_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\pic_conv_opt_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\proc_shared_file_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\proc_shared_file_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\program_ass_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\program_ass_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\search_loc_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\search_loc_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\search_loc_edit_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\search_loc_edit_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\sel_filter_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\sel_filter_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\sel_name_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\sel_name_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\shortcut_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\shortcut_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\single_rename_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\single_rename_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\text_merge.cpp">
+      <ObjectFileName>$(IntDir)\cmd\text_merge.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\text_merge_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\text_merge_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\tip_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\tip_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\title_dlg.cpp">
+      <ObjectFileName>$(IntDir)\cmd\title_dlg.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\trash.cpp">
+      <ObjectFileName>$(IntDir)\cmd\trash.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\router\cmd_command.cpp">
+      <ObjectFileName>$(IntDir)\cmd\router\cmd_command.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\router\cmd_command_map.cpp">
+      <ObjectFileName>$(IntDir)\cmd\router\cmd_command_map.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\router\cmd_context.cpp">
+      <ObjectFileName>$(IntDir)\cmd\router\cmd_context.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\router\cmd_executor.cpp">
+      <ObjectFileName>$(IntDir)\cmd\router\cmd_executor.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="cmd\router\cmd_parameters.cpp">
+      <ObjectFileName>$(IntDir)\cmd\router\cmd_parameters.obj</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="fxfile.rc"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\xpr\xpr.vcxproj">
+      <Project>{21C2490A-9701-99AF-1DA0-7F5460ADD8FF}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\fxfile-crash\fxfile-crash.vcxproj">
+      <Project>{E9AE4C1B-ACED-F77D-4D2A-AC569D6830E6}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+  <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets"/>
+  <ImportGroup Label="ExtensionTargets"/>
+</Project>

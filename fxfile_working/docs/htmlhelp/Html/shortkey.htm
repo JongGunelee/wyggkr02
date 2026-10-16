@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>단축키 활용</title>
+    <link type="text/css" rel="stylesheet" href="style.css">
+    <style>
+        table.shortcut { border-collapse: collapse; width: 100%; }
+        table.shortcut th, table.shortcut td { border: 1px solid #dddddd; padding: 5px; text-align: left; }
+        table.shortcut th { background: #f9f9f9; }
+        table.shortcut td:first-child { width: 190px; white-space: nowrap; }
+        .note { color: #444444; }
+    </style>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="purple" alink="red">
+    <p class="title">■ <strong>단축키 활용</strong></p>
+    <hr size="1" noshade color="#666666">
+
+    <p><b>1. 기본 단축키</b></p>
+    <p class="note">아래 표는 현재 프로그램의 기본 단축키입니다. 사용자가 [도구 → 단축키 설정]에서 변경한 경우에는 사용자 설정이 우선합니다.</p>
+    <table class="shortcut">
+        <thead><tr><th>단축키</th><th>해당 명령</th></tr></thead>
+        <tbody>
+            <tr data-command="ID_APP_EXIT"><td>Alt+F4</td><td>프로그램 종료</td></tr>
+            <tr data-command="ID_APP_HELP"><td>F1</td><td>도움말 내용</td></tr>
+            <tr data-command="ID_APP_HELP_FIND"><td>Ctrl+F1</td><td>도움말 찾아보기</td></tr>
+            <tr data-command="ID_EDIT_COPY"><td>Ctrl+C</td><td>선택 항목 복사</td></tr>
+            <tr data-command="ID_EDIT_COPY"><td>Ctrl+Insert</td><td>선택 항목 복사</td></tr>
+            <tr data-command="ID_EDIT_CUT"><td>Ctrl+X</td><td>선택 항목 잘라내기</td></tr>
+            <tr data-command="ID_EDIT_DEV_PATH_COPY"><td>Ctrl+Shift+Alt+C</td><td>개발자 형식 경로 복사</td></tr>
+            <tr data-command="ID_EDIT_NAME_COPY"><td>Ctrl+F</td><td>선택 항목 이름 복사</td></tr>
+            <tr data-command="ID_EDIT_FILENAME_COPY"><td>Shift+Alt+C</td><td>선택 파일명 복사</td></tr>
+            <tr data-command="ID_EDIT_NAME_COPY"><td>Ctrl+Shift+C</td><td>선택 항목 이름 복사</td></tr>
+            <tr data-command="ID_EDIT_PASTE"><td>Ctrl+V</td><td>붙여넣기</td></tr>
+            <tr data-command="ID_EDIT_PASTE"><td>Shift+Insert</td><td>붙여넣기</td></tr>
+            <tr data-command="ID_EDIT_PATH_COPY"><td>Ctrl+Alt+C</td><td>선택 항목 전체 경로 복사</td></tr>
+            <tr data-command="ID_EDIT_SEL_ALL"><td>Ctrl+A</td><td>모두 선택</td></tr>
+            <tr data-command="ID_EDIT_SEL_FILTER"><td>Ctrl+Shift+Num *</td><td>필터로 선택</td></tr>
+            <tr data-command="ID_EDIT_SEL_NAME"><td>Num +</td><td>이름으로 선택</td></tr>
+            <tr data-command="ID_EDIT_SEL_SAME_EXT"><td>Num *</td><td>같은 확장자 선택</td></tr>
+            <tr data-command="ID_EDIT_SEL_SAME_FILTER"><td>Ctrl+Num *</td><td>같은 필터 선택</td></tr>
+            <tr data-command="ID_EDIT_UNDO"><td>Ctrl+Z</td><td>실행 취소</td></tr>
+            <tr data-command="ID_EDIT_UNSEL_NAME"><td>Num -</td><td>이름으로 선택 해제</td></tr>
+            <tr data-command="ID_FILE_DELETE"><td>Delete</td><td>삭제(휴지통 사용)</td></tr>
+            <tr data-command="ID_FILE_DELETE"><td>Shift+Delete</td><td>영구 삭제(휴지통 사용 안 함)</td></tr>
+            <tr data-command="ID_FILE_EXEC_PARAM"><td>Ctrl+Enter</td><td>매개변수를 지정하여 실행</td></tr>
+            <tr data-command="ID_FILE_NEW_FOLDER"><td>F11</td><td>새 폴더 만들기</td></tr>
+            <tr data-command="ID_FILE_NEW_ITEMS"><td>Ctrl+F11</td><td>여러 항목 새로 만들기</td></tr>
+            <tr data-command="ID_FILE_NEW_TEXT"><td>F12</td><td>새 텍스트 파일 만들기</td></tr>
+            <tr data-command="ID_FILE_PRINT"><td>Ctrl+P</td><td>인쇄</td></tr>
+            <tr data-command="ID_FILE_PROPERTY"><td>Alt+Enter</td><td>등록 정보</td></tr>
+            <tr data-command="ID_FILE_RENAME"><td>F2</td><td>이름 바꾸기</td></tr>
+            <tr data-command="ID_FILE_RENAME"><td>Ctrl+F2</td><td>이름 바꾸기</td></tr>
+            <tr data-command="ID_FILE_TEXT_MERGE"><td>Ctrl+J</td><td>텍스트 문서 병합</td></tr>
+            <tr data-command="ID_GO_BACK"><td>Alt+왼쪽 화살표</td><td>뒤로</td></tr>
+            <tr data-command="ID_GO_BOOKMARK"><td>F9</td><td>북마크 열기</td></tr>
+            <tr data-command="ID_GO_BOOKMARK_ADD"><td>Ctrl+L</td><td>북마크 추가</td></tr>
+            <tr data-command="ID_GO_BOOKMARK_MODIFY"><td>Ctrl+F9</td><td>북마크 편집</td></tr>
+            <tr data-command="ID_GO_DRIVE"><td>F8</td><td>드라이브 상자</td></tr>
+            <tr data-command="ID_GO_FORWARD"><td>Alt+오른쪽 화살표</td><td>앞으로</td></tr>
+            <tr data-command="ID_GO_INIT_FOLDER_ALL"><td>Ctrl+I</td><td>모든 창을 초기 폴더로 이동</td></tr>
+            <tr data-command="ID_GO_PATH"><td>Ctrl+G</td><td>경로 지정 이동</td></tr>
+            <tr data-command="ID_GO_ROOT"><td>\</td><td>현재 드라이브의 루트 폴더로 이동</td></tr>
+            <tr data-command="ID_GO_SIBLING_DOWN"><td>Alt+아래 화살표</td><td>같은 수준의 다음 폴더로 이동</td></tr>
+            <tr data-command="ID_GO_SIBLING_UP"><td>Alt+위 화살표</td><td>같은 수준의 이전 폴더로 이동</td></tr>
+            <tr data-command="ID_GO_UP"><td>.</td><td>상위 폴더로 이동</td></tr>
+            <tr data-command="ID_GO_UP"><td>Backspace</td><td>상위 폴더로 이동</td></tr>
+            <tr data-command="ID_TOOL_CMD"><td>Ctrl+M</td><td>명령 프롬프트</td></tr>
+            <tr data-command="ID_TOOL_DOS_CMD"><td>/</td><td>DOS 명령 실행</td></tr>
+            <tr data-command="ID_TOOL_EMPTY_RECYCLEBIN"><td>Ctrl+R</td><td>휴지통 비우기</td></tr>
+            <tr data-command="ID_TOOL_OPTION"><td>Ctrl+F12</td><td>환경 설정</td></tr>
+            <tr data-command="ID_VIEW_ADDRESSBAR_SHOW"><td>F4</td><td>주소 표시줄 열기</td></tr>
+            <tr data-command="ID_TOOL_FILE_SEARCH"><td>Ctrl+E</td><td>파일 검색</td></tr>
+            <tr data-command="ID_TOOL_FILE_SEARCH"><td>F3</td><td>파일 검색</td></tr>
+            <tr data-command="ID_VIEW_FOLDER_TREE_SHOW"><td>Ctrl+D</td><td>폴더 트리 표시/숨기기</td></tr>
+            <tr data-command="ID_VIEW_REFRESH"><td>F5</td><td>새로 고침</td></tr>
+            <tr data-command="ID_WINDOW_NEXT"><td>F6</td><td>다음 분할 창으로 이동</td></tr>
+            <tr data-command="ID_WINDOW_TAB_CLOSE"><td>Ctrl+F4</td><td>현재 탭 닫기</td></tr>
+            <tr data-command="ID_WINDOW_TAB_CLOSE"><td>Ctrl+W</td><td>현재 탭 닫기</td></tr>
+            <tr data-command="ID_WINDOW_TAB_NEW"><td>Ctrl+T</td><td>새 탭 만들기</td></tr>
+            <tr data-command="ID_WINDOW_TAB_NEXT"><td>Ctrl+Tab</td><td>다음 탭으로 이동</td></tr>
+            <tr data-command="ID_WINDOW_TAB_PREVIOUS"><td>Ctrl+Shift+Tab</td><td>이전 탭으로 이동</td></tr>
+            <tr data-command="ID_WINDOW_PREV"><td>Shift+F6</td><td>이전 분할 창으로 이동</td></tr>
+        </tbody>
+    </table>
+
+    <p><b>2. 폴더 트리 전용 키</b></p>
+    <table class="shortcut"><thead><tr><th>키</th><th>동작</th></tr></thead><tbody>
+        <tr><td>Num + 또는 오른쪽 화살표</td><td>선택한 폴더 확장</td></tr>
+        <tr><td>Num - 또는 왼쪽 화살표</td><td>선택한 폴더 축소</td></tr>
+        <tr><td>Ctrl+Num +</td><td>하위 폴더 모두 확장</td></tr>
+        <tr><td>Ctrl+Num -</td><td>하위 폴더 모두 축소</td></tr>
+        <tr><td>마우스 오른쪽 버튼</td><td>상황에 맞는 메뉴 표시</td></tr>
+    </tbody></table>
+
+    <p><b>3. 파일 목록 전용 키</b></p>
+    <table class="shortcut"><thead><tr><th>키</th><th>동작</th></tr></thead><tbody>
+        <tr><td>Enter</td><td>선택한 파일 열기 또는 폴더 진입</td></tr>
+        <tr><td>Shift+클릭</td><td>기준 항목부터 클릭한 항목까지 범위 선택</td></tr>
+        <tr><td>Ctrl+클릭</td><td>항목을 하나씩 다중 선택하거나 선택 해제</td></tr>
+        <tr><td>마우스 오른쪽 버튼</td><td>선택 항목 또는 FxFile의 상황별 메뉴 표시</td></tr>
+    </tbody></table>
+
+    <p><b>4. 단축키 사용자 정의</b></p>
+    <p>[도구 → 단축키 설정]에서 명령별 단축키를 추가·제거하거나 기본값으로 복원할 수 있습니다. 동일한 키 조합을 다른 명령에 지정하면 기존 명령의 조합은 제거되고 새 명령 하나에만 지정됩니다. 사용자 설정 파일이 손상되면 프로그램은 안전하게 기본 단축키로 복귀합니다.</p>
+</body>
+</html>

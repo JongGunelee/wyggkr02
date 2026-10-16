@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-x64-Unicode|x64">
+      <Configuration>Debug-x64-Unicode</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-x86|Win32">
+      <Configuration>Debug-x86</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x64-Unicode|x64">
+      <Configuration>Release-x64-Unicode</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-x86|Win32">
+      <Configuration>Release-x86</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A1BA1A3A-81B9-5EEB-4385-AD860CBE225E}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>fxfile-upchecker</RootNamespace>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+  <PropertyGroup Label="Configuration">
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">MultiByte</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">MultiByte</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">Unicode</CharacterSet>
+    <CharacterSet Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">Unicode</CharacterSet>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Label="Locals">
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+  <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props"/>
+  <ImportGroup Label="ExtensionSettings"/>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"/>
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros"/>
+  <PropertyGroup>
+    <ExecutablePath>$(ExecutablePath);$(MSBuildProjectDirectory)\.\bin\;$(MSBuildProjectDirectory)\.\bin\</ExecutablePath>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">..\..\obj\fxfile-upchecker\dbg-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">..\..\obj\fxfile-upchecker\dbg-x86\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">..\..\obj\fxfile-upchecker\rel-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">..\..\obj\fxfile-upchecker\rel-x86\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">..\..\bin\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">..\..\bin\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">..\..\bin\x64\upchecker\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">..\..\bin\x64\upchecker\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">$(OutDir)$(ProjectName).exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">$(OutDir)$(ProjectName).exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">$(OutDir)$(ProjectName)_dbg.exe</TargetPath>
+    <TargetPath Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">$(OutDir)$(ProjectName)_dbg.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxprw_dbg.lib;libcurl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../bin;../../lib/libcurl/lib;../../bin/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EntryPointSymbol>wWinMainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(ProjectName)_dbg.exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <MinimalRebuild>true</MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxpr_dbg.lib;%(AdditionalDependencies);libcurl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../bin;../../lib/libcurl/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(ProjectName)_dbg.exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxprw.lib;libcurl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../bin;../../lib/libcurl/lib;../../bin/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <EntryPointSymbol>wWinMainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libxpr.lib;%(AdditionalDependencies);libcurl.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../bin;../../lib/libcurl/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <MapExports>true</MapExports>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.;..\..\src\xpr\include;..\..\src\base;..\..\lib\libcurl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Culture>0x0000</Culture>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="res\fxfile-upchecker.ico"/>
+    <None Include="res\fxfile-upchecker.rc2"/>
+    <None Include="fxfile-upchecker.gyp"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\base\conf_file.h"/>
+    <ClInclude Include="..\base\conf_file_ex.h"/>
+    <ClInclude Include="..\base\crc32.h"/>
+    <ClInclude Include="..\base\def.h"/>
+    <ClInclude Include="..\base\def_win.h"/>
+    <ClInclude Include="..\base\env_path.h"/>
+    <ClInclude Include="..\base\md5.h"/>
+    <ClInclude Include="..\base\getopt.h"/>
+    <ClInclude Include="..\base\pidl_win.h"/>
+    <ClInclude Include="..\base\sha.h"/>
+    <ClInclude Include="..\base\shell_item.h"/>
+    <ClInclude Include="..\base\update_info_manager.h"/>
+    <ClInclude Include="..\base\upchecker_def.h"/>
+    <ClInclude Include="main_window.h"/>
+    <ClInclude Include="meta_data_file.h"/>
+    <ClInclude Include="program_opts.h"/>
+    <ClInclude Include="resource.h"/>
+    <ClInclude Include="single_process.h"/>
+    <ClInclude Include="stdafx.h"/>
+    <ClInclude Include="update_checker.h"/>
+    <ClInclude Include="win_app.h"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\base\conf_file.cpp">
+      <ObjectFileName>$(IntDir)\base\conf_file.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\crc32.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\crc32.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\env_path.cpp">
+      <ObjectFileName>$(IntDir)\base\env_path.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\md5.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\md5.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\getopt.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\getopt.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\pidl_win.cpp">
+      <ObjectFileName>$(IntDir)\base\pidl_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\sha.c">
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <PrecompiledHeader></PrecompiledHeader>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)\base\sha.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\shell_item_win.cpp">
+      <ObjectFileName>$(IntDir)\base\shell_item_win.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\base\update_info_manager.cpp">
+      <ObjectFileName>$(IntDir)\base\update_info_manager.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="main_window.cpp">
+      <ObjectFileName>$(IntDir)\main_window.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="meta_data_file.cpp">
+      <ObjectFileName>$(IntDir)\meta_data_file.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="program_opts.cpp">
+      <ObjectFileName>$(IntDir)\program_opts.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="single_process.cpp">
+      <ObjectFileName>$(IntDir)\single_process.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug-x86|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-x86|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug-x64-Unicode|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-x64-Unicode|x64'">Create</PrecompiledHeader>
+      <ObjectFileName>$(IntDir)\stdafx.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="update_checker.cpp">
+      <ObjectFileName>$(IntDir)\update_checker.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="win_app.cpp">
+      <ObjectFileName>$(IntDir)\win_app.obj</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="fxfile-upchecker.rc"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\xpr\xpr.vcxproj">
+      <Project>{21C2490A-9701-99AF-1DA0-7F5460ADD8FF}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+  <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets"/>
+  <ImportGroup Label="ExtensionTargets"/>
+</Project>
