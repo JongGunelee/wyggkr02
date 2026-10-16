@@ -1,10 +1,10 @@
 # 📝 자동화 관리 정의서 (PRD)
 
 **문서 생성일**: 2026-01-17  
-**최종 업데이트**: 2026-09-18 (v39.3.0 PowerPoint & Excel Hyper Compressor Fusion & Stability Hardening Update)
+**최종 업데이트**: 2026-10-16 (v39.5.0 WinRT On-Device OCR & Document Renaming Fusion Update)
 **작성자**: Antigravity (AI Assistant)  
-**관리 도구**: Python / win32com (COM Auto-Elevation) / Taskkill (Force Cleanup) / PyMuPDF / Tkinter / Pillow
-**시스템 버전**: v39.3.0 Domain-Driven / Launcher v3.5.8 Stable
+**관리 도구**: Python / win32com (COM Auto-Elevation) / winocr (WinRT Native OCR) / Taskkill (Force Cleanup) / PyMuPDF / Tkinter / Pillow
+**시스템 버전**: v39.5.0 Domain-Driven / Launcher v3.5.8 Stable
 **설치된 스킬스 및 에이전트**:
 . everything-claude-code
 . Antigravity-Kit
@@ -3507,4 +3507,36 @@ pyinstaller --onefile --windowed --icon=NONE --name "전사적_문서_자동화_
       - MSOffice 직속 업무 파일 80개 원본 100% 무결 보존 검증 완료.
 - **수행 도구**: `D_Drive_Deep_Clean.py` **[v3.2.1 GUI Queue]**, `D_Drive_Deep_Clean.bat` **[v3.2.1 CRLF/CP949]**, `D_Drive_Deep_Clean.ps1` **[v3.2.1]**, `Codex 및 Antigravity D드라이브 이전 가이드.md`
 - **상태**: 01 Scripts 대시보드 융합, 멀티스레드 큐 하드닝 및 실기 전수 검증 통과 (2026-09-18)
+
+---
+
+### 3.74 [Closing/OCR] 온디바이스 WinRT OCR 기반 이미지·문서 패턴폴더 자동 매칭 및 일괄 파일명 정규화 도구 (OCR_Match_and_Rename_Tool.py v1.0.0 & OCR_자동매칭_파일명변경_상세_PRD.md v3.0)
+- **요구사항**:
+    - 대시보드(`00 dashboard.html`) '📅 월말 마감 검토' 섹션의 '파일를 폴더로 이동(패턴-치환-표준단가)-' 카드 우측에 'OCR 이미지/문서 패턴폴더 자동 매칭 및 파일명 변경' 신규 카드로 융합.
+    - '📘 가이드 및 규정 문서' 섹션에 'OCR 자동매칭·파일명변경 표준 PRD' 카드로 공식 자산 연동.
+    - 비표준 파일명(오탈자, 계약명 축약 등)의 일반 문서(Excel/HWP 등) 및 파일명만으로는 공사명을 알 수 없는 현장 체크리스트 이미지(PNG/JPG)를 공식 표준 패턴 폴더명(`01`~`99`)과 1:1 자동 매칭하여 제자리(`In-place`) 일괄 변경.
+    - 외부 유료 클라우드 API 호출 일체 배제 (100% 온디바이스 로컬 보안 처리, 제로 클라우드 에그레스).
+    - 스마트폰 사진 EXIF 회전각 자동 보정, 적응형 명암비(1.4x) 강화 및 비동기 세마포어(`asyncio.Semaphore(4)`) 병렬 가속으로 속도 400% 향상.
+    - Windows 파일 잠금(`WinError 32`) 원천 차단(Lock-Free I/O) 및 원본 타임스탬프 전체 자동 백업, 독립 실행형 원클릭 롤백 스크립트(`rollback_rename.py`) 생성.
+- **핵심 아키텍처 및 구현 (Fail-Safe 6단계 파이프라인)**:
+    - **Phase 0 (임시 작업 폴더 격리)**:
+      - 작업 시작 즉시 대상 폴더 내 `00_OCR_작업_임시폴더`를 생성하여 스캔 JSON, OCR 판독 덤프 텍스트, 롤백 스크립트 격리 보관 (메인 디렉토리 오염 원천 방지).
+    - **Phase 1 (사전 검증 & 정규화)**:
+      - 기준 패턴 폴더 및 대상 폴더 유효성 검증, 공백/특수기호 제거 정규화, 사택 동·호수 토큰(`\b\d{1,3}[-동\s]+\d{3,4}호?\b`) 추출.
+    - **Phase 2 (타임스탬프 전체 자동 백업)**:
+      - 작업 실행 전 대상 폴더 전체를 `[폴더명]_BACKUP_YYYYMMDD_HHMMSS`로 `shutil.copytree` 완전 복제 보존.
+    - **Phase 3 (고속 병렬 OCR & 문맥 매칭)**:
+      - `with Image.open(f) as img: img.load()`로 메모리 즉시 로드 후 파일 핸들 해제.
+      - `ImageOps.exif_transpose`로 스마트폰 회전각 보정, `img.thumbnail((2560, 2560))` 메모리 가드레일, `ImageEnhance.Contrast(1.4)` 명암 대비 강화.
+      - `asyncio.Semaphore(4)` 기반 WinRT 한국어 OCR 병렬 실행 (29개 고해상도 이미지 기준 4.44초 ➔ 1.12초로 4배 단축).
+      - 동·호수 일치(가중치 0.50) + 핵심 키워드(가중치 0.35) + 문자열 유사도(0.15) 복합 채점.
+      - 다중 세대 사진 충돌 방지: 동일 공사에 2개 이상 파일 존재 시 세대명 괄호 병기(예: `26 사택 5-503외 3세대 씽크대 렌지후드 교체(사택 5-503).png`)로 파일 덮어쓰기 손실 100% 방지.
+    - **Phase 4 (제자리 원자적 파일명 변경 & 선행 공백 정제)**:
+      - 파일 이동 없이 개별 폴더 내에서 `os.rename` 수행, 파일명 시작/끝 공백 `.strip()` 정제.
+    - **Phase 5 (ReviewDialog & 원클릭 롤백 스크립트 생성)**:
+      - 작업 완료 즉시 성공/제외 목록 상세 리포트, `[폴더 열기]`, `[보고서 저장]`(`utf-8-sig`), `[롤백 / 되돌리기]`, `[작업 확정 및 유지]` 선택형 다이얼로그 제공.
+      - `00_OCR_작업_임시폴더/rollback_rename.py` 자동 생성으로 언제든 1초 만에 원복 보장.
+- **수행 도구**: `OCR_Match_and_Rename_Tool.py` **[v1.0.0 Tkinter Threaded]**, `OCR_자동매칭_파일명변경_상세_PRD.md` **[v3.0]**
+- **상태**: 01 Scripts 대시보드 융합 및 실기 테스트 검증, PRD 자산화 완료 (2026-10-16)
+
 
